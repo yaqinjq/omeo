@@ -340,6 +340,10 @@ Route::middleware(['auth'])->group(function () {
                         ->name('confirm-review')->middleware('permission:finance.import');
                     Route::patch('/rows/{row}/update-nama', [BpjsReconciliationController::class, 'updateRowName'])
                         ->name('rows.update-nama')->middleware('permission:finance.import');
+                    Route::patch('/rows/{row}/update-nik', [BpjsReconciliationController::class, 'updateRowNik'])
+                        ->name('rows.update-nik')->middleware('permission:finance.import');
+                    Route::post('/rows/{row}/swap-nik', [BpjsReconciliationController::class, 'swapRowNik'])
+                        ->name('rows.swap-nik')->middleware('permission:finance.import');
                     Route::post('/{bill}/reparse', [BpjsReconciliationController::class, 'reparse'])
                         ->name('reparse')->middleware('permission:finance.import');
                     Route::get('/{bill}/cross-billing', [BpjsReconciliationController::class, 'crossBilling'])

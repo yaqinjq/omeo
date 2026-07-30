@@ -350,6 +350,59 @@ class BpjsReconciliationController extends Controller
         ]);
     }
 
+    // ── Inline edit NIK (AJAX PATCH) ─────────────────────────────────────────
+    // Dipakai saat parsing PDF menggeser pasangan nama/NIK (mis. nama yang
+    // patah ke 2 baris di PDF) — user bisa ketik ulang NIK yang benar sambil
+    // lihat dokumen aslinya.
+
+    public function updateRowNik(Request $request, BpjsOfficialBillRow $row)
+    {
+        $request->validate([
+            'nik' => ['required', 'string', 'regex:/^\d{16}$/'],
+        ]);
+
+        $old = $row->nik;
+        $row->update(['nik' => $request->nik]);
+
+        return response()->json([
+            'success' => true,
+            'old'     => $old,
+            'new'     => $row->nik,
+        ]);
+    }
+
+    // ── Tukar NIK dengan baris sebelum/sesudahnya (AJAX POST) ───────────────
+    // Cara cepat memperbaiki pergeseran nama/NIK akibat baris nama yang patah
+    // di PDF — daripada mengetik ulang 16 digit NIK secara manual, user cukup
+    // klik untuk menukar pasangan NIK antara dua baris yang bersebelahan.
+
+    public function swapRowNik(Request $request, BpjsOfficialBillRow $row)
+    {
+        $data = $request->validate([
+            'direction' => ['required', 'in:up,down'],
+        ]);
+
+        $neighbor = BpjsOfficialBillRow::where('bill_id', $row->bill_id)
+            ->where('id', $data['direction'] === 'up' ? '<' : '>', $row->id)
+            ->orderBy('id', $data['direction'] === 'up' ? 'desc' : 'asc')
+            ->first();
+
+        if (! $neighbor) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada baris di sisi itu.'], 422);
+        }
+
+        [$rowNik, $neighborNik] = [$row->nik, $neighbor->nik];
+        $row->update(['nik' => $neighborNik]);
+        $neighbor->update(['nik' => $rowNik]);
+
+        return response()->json([
+            'success'      => true,
+            'row_nik'      => $row->nik,
+            'neighbor_id'  => $neighbor->id,
+            'neighbor_nik' => $neighbor->nik,
+        ]);
+    }
+
     // ── Konfirmasi review → jalankan NIK matching ─────────────────────────────
 
     public function confirmReview(int $billId)

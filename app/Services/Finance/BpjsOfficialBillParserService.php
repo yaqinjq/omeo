@@ -2,6 +2,7 @@
 
 namespace App\Services\Finance;
 
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class BpjsOfficialBillParserService
@@ -33,11 +34,30 @@ class BpjsOfficialBillParserService
     public function parseExcel(string $filePath): array
     {
         set_time_limit(120);
-        $spreadsheet = IOFactory::load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
 
-        $meta = $this->extractMetaFromExcel($sheet);
-        $rows = $this->extractRowsFromExcel($sheet);
+        try {
+            // readDataOnly skips styles/drawings/defined-names/merged-cell
+            // recalculation — the parts of PhpSpreadsheet most likely to choke
+            // on non-standard files (e.g. PDF-to-Excel converters like Adobe
+            // often emit unusual sheet dimensions/merged cells). We only need
+            // cell values, so this both avoids a common crash and is faster.
+            $reader = IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $meta = $this->extractMetaFromExcel($sheet);
+            $rows = $this->extractRowsFromExcel($sheet);
+        } catch (\PhpOffice\PhpSpreadsheet\Exception|\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+            Log::error('BPJS Excel Parse Error: ' . $e->getMessage(), [
+                'file'  => basename($filePath),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw new \RuntimeException(
+                'File Excel ini tidak bisa dibaca (struktur file tidak standar — sering terjadi kalau file hasil convert PDF-ke-Excel dari aplikasi pihak ketiga). '
+                . 'Coba upload PDF aslinya langsung, atau buka file ini di Excel/Google Sheets lalu simpan ulang sebagai .xlsx baru sebelum upload.'
+            );
+        }
 
         return ['meta' => $meta, 'rows' => $rows, 'format' => 'excel'];
     }
@@ -343,7 +363,7 @@ class BpjsOfficialBillParserService
         } catch (\RuntimeException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('BPJS PDF Parse Error: ' . $e->getMessage(), [
+            Log::error('BPJS PDF Parse Error: ' . $e->getMessage(), [
                 'file'  => basename($filePath),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -402,7 +422,7 @@ class BpjsOfficialBillParserService
             $pos = strpos($text, $marker);
             if ($pos !== false) {
                 $text = substr($text, 0, $pos);
-                \Log::info('BPJS Parser: teks dipotong di marker "' . $marker . '"', [
+                Log::info('BPJS Parser: teks dipotong di marker "' . $marker . '"', [
                     'remaining_length' => strlen($text),
                 ]);
                 break;
@@ -485,7 +505,7 @@ class BpjsOfficialBillParserService
         // fallback ke range filter eksplisit agar kolom JHT yang besar tidak ikut dibuang.
         $expectedMin = count($niks) * 4; // minimal 4 kolom per karyawan
         if (count($niks) > 0 && count($allNums) < $expectedMin) {
-            \Log::warning('BPJS Parser: angka tidak cukup setelah filter, fallback ke range 5000-250000', [
+            Log::warning('BPJS Parser: angka tidak cukup setelah filter, fallback ke range 5000-250000', [
                 'filtered_count' => count($allNums),
                 'expected_min'   => $expectedMin,
                 'employee_count' => count($niks),
@@ -503,7 +523,7 @@ class BpjsOfficialBillParserService
 
         // ── Step 4b: Validate counts before assembly ──────────────────────────
         if (count($niks) === 0) {
-            \Log::warning('BPJS Parser: tidak ada NIK ditemukan di PDF', [
+            Log::warning('BPJS Parser: tidak ada NIK ditemukan di PDF', [
                 'text_length' => strlen($text),
                 'pdf_preview' => substr($text, 0, 500),
             ]);
@@ -511,7 +531,7 @@ class BpjsOfficialBillParserService
         }
 
         if (count($niks) !== count($names)) {
-            \Log::warning('BPJS Parser: jumlah NIK tidak sama dengan jumlah nama', [
+            Log::warning('BPJS Parser: jumlah NIK tidak sama dengan jumlah nama', [
                 'nik_count'  => count($niks),
                 'name_count' => count($names),
                 'niks'       => $niks,
@@ -526,7 +546,7 @@ class BpjsOfficialBillParserService
         // Validasi total angka vs jumlah kolom yang diharapkan
         $total_numbers = array_sum(array_map('count', $blocks));
         if ($count > 0 && ($total_numbers % $count !== 0)) {
-            \Log::warning('BPJS Parser: total angka tidak habis dibagi jumlah karyawan', [
+            Log::warning('BPJS Parser: total angka tidak habis dibagi jumlah karyawan', [
                 'total_numbers'  => $total_numbers,
                 'employee_count' => $count,
                 'remainder'      => $total_numbers % $count,
@@ -541,15 +561,15 @@ class BpjsOfficialBillParserService
         }
         unset($block);
 
-        \Log::debug('BPJS_DEBUG niks', ['data' => array_slice($niks, 0, 5)]);
-        \Log::debug('BPJS_DEBUG names', ['data' => array_slice($names, 0, 5)]);
-        \Log::debug('BPJS_DEBUG blocks_0', ['data' => array_slice($blocks[0] ?? [], 0, 5)]);
+        Log::debug('BPJS_DEBUG niks', ['data' => array_slice($niks, 0, 5)]);
+        Log::debug('BPJS_DEBUG names', ['data' => array_slice($names, 0, 5)]);
+        Log::debug('BPJS_DEBUG blocks_0', ['data' => array_slice($blocks[0] ?? [], 0, 5)]);
 
         // ── Step 5: Build rows ───────────────────────────────────────────────
         $rows = [];
         for ($idx = 0; $idx < $count; $idx++) {
             if (!isset($niks[$idx]) || !isset($names[$idx])) {
-                \Log::warning('BPJS Parser: idx out of bounds saat assembly', ['idx' => $idx]);
+                Log::warning('BPJS Parser: idx out of bounds saat assembly', ['idx' => $idx]);
                 continue;
             }
 
@@ -575,7 +595,7 @@ class BpjsOfficialBillParserService
             // tersedot ke slot JP karena column-order PDF berbeda) → zero-kan.
             foreach (['iuran_jp_employee', 'iuran_jp_employer'] as $jpField) {
                 if ($row[$jpField] > 0 && $row[$jpField] >= $jhtBase) {
-                    \Log::warning('BPJS Parser: ' . $jpField . ' >= total JHT — misalignment kolom, di-reset 0', [
+                    Log::warning('BPJS Parser: ' . $jpField . ' >= total JHT — misalignment kolom, di-reset 0', [
                         'nik'      => $niks[$idx] ?? 'unknown',
                         'value'    => $row[$jpField],
                         'jht_base' => $jhtBase,
@@ -595,15 +615,28 @@ class BpjsOfficialBillParserService
         return $rows;
     }
 
+    /**
+     * Wrapped 2-3 line names in the PDF's "Nama Tenaga Kerja" column get
+     * extracted as separate lines, inflating $names beyond $targetCount.
+     * Each adjacent pair is scored on how likely line[i] is a *continuation*
+     * of line[i-1] (rather than a new employee's name), and only the
+     * highest-scoring `excess` positions are merged — picked by rank across
+     * the whole page, not "first match wins". This avoids the old fallback
+     * of blindly merging the last two names in the list, which could corrupt
+     * completely unrelated rows when no confident fragment was found.
+     */
     private function mergeFragmentedNames(array $names, int $targetCount): array
     {
         if (count($names) <= $targetCount) {
             return $names;
         }
 
-        \Log::info('BPJS Parser: deteksi fragmentasi nama', [
+        $excess = count($names) - $targetCount;
+
+        Log::info('BPJS Parser: deteksi fragmentasi nama', [
             'raw_count'    => count($names),
             'target_count' => $targetCount,
+            'excess'       => $excess,
             'raw_names'    => $names,
         ]);
 
@@ -621,70 +654,70 @@ class BpjsOfficialBillParserService
             'LUH', 'DESAK', 'SANG',
         ];
 
-        $result        = $names;
-        $maxIterations = count($names) - $targetCount;
+        $scores = [];
+        for ($i = 1; $i < count($names); $i++) {
+            $current       = trim($names[$i]);
+            $previous      = trim($names[$i - 1]);
+            $currentWords  = explode(' ', $current);
+            $previousWords = explode(' ', $previous);
 
-        for ($iter = 0; $iter < $maxIterations; $iter++) {
-            $count  = count($result);
-            $merged = false;
+            $score = 0;
 
-            for ($i = 1; $i < $count; $i++) {
-                $current       = trim($result[$i]);
-                $previous      = trim($result[$i - 1]);
-                $currentWords  = explode(' ', $current);
-                $previousWords = explode(' ', $previous);
+            // Fewer words on the continuation line = stronger signal, since
+            // wrap fragments are usually just the tail end of a long name.
+            $wordCount = count($currentWords);
+            if ($wordCount === 1)      $score += 10;
+            elseif ($wordCount === 2)  $score += 5;
+            elseif ($wordCount === 3)  $score += 2;
 
-                $isFragment = false;
-                $reason     = '';
-
-                // Kondisi 1: current hanya 1 kata
-                if (count($currentWords) === 1) {
-                    $isFragment = true;
-                    $reason     = 'single_word';
-                }
-
-                // Kondisi 2: previous diakhiri connecting word
-                if (! $isFragment) {
-                    $lastWordOfPrevious = strtoupper(end($previousWords));
-                    if (in_array($lastWordOfPrevious, $connectingWords)) {
-                        $isFragment = true;
-                        $reason     = 'connecting_word:' . $lastWordOfPrevious;
-                    }
-                }
-
-                if ($isFragment) {
-                    $mergedName = $previous . ' ' . $current;
-
-                    \Log::info('BPJS Parser: merge fragment', [
-                        'previous' => $previous,
-                        'fragment' => $current,
-                        'result'   => $mergedName,
-                        'reason'   => $reason,
-                    ]);
-
-                    array_splice($result, $i - 1, 2, [$mergedName]);
-                    $merged = true;
-                    break;
-                }
+            $lastWordOfPrevious = strtoupper(end($previousWords));
+            if (in_array($lastWordOfPrevious, $connectingWords, true)) {
+                $score += 8;
             }
 
-            // Tidak ada fragment jelas → fallback: merge dua entry terakhir
-            if (! $merged && count($result) > $targetCount) {
-                $last       = array_pop($result);
-                $secondLast = array_pop($result);
-                $result[]   = $secondLast . ' ' . $last;
-
-                \Log::warning('BPJS Parser: fallback merge (tidak ada fragment jelas)', [
-                    'merged' => $secondLast . ' ' . $last,
-                ]);
+            // Trailing single-letter token (middle initial like "M") is a
+            // strong sign the line is a fragment, not a full standalone name.
+            $lastWordOfCurrent = end($currentWords);
+            if (mb_strlen($lastWordOfCurrent) <= 2) {
+                $score += 3;
             }
 
-            if (count($result) <= $targetCount) {
-                break;
-            }
+            $scores[$i] = $score;
         }
 
-        \Log::info('BPJS Parser: nama setelah merge', [
+        arsort($scores);
+        $mergePositions = array_slice(array_keys($scores), 0, $excess);
+        sort($mergePositions);
+
+        Log::info('BPJS Parser: posisi fragment yang akan digabung', [
+            'positions' => $mergePositions,
+            'scores'    => array_intersect_key($scores, array_flip($mergePositions)),
+        ]);
+
+        // Merge from the highest index down so earlier splices don't shift
+        // positions we haven't processed yet.
+        $result = $names;
+        foreach (array_reverse($mergePositions) as $pos) {
+            $mergedName        = trim($result[$pos - 1] . ' ' . $result[$pos]);
+            $result[$pos - 1]  = $mergedName;
+            array_splice($result, $pos, 1);
+
+            Log::info('BPJS Parser: merge fragment', [
+                'position' => $pos,
+                'result'   => $mergedName,
+                'score'    => $scores[$pos] ?? null,
+            ]);
+        }
+
+        if (count($result) !== $targetCount) {
+            Log::warning('BPJS Parser: jumlah nama setelah merge masih tidak cocok, kemungkinan ada nama yang salah gabung — perlu review manual', [
+                'result_count' => count($result),
+                'target_count' => $targetCount,
+                'result'       => $result,
+            ]);
+        }
+
+        Log::info('BPJS Parser: nama setelah merge', [
             'count'  => count($result),
             'result' => $result,
         ]);
@@ -713,7 +746,7 @@ class BpjsOfficialBillParserService
             $trimmed       = array_slice($numbers, 0, $total - $remainder);
             $removedValues = array_slice($numbers, $total - $remainder);
 
-            \Log::info('BPJS Parser: trim grand total dari akhir', [
+            Log::info('BPJS Parser: trim grand total dari akhir', [
                 'removed_count'  => $remainder,
                 'removed_values' => $removedValues,
             ]);
@@ -744,7 +777,7 @@ class BpjsOfficialBillParserService
 
             $removed = $before - count($result);
             if ($removed > 0) {
-                \Log::info('BPJS Parser: hapus outlier grand total', [
+                Log::info('BPJS Parser: hapus outlier grand total', [
                     'removed_count' => $removed,
                     'threshold'     => $threshold,
                     'median'        => $median,
