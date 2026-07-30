@@ -371,6 +371,46 @@ class BpjsReconciliationController extends Controller
         ]);
     }
 
+    // ── Gabung nama ke baris sebelumnya, lalu hapus baris ini (AJAX POST) ────
+    // Untuk kasus baris "hantu": nama yang patah 2 baris di PDF gagal digabung
+    // otomatis saat parsing, sehingga jadi baris tersendiri dengan NIK yang
+    // sebenarnya milik baris di bawahnya. Menukar NIK saja tidak cukup di sini
+    // — jumlah barisnya sendiri yang kelebihan satu. Aksi ini menempelkan nama
+    // baris ini ke akhir nama baris sebelumnya, lalu menghapus baris ini,
+    // supaya seluruh baris di bawahnya otomatis "naik" satu posisi.
+
+    public function mergeRowUp(Request $request, BpjsOfficialBillRow $row)
+    {
+        $previous = BpjsOfficialBillRow::where('bill_id', $row->bill_id)
+            ->where('id', '<', $row->id)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (! $previous) {
+            return response()->json(['success' => false, 'message' => 'Tidak ada baris di atasnya.'], 422);
+        }
+
+        $mergedName = trim($previous->nama . ' ' . $row->nama);
+
+        DB::transaction(function () use ($previous, $row, $mergedName) {
+            $previous->update(['nama' => $mergedName]);
+
+            $bill = BpjsOfficialBill::find($row->bill_id);
+            if ($bill) {
+                $bill->decrement('total_rows_parsed');
+                $bill->decrement('total_iuran_official', $row->total_iuran);
+            }
+
+            $row->delete();
+        });
+
+        return response()->json([
+            'success'       => true,
+            'previous_id'   => $previous->id,
+            'previous_nama' => $mergedName,
+        ]);
+    }
+
     // ── Tukar NIK dengan baris sebelum/sesudahnya (AJAX POST) ───────────────
     // Cara cepat memperbaiki pergeseran nama/NIK akibat baris nama yang patah
     // di PDF — daripada mengetik ulang 16 digit NIK secara manual, user cukup

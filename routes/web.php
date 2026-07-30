@@ -344,6 +344,8 @@ Route::middleware(['auth'])->group(function () {
                         ->name('rows.update-nik')->middleware('permission:finance.import');
                     Route::post('/rows/{row}/swap-nik', [BpjsReconciliationController::class, 'swapRowNik'])
                         ->name('rows.swap-nik')->middleware('permission:finance.import');
+                    Route::post('/rows/{row}/merge-up', [BpjsReconciliationController::class, 'mergeRowUp'])
+                        ->name('rows.merge-up')->middleware('permission:finance.import');
                     Route::post('/{bill}/reparse', [BpjsReconciliationController::class, 'reparse'])
                         ->name('reparse')->middleware('permission:finance.import');
                     Route::get('/{bill}/cross-billing', [BpjsReconciliationController::class, 'crossBilling'])

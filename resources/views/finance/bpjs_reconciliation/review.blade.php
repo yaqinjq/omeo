@@ -94,27 +94,37 @@
 
                     {{-- Nama: inline editable --}}
                     <td class="px-4 py-2.5">
-                        <div class="nama-cell"
-                             data-id="{{ $row->id }}"
-                             data-original="{{ $row->nama }}"
-                             style="cursor:pointer; padding:5px 8px;
-                                    border-radius:6px; border:2px solid transparent;
-                                    display:inline-flex; align-items:center; gap:4px;
-                                    max-width:100%;
-                                    {{ $row->warning === 'fragment' ? 'background:#FEF9C3; border-color:#F59E0B;' : '' }}
-                                    {{ $row->warning === 'total'    ? 'background:#FEE2E2; border-color:#EF4444;' : '' }}"
-                             title="Klik untuk edit">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div class="nama-cell"
+                                 data-id="{{ $row->id }}"
+                                 data-original="{{ $row->nama }}"
+                                 style="cursor:pointer; padding:5px 8px;
+                                        border-radius:6px; border:2px solid transparent;
+                                        display:inline-flex; align-items:center; gap:4px;
+                                        max-width:100%;
+                                        {{ $row->warning === 'fragment' ? 'background:#FEF9C3; border-color:#F59E0B;' : '' }}
+                                        {{ $row->warning === 'total'    ? 'background:#FEE2E2; border-color:#EF4444;' : '' }}"
+                                 title="Klik untuk edit">
 
-                            @if($row->warning)
-                            <span title="{{ $row->warning === 'fragment'
-                                           ? 'Nama hanya 1 kata — kemungkinan terpotong'
-                                           : 'Total iuran tidak wajar — kemungkinan grand total tersedot' }}">
-                                ⚠️
-                            </span>
+                                @if($row->warning)
+                                <span title="{{ $row->warning === 'fragment'
+                                               ? 'Nama hanya 1 kata — kemungkinan terpotong'
+                                               : 'Total iuran tidak wajar — kemungkinan grand total tersedot' }}">
+                                    ⚠️
+                                </span>
+                                @endif
+
+                                <span class="nama-text font-medium text-slate-800">{{ $row->nama }}</span>
+                                <span class="edit-hint text-slate-300 text-xs">✏️</span>
+                            </div>
+
+                            @if($row->warning === 'fragment')
+                            <button type="button" class="merge-up-btn" data-id="{{ $row->id }}"
+                                    title="Gabung nama ini ke baris di atasnya, lalu hapus baris ini (untuk nama yang patah 2 baris di PDF)"
+                                    style="font-size:10px; padding:3px 8px; border:1px solid #F59E0B; border-radius:6px; background:#FFFBEB; color:#92400E; cursor:pointer; white-space:nowrap;">
+                                🔗 Gabung ke atas
+                            </button>
                             @endif
-
-                            <span class="nama-text font-medium text-slate-800">{{ $row->nama }}</span>
-                            <span class="edit-hint text-slate-300 text-xs">✏️</span>
                         </div>
                     </td>
 
@@ -311,6 +321,37 @@ document.querySelectorAll('.nik-cell').forEach(function(cell) {
             if (e.key === 'Enter')  { e.preventDefault(); this.blur(); }
             if (e.key === 'Escape') { this.dataset.original = current; this.blur(); }
         });
+    });
+});
+
+// ── Gabung nama ke baris atas (untuk baris "hantu" hasil nama patah) ───────
+document.querySelectorAll('.merge-up-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const rowId = this.dataset.id;
+
+        if (!confirm('Gabung nama baris ini ke baris di atasnya, lalu HAPUS baris ini? Semua baris di bawahnya akan naik satu posisi. Tindakan ini tidak bisa dibatalkan.')) {
+            return;
+        }
+
+        fetch(`/finance/bpjs-reconciliation/rows/${rowId}/merge-up`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.message || 'Gagal menggabung baris.');
+                return;
+            }
+            // Reload supaya nomor urut, status warning, dan total baris di
+            // header ikut ter-update konsisten dari server.
+            window.location.reload();
+        })
+        .catch(() => alert('Gagal menggabung baris, coba lagi.'));
     });
 });
 
