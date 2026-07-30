@@ -120,7 +120,7 @@
 
                             @if($row->warning === 'fragment')
                             <button type="button" class="merge-up-btn" data-id="{{ $row->id }}"
-                                    title="Gabung nama ini ke baris di atasnya, lalu hapus baris ini (untuk nama yang patah 2 baris di PDF)"
+                                    title="Gabung nama ini ke baris di atasnya, lalu geser nama baris di bawahnya naik satu (NIK/Total tidak berubah) — untuk nama yang patah 2 baris di PDF"
                                     style="font-size:10px; padding:3px 8px; border:1px solid #F59E0B; border-radius:6px; background:#FFFBEB; color:#92400E; cursor:pointer; white-space:nowrap;">
                                 🔗 Gabung ke atas
                             </button>
@@ -329,7 +329,7 @@ document.querySelectorAll('.merge-up-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         const rowId = this.dataset.id;
 
-        if (!confirm('Gabung nama baris ini ke baris di atasnya, lalu HAPUS baris ini? Semua baris di bawahnya akan naik satu posisi. Tindakan ini tidak bisa dibatalkan.')) {
+        if (!confirm('Gabung nama baris ini ke baris di atasnya? Kolom Nama di semua baris di bawahnya akan naik satu posisi (seperti geser sel di Excel) — NIK, Total Iuran, dan baris itu sendiri TIDAK dihapus/berubah. Baris paling akhir akan kosong dan perlu diisi manual. Tindakan ini tidak bisa dibatalkan otomatis.')) {
             return;
         }
 

@@ -371,13 +371,15 @@ class BpjsReconciliationController extends Controller
         ]);
     }
 
-    // ── Gabung nama ke baris sebelumnya, lalu hapus baris ini (AJAX POST) ────
+    // ── Gabung nama ke baris sebelumnya, geser kolom Nama saja (AJAX POST) ───
     // Untuk kasus baris "hantu": nama yang patah 2 baris di PDF gagal digabung
-    // otomatis saat parsing, sehingga jadi baris tersendiri dengan NIK yang
-    // sebenarnya milik baris di bawahnya. Menukar NIK saja tidak cukup di sini
-    // — jumlah barisnya sendiri yang kelebihan satu. Aksi ini menempelkan nama
-    // baris ini ke akhir nama baris sebelumnya, lalu menghapus baris ini,
-    // supaya seluruh baris di bawahnya otomatis "naik" satu posisi.
+    // otomatis saat parsing, sehingga jadi baris tersendiri. NIK/Total/Status
+    // tiap baris SUDAH BENAR dan TIDAK BOLEH ikut bergeser atau terhapus —
+    // yang salah cuma kolom Nama-nya. Jadi aksi ini persis seperti "Delete
+    // Cell, Shift Up" di Excel tapi hanya untuk kolom Nama: nama baris ini
+    // ditempel ke baris sebelumnya, lalu semua nama di bawahnya naik satu,
+    // baris paling akhir kosong (perlu diisi manual). Tidak ada baris yang
+    // dihapus, jumlah baris tetap sama seperti sebelumnya.
 
     public function mergeRowUp(Request $request, BpjsOfficialBillRow $row)
     {
@@ -392,16 +394,25 @@ class BpjsReconciliationController extends Controller
 
         $mergedName = trim($previous->nama . ' ' . $row->nama);
 
-        DB::transaction(function () use ($previous, $row, $mergedName) {
+        // Semua baris dari baris ini sampai akhir tagihan, urut — dipakai
+        // untuk menggeser kolom Nama saja tanpa menyentuh NIK/Total/Status.
+        $rowsFromHere = BpjsOfficialBillRow::where('bill_id', $row->bill_id)
+            ->where('id', '>=', $row->id)
+            ->orderBy('id')
+            ->get(['id', 'nama']);
+
+        DB::transaction(function () use ($previous, $mergedName, $rowsFromHere) {
             $previous->update(['nama' => $mergedName]);
 
-            $bill = BpjsOfficialBill::find($row->bill_id);
-            if ($bill) {
-                $bill->decrement('total_rows_parsed');
-                $bill->decrement('total_iuran_official', $row->total_iuran);
-            }
+            $ids   = $rowsFromHere->pluck('id')->values();
+            $namas = $rowsFromHere->pluck('nama')->values();
 
-            $row->delete();
+            for ($i = 0; $i < $ids->count() - 1; $i++) {
+                BpjsOfficialBillRow::where('id', $ids[$i])->update(['nama' => $namas[$i + 1]]);
+            }
+            // Baris paling akhir di tagihan: tidak ada lagi nama di bawahnya
+            // untuk digeser naik — dikosongkan supaya jelas perlu diisi manual.
+            BpjsOfficialBillRow::where('id', $ids->last())->update(['nama' => '']);
         });
 
         return response()->json([
