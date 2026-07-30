@@ -306,6 +306,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('appraisals/report/employee/{employeeId}', [AppraisalController::class, 'reportEmployee'])->name('appraisals.report-employee')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/signer', [AppraisalController::class, 'saveSigner'])->name('appraisals.report-employee.save-signer')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/sign', [AppraisalController::class, 'saveSignature'])->name('appraisals.report-employee.sign')->whereNumber('employeeId');
+        Route::post('appraisals/report/employee/{employeeId}/extend-due-date-bulk', [AppraisalController::class, 'extendDueDateBulk'])->name('appraisals.report-employee.extend-due-date-bulk')->whereNumber('employeeId');
         Route::get('appraisals/export-report', [AppraisalController::class, 'exportReport'])->name('appraisals.export-report');
         Route::get('appraisals/export-bulk-pdf', [AppraisalController::class, 'exportBulkPdf'])->name('appraisals.export-bulk-pdf');
         Route::match(['get','post'], 'appraisals/export-employee-pdf/{employeeId}', [AppraisalController::class, 'exportEmployeePdf'])->name('appraisals.export-employee-pdf')->whereNumber('employeeId');
@@ -320,6 +321,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('appraisals/{appraisal}/approve', [AppraisalController::class, 'approve'])->whereNumber('appraisal')->name('appraisals.approve');
         Route::post('appraisals/{appraisal}/remind', [AppraisalController::class, 'remind'])->whereNumber('appraisal')->name('appraisals.remind');
         Route::post('appraisals/{appraisal}/extend-due-date', [AppraisalController::class, 'extendDueDate'])->whereNumber('appraisal')->name('appraisals.extend-due-date');
+        Route::post('appraisals/{appraisal}/toggle-include-in-score', [AppraisalController::class, 'toggleIncludeInScore'])->whereNumber('appraisal')->name('appraisals.toggle-include-in-score');
+        Route::post('appraisals/{appraisal}/request-edit', [AppraisalController::class, 'requestEdit'])->whereNumber('appraisal')->name('appraisals.request-edit');
+        Route::post('appraisal-edit-requests/{editRequest}/approve', [AppraisalController::class, 'approveEditRequest'])->whereNumber('editRequest')->name('appraisal-edit-requests.approve');
+        Route::post('appraisal-edit-requests/{editRequest}/reject', [AppraisalController::class, 'rejectEditRequest'])->whereNumber('editRequest')->name('appraisal-edit-requests.reject');
         Route::post('appraisals/{appraisal}/assign', [AppraisalController::class, 'assign'])->whereNumber('appraisal')->name('appraisals.assign');
         Route::get('appraisals/{appraisal}/print', [AppraisalController::class, 'print'])->whereNumber('appraisal')->name('appraisals.print');
 

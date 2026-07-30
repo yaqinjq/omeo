@@ -74,6 +74,32 @@
     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Trigger Appraisal</div><div class="mt-2 text-lg font-bold text-slate-900">{{ str_replace('_', ' ', ucfirst((string) ($appraisal->trigger_source ?? 'period_legacy'))) }}</div><div class="mt-1 text-xs text-slate-500">{{ $appraisal->trigger_reason ?: 'Mengikuti assignment appraisal yang berjalan.' }}</div></div>
   </div>
 
+  @if($isEvaluator && $appraisal->status === 'approved')
+    @if($approvedUnusedEditRequest)
+      <div class="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        ✅ Permintaan edit Anda sudah disetujui HRD. Silakan edit penilaian di bawah, lalu kirim ulang sebelum due date{{ $appraisal->due_date ? ' ('.$appraisal->due_date->format('d-m-Y').')' : '' }}.
+      </div>
+    @elseif($pendingEditRequest)
+      <div class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        ⏳ Permintaan edit Anda ({{ $pendingEditRequest->created_at->format('d-m-Y H:i') }}) masih menunggu persetujuan HRD.
+      </div>
+    @else
+      <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div class="text-sm text-slate-700">Appraisal ini sudah disetujui HRD dan tidak bisa diubah langsung. Salah isi nilai? Ajukan izin edit ke HRD (sisa jatah: {{ max(0, \App\Models\AppraisalEditRequest::MAX_APPROVED_PER_APPRAISAL - $editRequestsApprovedCount) }}x).</div>
+        @if($editRequestsApprovedCount < \App\Models\AppraisalEditRequest::MAX_APPROVED_PER_APPRAISAL)
+          <details class="mt-2">
+            <summary class="cursor-pointer text-xs font-medium text-indigo-600 hover:text-indigo-800">Ajukan Edit Penilaian</summary>
+            <form method="POST" action="{{ route('appraisals.request-edit', $appraisal) }}" class="mt-3 max-w-md space-y-2">
+              @csrf
+              <textarea name="reason" required rows="2" placeholder="Alasan minta edit ulang, contoh: salah pilih skor bintang" class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm">{{ old('reason') }}</textarea>
+              <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">Kirim Permintaan</button>
+            </form>
+          </details>
+        @endif
+      </div>
+    @endif
+  @endif
+
   <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
     <div class="space-y-6 xl:col-span-2">
       <div class="card p-6">

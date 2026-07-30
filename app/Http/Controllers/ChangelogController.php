@@ -19,6 +19,21 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.10',
+                'date'    => '30 Juli 2026',
+                'label'   => 'Appraisal: Monitoring per Karyawan, Koreksi Nilai, Print Out PDF',
+                'color'   => '#0891B2',
+                'items'   => [
+                    'Command backfill: histori appraisal lama otomatis dikonversi ke klasifikasi 6-tingkat baru (Outstanding/dst)',
+                    'Fix tombol "Print Out" di Laporan Appraisal per karyawan — sekarang buka file PDF rapi (sama seperti Export PDF) di tab baru, bukan cetak halaman HTML mentah',
+                    'Redesign halaman Monitoring Appraisal: 1 baris = 1 karyawan (gabungan semua evaluator), progress ditampilkan sebagai "X/Y evaluator submit", klik Detail untuk kelola per evaluator',
+                    'Filter baru di Monitoring: nama/jabatan/NIK, departemen, status agregat (Selesai Semua/Sebagian/Belum Ada), due date terlewat, jenis trigger',
+                    'Fitur baru: HRD bisa perpanjang due date untuk semua evaluator satu karyawan sekaligus (bukan cuma satu-satu) dari halaman Laporan Appraisal per karyawan',
+                    'Fitur baru: HRD bisa exclude penilaian evaluator tertentu dari perhitungan rata-rata gabungan (misal evaluator salah kasih nilai), tanpa hapus datanya, bisa di-include lagi kapan saja',
+                    'Fitur baru: evaluator bisa ajukan izin edit ulang penilaian yang sudah di-approve HRD (wajib isi alasan), HRD approve/reject, maksimal 2x per appraisal, dibatasi due date, dengan reminder ke kedua sisi',
+                ],
+            ],
+            [
                 'version' => 'v3.3.9',
                 'date'    => '30 Juli 2026',
                 'label'   => 'Appraisal: Perpanjang Due Date, Skor Gaya IPK, Template Kriteria per Kategori',
@@ -478,6 +493,19 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '30 Juli 2026',
+                'title'   => 'Appraisal: Monitoring per Karyawan, Koreksi Nilai, Print Out PDF (v3.3.10)',
+                'summary' => 'Lanjutan masukan HRD atas modul appraisal. Halaman Monitoring sekarang dikelompokkan per karyawan (bukan per evaluator lagi) sehingga HRD lebih cepat lihat progress — misalnya "3/5 evaluator submit" dalam satu baris, lengkap dengan filter departemen, status, dan due date terlewat. Tombol "Print Out" yang sebelumnya mencetak halaman web mentah sekarang membuka file PDF rapi. Yang paling penting: HRD sekarang punya dua cara menangani evaluator yang salah kasih nilai — bisa langsung "exclude" dari perhitungan tanpa hapus data, atau evaluator sendiri bisa minta izin edit ulang (maksimal 2x, harus disetujui HRD, dengan reminder ke kedua pihak). Data appraisal lama juga sudah dikonversi otomatis ke label klasifikasi baru.',
+                'access'  => 'Appraisal HRD → Monitoring Appraisal (grouping baru) | Laporan Appraisal → Detail Karyawan → tombol Exclude/Perpanjang Due Date/Approve Edit Request',
+                'howto'   => [
+                    'Monitoring: gunakan filter departemen/status/due date terlewat untuk cari karyawan yang perlu ditindaklanjuti, klik "Detail" untuk lihat per evaluator',
+                    'Exclude nilai salah: buka Laporan Appraisal → Detail Karyawan, klik "Exclude" di bawah nama evaluator yang nilainya salah — nilai itu langsung tidak ikut dihitung rata-rata',
+                    'Approve edit ulang: kalau evaluator sudah mengajukan izin edit, akan muncul panel kuning di atas halaman Detail Karyawan — klik Setujui/Tolak',
+                    'Perpanjang due date massal: buka Detail Karyawan, klik "Perpanjang Due Date — Semua Evaluator"',
+                ],
+                'stats'   => '✅ Monitoring di-redesign (grouping per karyawan) | Fitur baru: Exclude Nilai, Request Edit (maks 2x), Perpanjang Due Date Massal | Bug diperbaiki: Print Out | File diubah/baru: 10',
+            ],
             [
                 'date'    => '30 Juli 2026',
                 'title'   => 'Appraisal: Perpanjang Due Date, Skor Gaya IPK, Template Kriteria per Kategori (v3.3.9)',

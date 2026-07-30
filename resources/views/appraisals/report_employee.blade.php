@@ -43,6 +43,49 @@
     </div>
     @endif
 
+    @if(in_array((string) auth()->user()->role, ['admin','hrd'], true) && $pendingEditRequests->isNotEmpty())
+    <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:700; color:#92400E; margin-bottom:8px;">&#9203; Permintaan Edit Penilaian Menunggu Persetujuan</div>
+        @foreach($pendingEditRequests as $appraisalId => $req)
+            @php $evalNum = $evaluatorNumber[$appraisalId] ?? '?'; @endphp
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid #FEF3C7;">
+                <div style="font-size:12px; color:#78350F;">
+                    <b>Evaluator {{ $evalNum }}</b> ({{ $req->requestedBy?->name ?? '-' }}) &mdash; {{ $req->reason }}
+                    <span style="color:#B45309;">&middot; {{ $req->created_at->format('d-m-Y H:i') }}</span>
+                </div>
+                <div style="display:flex; gap:6px; flex-shrink:0;">
+                    <form method="POST" action="{{ route('appraisal-edit-requests.approve', $req) }}">
+                        @csrf
+                        <button type="submit" style="font-size:11px; background:#059669; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer;">Setujui</button>
+                    </form>
+                    <form method="POST" action="{{ route('appraisal-edit-requests.reject', $req) }}">
+                        @csrf
+                        <button type="submit" style="font-size:11px; background:#DC2626; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer;">Tolak</button>
+                    </form>
+                </div>
+            </div>
+        @endforeach
+    </div>
+    @endif
+
+    @if(in_array((string) auth()->user()->role, ['admin','hrd'], true))
+    <details style="background:white; border:1px solid #E2E8F0; border-radius:10px; padding:12px 18px; margin-bottom:16px;">
+        <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#1D4ED8;">Perpanjang Due Date — Semua Evaluator</summary>
+        <form method="POST" action="{{ route('appraisals.report-employee.extend-due-date-bulk', $employee->id) }}" style="margin-top:10px; max-width:420px; display:flex; flex-direction:column; gap:8px;">
+            @csrf
+            <div>
+                <label style="display:block; font-size:11px; color:#64748B; margin-bottom:3px;">Due date baru (berlaku untuk semua evaluator yang belum approved)</label>
+                <input type="date" name="new_due_date" required style="width:100%; border:1px solid #CBD5E1; border-radius:6px; padding:6px 8px; font-size:13px;">
+            </div>
+            <div>
+                <label style="display:block; font-size:11px; color:#64748B; margin-bottom:3px;">Alasan</label>
+                <textarea name="reason" required rows="2" style="width:100%; border:1px solid #CBD5E1; border-radius:6px; padding:6px 8px; font-size:13px;"></textarea>
+            </div>
+            <button type="submit" style="font-size:12px; background:#1D4ED8; color:white; border:none; padding:7px 14px; border-radius:6px; cursor:pointer; align-self:flex-start;">Simpan untuk Semua Evaluator</button>
+        </form>
+    </details>
+    @endif
+
     {{-- ── INFO BAR ── --}}
     @php
         $sigCount   = $sigBatch?->signedCount() ?? 0;
@@ -221,9 +264,20 @@
                         <tr style="background:#1e3a8a; color:white;">
                             <th style="padding:10px 14px; text-align:left; font-weight:600; min-width:200px;">Kriteria Penilaian</th>
                             @foreach($chunk as $a)
-                            <th style="padding:10px 10px; text-align:center; font-weight:600; min-width:90px; white-space:nowrap;">
+                            <th style="padding:10px 10px; text-align:center; font-weight:600; min-width:90px; white-space:nowrap; {{ !$a->included_in_score ? 'opacity:.5;' : '' }}">
                                 {{ $a->appraiser?->name ?? 'Evaluator' }}<br>
                                 <span style="font-size:9px; opacity:.7;">(Eval {{ $evaluatorNumber[$a->id] }})</span>
+                                @if(!$a->included_in_score)
+                                    <br><span style="font-size:9px; background:#FEE2E2; color:#991B1B; padding:1px 6px; border-radius:99px;">Dikecualikan</span>
+                                @endif
+                                @if(in_array((string) auth()->user()->role, ['admin','hrd'], true))
+                                <form method="POST" action="{{ route('appraisals.toggle-include-in-score', $a) }}" style="margin-top:4px;">
+                                    @csrf
+                                    <button type="submit" style="font-size:9px; background:{{ $a->included_in_score ? '#FEF2F2' : '#F0FDF4' }}; color:{{ $a->included_in_score ? '#B91C1C' : '#15803D' }}; border:1px solid {{ $a->included_in_score ? '#FECACA' : '#BBF7D0' }}; border-radius:6px; padding:2px 6px; cursor:pointer;">
+                                        {{ $a->included_in_score ? 'Exclude' : 'Include lagi' }}
+                                    </button>
+                                </form>
+                                @endif
                             </th>
                             @endforeach
                             <th style="padding:10px 10px; text-align:center; font-weight:600; min-width:75px; background:#1e40af;">Rata-rata</th>
@@ -241,7 +295,7 @@
                             <td style="padding:8px 14px; color:#374151; border-bottom:1px solid #F1F5F9;">{{ $mRow['label'] }}</td>
                             @foreach($chunk as $a)
                             @php $s = $mRow['scores'][$a->id] ?? null; @endphp
-                            <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #F1F5F9;
+                            <td style="padding:8px 10px; text-align:center; border-bottom:1px solid #F1F5F9; {{ !$a->included_in_score ? 'opacity:.4;' : '' }}
                                        {{ $s !== null && $s >= 4 ? 'color:#166534;' : ($s !== null && $s <= 2 ? 'color:#991B1B;' : 'color:#374151;') }}">
                                 {{ $s !== null ? $s : '—' }}
                             </td>
@@ -256,7 +310,7 @@
                             <td style="padding:9px 14px; font-weight:700; color:#1e3a8a; font-size:12px;">RATA-RATA PER EVALUATOR</td>
                             @foreach($chunk as $a)
                             @php $ea = $evalAvgs[$a->id] ?? null; @endphp
-                            <td style="padding:9px 10px; text-align:center; font-weight:700;
+                            <td style="padding:9px 10px; text-align:center; font-weight:700; {{ !$a->included_in_score ? 'opacity:.4;' : '' }}
                                        {{ $ea !== null && $ea >= 3.5 ? 'color:#166534;' : ($ea !== null && $ea < 2.5 ? 'color:#991B1B;' : 'color:#1e3a8a;') }}">
                                 {{ $ea !== null ? number_format($ea, 2) : '—' }}
                             </td>
@@ -412,9 +466,11 @@
                 </div>
 
                 {{-- Export Buttons --}}
+                <input type="hidden" name="download" id="pdfDownloadFlag" value="1">
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button type="submit"
                             formaction="{{ route('appraisals.export-employee-pdf', $employee->id) }}"
+                            onclick="document.getElementById('pdfDownloadFlag').value='1'"
                             style="background:#DC2626; color:white; border:none; padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                         &#x2B07; Export PDF
                     </button>
@@ -428,7 +484,11 @@
                             title="Library DOC belum tersedia">
                         &#x2B07; Export DOC
                     </button>
-                    <button type="button" onclick="window.print()"
+                    <button type="submit"
+                            formaction="{{ route('appraisals.export-employee-pdf', $employee->id) }}"
+                            formtarget="_blank"
+                            onclick="document.getElementById('pdfDownloadFlag').value='0'"
+                            title="Buka preview PDF di tab baru, lalu print dari sana"
                             style="background:#475569; color:white; border:none; padding:9px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                         &#x1F5A8; Print Out
                     </button>

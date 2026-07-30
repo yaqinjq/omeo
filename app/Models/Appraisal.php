@@ -43,6 +43,7 @@ class Appraisal extends Model
         'migration_source',
         'migration_legacy_id',
         'migrated_at',
+        'included_in_score',
     ];
 
     protected $casts = [
@@ -57,6 +58,7 @@ class Appraisal extends Model
         'enable_skill_component'   => 'boolean',
         'enable_position_component' => 'boolean',
         'enable_kpi_component'     => 'boolean',
+        'included_in_score'        => 'boolean',
     ];
 
     public function period() { return $this->belongsTo(AppraisalPeriod::class, 'appraisal_period_id'); }
@@ -66,5 +68,6 @@ class Appraisal extends Model
     public function details() { return $this->hasMany(AppraisalDetail::class, 'appraisal_id'); }
     public function componentScores() { return $this->hasMany(AppraisalComponentScore::class, 'appraisal_id'); }
     public function invitationLogs() { return $this->hasMany(AppraisalInvitationLog::class, 'appraisal_id')->latest('id'); }
+    public function editRequests() { return $this->hasMany(AppraisalEditRequest::class, 'appraisal_id')->latest('id'); }
 }
 

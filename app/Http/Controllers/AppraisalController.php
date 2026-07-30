@@ -6,6 +6,7 @@ use App\Models\AppSetting;
 use App\Models\Appraisal;
 use App\Models\AppraisalBatchSignature;
 use App\Models\AppraisalDetail;
+use App\Models\AppraisalEditRequest;
 use App\Models\AppraisalIndicator;
 use App\Models\AppraisalInvitationLog;
 use App\Models\AppraisalWeightConfig;
@@ -276,6 +277,10 @@ class AppraisalController extends Controller
         $safeName = preg_replace('/[^A-Za-z0-9_-]/', '_', $data['employee']->full_name);
         $filename = "Laporan_Appraisal_{$safeName}_" . now()->format('Ymd') . '.pdf';
 
+        if (! $request->boolean('download', true)) {
+            return $pdf->stream($filename);
+        }
+
         return $pdf->download($filename);
     }
 
@@ -489,11 +494,13 @@ class AppraisalController extends Controller
             ->unique()->sort()->values();
         $indicators = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('id')->get();
 
-        $matrix = $indicators->map(function ($ind) use ($appraisals) {
+        $includedIds = $appraisals->where('included_in_score', true)->pluck('id');
+
+        $matrix = $indicators->map(function ($ind) use ($appraisals, $includedIds) {
             $scores = $appraisals->mapWithKeys(fn ($a) => [
                 $a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->score,
             ]);
-            $validScores = $scores->filter(fn ($s) => $s !== null);
+            $validScores = $scores->filter(fn ($s, $appraisalId) => $s !== null && $includedIds->contains($appraisalId));
             return [
                 'label'  => $ind->question,
                 'scores' => $scores->toArray(),
@@ -506,7 +513,9 @@ class AppraisalController extends Controller
             return [$a->id => $scores->isNotEmpty() ? round($scores->avg(), 2) : null];
         })->toArray();
 
-        $overallAvg      = collect($evalAvgs)->filter()->average();
+        $overallAvg = collect($evalAvgs)
+            ->filter(fn ($avg, $appraisalId) => $avg !== null && $includedIds->contains($appraisalId))
+            ->average();
         $overallAvg      = $overallAvg ? round((float) $overallAvg, 2) : null;
         $evaluatorNumber = $appraisals->mapWithKeys(fn ($a, $idx) => [$a->id => $idx + 1])->toArray();
 
@@ -558,11 +567,28 @@ class AppraisalController extends Controller
             ? ($appraisals->first()?->period?->name ?? $periods->firstWhere('id', $periodId)?->name ?? 'Semua Periode')
             : 'Semua Periode';
 
+        $pendingEditRequests = Schema::hasTable('appraisal_edit_requests')
+            ? AppraisalEditRequest::whereIn('appraisal_id', $appraisals->pluck('id'))
+                ->where('status', 'pending')
+                ->with('requestedBy:id,name')
+                ->get()
+                ->keyBy('appraisal_id')
+            : collect();
+
+        $editRequestCounts = Schema::hasTable('appraisal_edit_requests')
+            ? AppraisalEditRequest::whereIn('appraisal_id', $appraisals->pluck('id'))
+                ->where('status', 'approved')
+                ->get()
+                ->groupBy('appraisal_id')
+                ->map->count()
+            : collect();
+
         return view('appraisals.report_employee', compact(
             'employee', 'appraisals', 'matrix', 'evalAvgs', 'overallAvg',
             'evaluatorNumber', 'narratives', 'consensusStatus', 'latestAppraisal',
             'sigBatch', 'periods', 'allUsers',
-            'periodId', 'periodName', 'dateFrom', 'dateTo', 'dateMin', 'dateMax'
+            'periodId', 'periodName', 'dateFrom', 'dateTo', 'dateMin', 'dateMax',
+            'pendingEditRequests', 'editRequestCounts'
         ));
     }
 
@@ -779,23 +805,94 @@ class AppraisalController extends Controller
         };
     }
 
-    public function index()
+    public function index(Request $request)
     {
         if (!Schema::hasTable('appraisals')) {
             return view('appraisals.index', [
-                'appraisals' => $this->emptyPaginator(15),
+                'paginator' => $this->emptyPaginator(15),
                 'moduleWarning' => 'Tabel appraisal belum tersedia di environment ini. Halaman dibuka dengan mode aman.',
+                'departments' => collect(), 'search' => null, 'departmentId' => null,
+                'aggStatus' => null, 'overdueOnly' => false, 'triggerSource' => null,
             ]);
         }
 
-        $appraisals = Appraisal::query()
-            ->with(['employee', 'period', 'appraiser:id,name'])
-            ->orderByRaw("CASE status WHEN 'draft' THEN 1 WHEN 'submitted' THEN 2 WHEN 'approved' THEN 3 ELSE 4 END")
-            ->orderByRaw(Schema::hasColumn('appraisals', 'due_date') ? 'due_date asc' : 'id desc')
-            ->orderByDesc('id')
-            ->paginate(15);
+        $search        = trim((string) $request->input('search', ''));
+        $departmentId  = $request->input('department_id');
+        $aggStatus     = $request->input('agg_status');
+        $overdueOnly   = $request->boolean('overdue_only');
+        $triggerSource = $request->input('trigger_source');
 
-        return view('appraisals.index', compact('appraisals'));
+        $allAppraisals = Appraisal::query()
+            ->with(['employee:id,full_name,employee_number,jabatan,department_id', 'employee.department:id,name', 'period:id,name', 'appraiser:id,name'])
+            ->when($search, fn ($q) => $q->whereHas('employee', fn ($eq) =>
+                $eq->where('full_name', 'like', "%{$search}%")
+                   ->orWhere('jabatan', 'like', "%{$search}%")
+                   ->orWhere('employee_number', 'like', "%{$search}%")
+            ))
+            ->when($departmentId, fn ($q) => $q->whereHas('employee', fn ($eq) => $eq->where('department_id', $departmentId)))
+            ->when($triggerSource, fn ($q) => $q->where('trigger_source', $triggerSource))
+            ->orderBy('employee_id')
+            ->orderBy('id')
+            ->get();
+
+        $groupedAll = $allAppraisals->groupBy('employee_id')
+            ->map(function ($items, $empId) {
+                $emp = $items->first()->employee;
+
+                $total          = $items->count();
+                $submittedTotal = $items->whereIn('status', ['submitted', 'approved'])->count();
+                $draftCount     = $items->where('status', 'draft')->count();
+                $approvedCount  = $items->where('status', 'approved')->count();
+
+                $aggStatus = $submittedTotal === $total
+                    ? 'complete'
+                    : ($submittedTotal > 0 ? 'partial' : 'none');
+
+                $pendingDueDates = $items->where('status', '!=', 'approved')->pluck('due_date')->filter();
+                $nearestDueDate  = $pendingDueDates->sort()->first();
+                $isOverdue       = $nearestDueDate && $nearestDueDate->isPast();
+
+                return (object) [
+                    'employee_id'      => $empId,
+                    'employee_name'    => $emp?->full_name ?? '-',
+                    'employee_number'  => $emp?->employee_number ?? '-',
+                    'jabatan'          => $emp?->jabatan ?? '-',
+                    'department_name'  => $emp?->department?->name ?? '-',
+                    'period_name'      => $items->sortByDesc('id')->first()->period?->name ?? '-',
+                    'total'            => $total,
+                    'submitted_total'  => $submittedTotal,
+                    'draft_count'      => $draftCount,
+                    'approved_count'   => $approvedCount,
+                    'agg_status'       => $aggStatus,
+                    'nearest_due_date' => $nearestDueDate,
+                    'is_overdue'       => $isOverdue,
+                    'trigger_sources'  => $items->pluck('trigger_source')->filter()->unique()->values(),
+                    'report_url'       => route('appraisals.report-employee', $empId),
+                ];
+            })
+            ->when($aggStatus, fn ($c) => $c->where('agg_status', $aggStatus))
+            ->when($overdueOnly, fn ($c) => $c->where('is_overdue', true))
+            ->sortBy(fn ($row) => $row->nearest_due_date ?? \Illuminate\Support\Carbon::create(9999, 12, 31))
+            ->values();
+
+        $perPage     = 15;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems   = $groupedAll->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $paginator   = new LengthAwarePaginator(
+            $pageItems,
+            $groupedAll->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->except('page')]
+        );
+
+        $departments = Schema::hasTable('departments')
+            ? \App\Models\Department::orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        return view('appraisals.index', compact(
+            'paginator', 'search', 'departmentId', 'aggStatus', 'overdueOnly', 'triggerSource', 'departments'
+        ));
     }
 
     public function my(Request $request)
@@ -914,7 +1011,25 @@ class AppraisalController extends Controller
                 ];
             });
 
-        $canEdit = $viewerMode === 'evaluator' && $appraisal->status !== 'approved';
+        $approvedUnusedEditRequest = Schema::hasTable('appraisal_edit_requests')
+            ? AppraisalEditRequest::where('appraisal_id', $appraisal->id)
+                ->where('status', 'approved')
+                ->whereNull('used_at')
+                ->latest('id')
+                ->first()
+            : null;
+
+        $canEdit = $viewerMode === 'evaluator'
+            && ($appraisal->status !== 'approved' || $approvedUnusedEditRequest !== null);
+
+        $pendingEditRequest = $viewerMode === 'evaluator' && Schema::hasTable('appraisal_edit_requests')
+            ? AppraisalEditRequest::where('appraisal_id', $appraisal->id)->where('status', 'pending')->latest('id')->first()
+            : null;
+
+        $editRequestsApprovedCount = Schema::hasTable('appraisal_edit_requests')
+            ? AppraisalEditRequest::where('appraisal_id', $appraisal->id)->where('status', 'approved')->count()
+            : 0;
+
         $employeeEvaluatorAlias = null;
 
         if ($viewerMode === 'employee') {
@@ -946,6 +1061,9 @@ class AppraisalController extends Controller
             'categorySummary' => $categorySummary,
             'componentRows' => $componentRows,
             'employeeEvaluatorAlias' => $employeeEvaluatorAlias,
+            'pendingEditRequest' => $pendingEditRequest,
+            'editRequestsApprovedCount' => $editRequestsApprovedCount,
+            'approvedUnusedEditRequest' => $approvedUnusedEditRequest,
         ]);
     }
 
@@ -995,8 +1113,16 @@ class AppraisalController extends Controller
             abort(403);
         }
 
-        if ($appraisal->status === 'approved') {
-            return back()->with('error', 'Appraisal yang sudah disetujui tidak dapat diubah lagi.');
+        $unusedEditRequest = Schema::hasTable('appraisal_edit_requests')
+            ? AppraisalEditRequest::where('appraisal_id', $appraisal->id)
+                ->where('status', 'approved')
+                ->whereNull('used_at')
+                ->latest('id')
+                ->first()
+            : null;
+
+        if ($appraisal->status === 'approved' && ! $unusedEditRequest) {
+            return back()->with('error', 'Appraisal yang sudah disetujui tidak dapat diubah lagi. Ajukan permintaan edit ke HRD dulu.');
         }
 
         $data = $request->validate([
@@ -1188,6 +1314,10 @@ class AppraisalController extends Controller
             ]);
         });
 
+        if ($unusedEditRequest) {
+            $unusedEditRequest->update(['used_at' => now()]);
+        }
+
         return redirect()->route('appraisals.evaluator')->with('success', 'Appraisal berhasil dikirim. HRD dapat meninjau hasil setelah ini.');
     }
 
@@ -1260,6 +1390,201 @@ class AppraisalController extends Controller
         }
 
         return back()->with('success', "Due date berhasil diubah dari {$oldDueDate} ke {$newDueDate}.");
+    }
+
+    /**
+     * Perpanjang due date semua evaluator (yang belum approved) untuk satu
+     * karyawan sekaligus, dipanggil dari halaman Laporan Appraisal per karyawan.
+     */
+    public function extendDueDateBulk(Request $request, int $employeeId): RedirectResponse
+    {
+        $user = $request->user();
+        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'new_due_date' => ['required', 'date'],
+            'reason'       => ['required', 'string', 'max:500'],
+        ]);
+
+        $appraisals = Appraisal::where('employee_id', $employeeId)
+            ->where('status', '!=', 'approved')
+            ->get();
+
+        if ($appraisals->isEmpty()) {
+            return back()->with('error', 'Tidak ada appraisal yang bisa diperpanjang due date-nya (semua sudah approved).');
+        }
+
+        foreach ($appraisals as $appraisal) {
+            $oldDueDate = $appraisal->due_date?->format('Y-m-d');
+            $appraisal->update(['due_date' => $data['new_due_date']]);
+
+            if (Schema::hasTable('appraisal_invitation_logs')) {
+                AppraisalInvitationLog::create([
+                    'appraisal_id'   => $appraisal->id,
+                    'actor_user_id'  => $user->id,
+                    'target_user_id' => $appraisal->appraiser_id,
+                    'action'         => 'due_date_extended',
+                    'notes'          => 'Due date diubah dari ' . ($oldDueDate ?? '-') . ' ke ' . $data['new_due_date'] . ' (perpanjangan massal). Alasan: ' . $data['reason'],
+                    'payload'        => [
+                        'old_due_date' => $oldDueDate,
+                        'new_due_date' => $data['new_due_date'],
+                        'reason'       => $data['reason'],
+                        'bulk'         => true,
+                    ],
+                ]);
+            }
+        }
+
+        return back()->with('success', "Due date {$appraisals->count()} evaluator berhasil diperpanjang ke {$data['new_due_date']}.");
+    }
+
+    /**
+     * HRD instan include/exclude satu submission evaluator dari perhitungan
+     * rata-rata gabungan karyawan, tanpa perlu evaluator terlibat. Dipakai saat
+     * evaluator salah memberi nilai dan HRD perlu segera mengoreksi laporan.
+     */
+    public function toggleIncludeInScore(Request $request, Appraisal $appraisal): RedirectResponse
+    {
+        $user = $request->user();
+        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+            abort(403);
+        }
+
+        $newValue = ! $appraisal->included_in_score;
+        $appraisal->update(['included_in_score' => $newValue]);
+
+        if (Schema::hasTable('appraisal_invitation_logs')) {
+            AppraisalInvitationLog::create([
+                'appraisal_id'   => $appraisal->id,
+                'actor_user_id'  => $user->id,
+                'target_user_id' => $appraisal->appraiser_id,
+                'action'         => $newValue ? 'score_included' : 'score_excluded',
+                'notes'          => $newValue
+                    ? 'Penilaian evaluator ini diikutkan kembali ke perhitungan rata-rata.'
+                    : 'Penilaian evaluator ini dikecualikan dari perhitungan rata-rata karena dianggap tidak valid.',
+            ]);
+        }
+
+        return back()->with('success', $newValue
+            ? 'Penilaian evaluator diikutkan kembali ke perhitungan.'
+            : 'Penilaian evaluator dikecualikan dari perhitungan.');
+    }
+
+    /**
+     * Evaluator mengajukan izin edit ulang penilaian yang sudah di-approve HRD.
+     * Maksimal 2 request yang disetujui per appraisal, dibatasi due date.
+     */
+    public function requestEdit(Request $request, Appraisal $appraisal): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless((int) $appraisal->appraiser_id === (int) $user->id, 403);
+        abort_unless($appraisal->status === 'approved', 400);
+
+        if ($appraisal->due_date && now()->gt($appraisal->due_date)) {
+            return back()->with('error', 'Due date appraisal ini sudah lewat, tidak bisa mengajukan edit lagi.');
+        }
+
+        $approvedCount = AppraisalEditRequest::where('appraisal_id', $appraisal->id)
+            ->where('status', 'approved')
+            ->count();
+        if ($approvedCount >= AppraisalEditRequest::MAX_APPROVED_PER_APPRAISAL) {
+            return back()->with('error', 'Jatah edit untuk appraisal ini sudah habis (maksimal ' . AppraisalEditRequest::MAX_APPROVED_PER_APPRAISAL . 'x). Hubungi HRD.');
+        }
+
+        $hasPending = AppraisalEditRequest::where('appraisal_id', $appraisal->id)->where('status', 'pending')->exists();
+        if ($hasPending) {
+            return back()->with('error', 'Masih ada permintaan edit yang menunggu persetujuan HRD.');
+        }
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $editRequest = AppraisalEditRequest::create([
+            'appraisal_id'          => $appraisal->id,
+            'requested_by_user_id'  => $user->id,
+            'reason'                => $data['reason'],
+            'status'                => 'pending',
+        ]);
+
+        if (Schema::hasTable('hr_notifications') && $appraisal->invited_by_user_id) {
+            HrNotification::create([
+                'user_id'    => $appraisal->invited_by_user_id,
+                'type'       => 'appraisal_edit_request',
+                'title'      => 'Permintaan edit penilaian appraisal',
+                'body'       => ($user->name ?? 'Evaluator') . ' minta izin edit ulang penilaian untuk ' . ($appraisal->employee?->full_name ?? 'karyawan') . '. Alasan: ' . $data['reason'],
+                'is_read'    => false,
+                'unique_key' => 'appraisal-edit-request-' . $editRequest->id,
+                'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.report-employee', $appraisal->employee_id)],
+            ]);
+        }
+
+        return back()->with('success', 'Permintaan edit sudah dikirim ke HRD, tunggu persetujuan.');
+    }
+
+    public function approveEditRequest(Request $request, AppraisalEditRequest $editRequest): RedirectResponse
+    {
+        $user = $request->user();
+        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+            abort(403);
+        }
+        abort_unless($editRequest->status === 'pending', 400);
+
+        $editRequest->update([
+            'status'               => 'approved',
+            'reviewed_by_user_id'  => $user->id,
+            'reviewed_at'          => now(),
+        ]);
+
+        $appraisal = $editRequest->appraisal;
+
+        if (Schema::hasTable('appraisal_invitation_logs')) {
+            AppraisalInvitationLog::create([
+                'appraisal_id'   => $appraisal->id,
+                'actor_user_id'  => $user->id,
+                'target_user_id' => $appraisal->appraiser_id,
+                'action'         => 'edit_request_approved',
+                'notes'          => 'HRD menyetujui permintaan edit. Alasan evaluator: ' . $editRequest->reason,
+            ]);
+        }
+
+        if (Schema::hasTable('hr_notifications')) {
+            HrNotification::create([
+                'user_id'    => $appraisal->appraiser_id,
+                'type'       => 'appraisal_edit_approved',
+                'title'      => 'Permintaan edit penilaian disetujui',
+                'body'       => 'HRD menyetujui permintaan edit Anda untuk penilaian ' . ($appraisal->employee?->full_name ?? 'karyawan') . '. Segera edit sebelum due date' . ($appraisal->due_date ? ' (' . $appraisal->due_date->format('d-m-Y') . ')' : '') . '.',
+                'is_read'    => false,
+                'unique_key' => 'appraisal-edit-approved-' . $editRequest->id,
+                'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
+            ]);
+        }
+
+        return back()->with('success', 'Permintaan edit disetujui. Evaluator sekarang bisa edit penilaiannya 1x.');
+    }
+
+    public function rejectEditRequest(Request $request, AppraisalEditRequest $editRequest): RedirectResponse
+    {
+        $user = $request->user();
+        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+            abort(403);
+        }
+        abort_unless($editRequest->status === 'pending', 400);
+
+        $data = $request->validate([
+            'review_note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $editRequest->update([
+            'status'               => 'rejected',
+            'reviewed_by_user_id'  => $user->id,
+            'reviewed_at'          => now(),
+            'review_note'          => $data['review_note'] ?? null,
+        ]);
+
+        return back()->with('success', 'Permintaan edit ditolak.');
     }
 
     public function print(Appraisal $appraisal, Request $request)
