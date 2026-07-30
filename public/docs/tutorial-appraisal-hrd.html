@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial HRD — Modul Appraisal | Omeo HR Suite</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        /* ── Header ───────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: white;
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+        .header p  { font-size: 1.05rem; opacity: .9; }
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,.2);
+            border: 1px solid rgba(255,255,255,.4);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: .82rem;
+            margin-top: 12px;
+        }
+
+        /* ── Layout ──────────────────────────────── */
+        .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+
+        /* ── TOC ─────────────────────────────────── */
+        .toc {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 32px;
+        }
+        .toc h2 { font-size: 1rem; font-weight: 600; color: #64748b; margin-bottom: 12px; letter-spacing: .05em; text-transform: uppercase; }
+        .toc ol  { padding-left: 20px; }
+        .toc li  { margin-bottom: 6px; }
+        .toc a   { color: #8b5cf6; text-decoration: none; font-size: .95rem; }
+        .toc a:hover { text-decoration: underline; }
+
+        /* ── Section ─────────────────────────────── */
+        .section {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 24px;
+            scroll-margin-top: 20px;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .section-num {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: .95rem;
+            flex-shrink: 0;
+            color: white;
+        }
+        .section h2 { font-size: 1.2rem; font-weight: 700; color: #1e293b; }
+        .section .subtitle { font-size: .88rem; color: #64748b; margin-top: 2px; }
+
+        /* ── Steps ───────────────────────────────── */
+        .step {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 3px solid #e2e8f0;
+        }
+        .step.highlight { border-left-color: #ec4899; background: #fdf4ff; }
+        .step-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #ec4899;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .8rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .step-content h4 { font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
+        .step-content p  { font-size: .9rem; color: #475569; }
+        .step-content ul { padding-left: 16px; margin-top: 6px; font-size: .9rem; color: #475569; }
+        .step-content li { margin-bottom: 3px; }
+
+        /* ── Info / Warning ──────────────────────── */
+        .info-box, .warn-box, .formula-box {
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            font-size: .9rem;
+        }
+        .info-box  { background: #eff6ff; border-left: 4px solid #3b82f6; color: #1e40af; }
+        .warn-box  { background: #fefce8; border-left: 4px solid #eab308; color: #713f12; }
+        .formula-box { background: #fdf4ff; border-left: 4px solid #a855f7; color: #581c87; }
+        .info-box strong, .warn-box strong, .formula-box strong {
+            display: block; margin-bottom: 4px;
+        }
+
+        /* ── Mode Cards ──────────────────────────── */
+        .mode-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 16px 0; }
+        .mode-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+        }
+        .mode-card .mode-title { font-weight: 700; font-size: .95rem; margin-bottom: 6px; }
+        .mode-card p { font-size: .85rem; color: #64748b; }
+        .mode-card .mode-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: .75rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* ── Score Component Table ────────────────── */
+        .comp-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .9rem; }
+        .comp-table th {
+            background: #f1f5f9;
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+        }
+        .comp-table td {
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+        .comp-table tr:nth-child(even) td { background: #f8fafc; }
+        .weight-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: .8rem;
+            font-weight: 600;
+        }
+
+        /* ── Star row ────────────────────────────── */
+        .star-example { color: #f59e0b; font-size: 1.2rem; letter-spacing: 2px; }
+        .star-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .star-label { font-size: .85rem; min-width: 100px; }
+
+        /* ── Result badges ───────────────────────── */
+        .result-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 14px 0; }
+        .result-item { text-align: center; padding: 10px 6px; border-radius: 8px; }
+        .result-item .score { font-weight: 700; font-size: 1rem; }
+        .result-item .label { font-size: .75rem; margin-top: 2px; }
+
+        /* ── Criteria list ───────────────────────── */
+        .criteria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+        .criteria-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            font-size: .88rem;
+        }
+        .criteria-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .criteria-weight { margin-left: auto; color: #64748b; font-size: .8rem; }
+
+        /* ── Footer ──────────────────────────────── */
+        .doc-footer {
+            text-align: center;
+            padding: 24px;
+            color: #94a3b8;
+            font-size: .85rem;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 600px) {
+            .result-grid    { grid-template-columns: repeat(3, 1fr); }
+            .criteria-grid  { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════ -->
+<div class="header">
+    <h1>Tutorial HRD — Modul Appraisal</h1>
+    <p>Panduan lengkap generate, evaluasi, dan approval penilaian karyawan</p>
+    <span class="badge">Omeo HR Suite · v9.2 · Juni 2026</span>
+</div>
+
+<div class="container">
+
+    <!-- TOC -->
+    <div class="toc">
+        <h2>Daftar Isi</h2>
+        <ol>
+            <li><a href="#overview">Gambaran Umum Sistem Appraisal</a></li>
+            <li><a href="#generate">Generate Penilaian Baru</a></li>
+            <li><a href="#update-juni-2026">🆕 Update 30 Juni 2026 — Tampilan Kanban & Batch Builder</a></li>
+            <li><a href="#modes">3 Mode Penugasan</a></li>
+            <li><a href="#komponen">Komponen Penilaian & Formula Skor</a></li>
+            <li><a href="#form-evaluasi">Mengisi Form Evaluasi</a></li>
+            <li><a href="#kriteria">11 Indikator Kriteria Penilaian</a></li>
+            <li><a href="#approval">Monitoring & Approval</a></li>
+            <li><a href="#hasil">Membaca Hasil Penilaian</a></li>
+            <li><a href="#faq">FAQ & Troubleshooting</a></li>
+        </ol>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 1 — OVERVIEW
+    ═══════════════════════════════════════ -->
+    <div class="section" id="overview">
+        <div class="section-header">
+            <div class="section-num" style="background:#ec4899;">1</div>
+            <div>
+                <h2>Gambaran Umum Sistem Appraisal</h2>
+                <div class="subtitle">Alur kerja end-to-end penilaian karyawan</div>
+            </div>
+        </div>
+
+        <p>Modul Appraisal di Omeo HR Suite memungkinkan HRD melakukan penilaian karyawan secara terstruktur. Setiap penilaian (appraisal) memiliki alur status:</p>
+
+        <div class="step highlight" style="margin-top:16px;">
+            <div class="step-num" style="background:#6366f1; font-size:.7rem;">→</div>
+            <div class="step-content">
+                <h4 style="color:#3730a3;">Alur Status Appraisal</h4>
+                <p><strong>Draft</strong> → <strong>Self Assessment</strong> → <strong>Evaluator Review</strong> → <strong>Approved</strong></p>
+            </div>
+        </div>
+
+        <p style="margin-top:12px;">HRD berperan dalam dua tahap utama: <strong>Generate</strong> (membuat appraisal baru) dan <strong>Approval</strong> (menyetujui hasil evaluasi).</p>
+
+        <div class="info-box">
+            <strong>Yang baru di v9.2</strong>
+            Formula skor akhir baru: <strong>KPI 30% + Training 20% + Kriteria Bintang 50%</strong>. Star rating 1–5 bintang menggantikan input angka. Tersedia 3 mode generate yang disesuaikan dengan kebutuhan.
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 2 — GENERATE
+    ═══════════════════════════════════════ -->
+    <div class="section" id="generate">
+        <div class="section-header">
+            <div class="section-num" style="background:#f97316;">2</div>
+            <div>
+                <h2>Generate Penilaian Baru</h2>
+                <div class="subtitle">Cara membuat appraisal untuk satu atau banyak karyawan</div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+                <h4>Buka halaman Appraisal</h4>
+                <p>Di sidebar, klik <strong>Appraisal</strong> → <strong>Semua Penilaian</strong>, lalu klik tombol <strong>+ Generate Penilaian</strong> di pojok kanan atas.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+                <h4>Pilih Mode Penugasan</h4>
+                <p>Ada 3 mode yang tersedia (lihat bagian 3). Pilih yang sesuai kebutuhan.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+                <h4>Pilih Karyawan & Evaluator</h4>
+                <p>Tergantung mode yang dipilih, centang daftar karyawan atau gunakan live search. Tentukan siapa evaluator untuk masing-masing karyawan.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+                <h4>Aktifkan Komponen Penilaian</h4>
+                <p>Centang komponen yang ingin diaktifkan:</p>
+                <ul>
+                    <li><strong>KPI</strong> (default: aktif) — input persentase pencapaian target</li>
+                    <li><strong>Kompetensi Keahlian</strong> (opsional) — penilaian manual skill</li>
+                    <li><strong>Kompetensi Posisi</strong> (opsional) — penilaian manual jabatan</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-content">
+                <h4>Klik Generate</h4>
+                <p>Sistem akan membuat appraisal untuk semua karyawan yang dipilih, dalam status <strong>Draft</strong>. Evaluator yang ditunjuk akan bisa mengisi penilaian.</p>
+            </div>
+        </div>
+
+        <div class="warn-box">
+            <strong>Perhatian</strong>
+            Satu karyawan hanya boleh punya satu appraisal aktif per periode. Jika sudah ada appraisal sebelumnya, sistem akan memberikan warning.
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION UPDATE — 30 JUNI 2026
+    ═══════════════════════════════════════ -->
+    <div class="section" id="update-juni-2026">
+        <div class="section-header">
+            <div class="section-num" style="background:#fbbf24; font-size:1rem;">🆕</div>
+            <div>
+                <h2>Update 30 Juni 2026 — Tampilan Lebih Mudah Dibaca</h2>
+                <div class="subtitle">Halaman Assignment Appraisal sekarang lebih informatif dan mudah digunakan</div>
+            </div>
+        </div>
+
+        <p style="font-size:.95rem; margin-bottom:16px;">
+            Sekarang saat HRD membuka halaman Assignment Appraisal, daftar karyawan yang masih probation langsung dikelompokkan menjadi <strong>3 kolom</strong> berdasarkan seberapa mendesak mereka perlu dinilai:
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:16px;">
+            <div style="background:#ECFDF5; border:1px solid #6ee7b7; border-radius:10px; padding:16px;">
+                <div style="font-weight:700; color:#059669; margin-bottom:6px;">🟢 Masih Aman</div>
+                <p style="font-size:.85rem; color:#065f46;">Masa probation masih lebih dari 7 hari lagi. Belum perlu terburu-buru.</p>
+            </div>
+            <div style="background:#FFFBEB; border:1px solid #fbbf24; border-radius:10px; padding:16px;">
+                <div style="font-weight:700; color:#D97706; margin-bottom:6px;">🟡 Segera</div>
+                <p style="font-size:.85rem; color:#92400e;">Masa probation akan berakhir dalam 7 hari ke depan. Mulai prioritaskan.</p>
+            </div>
+            <div style="background:#FEF2F2; border:1px solid #fca5a5; border-radius:10px; padding:16px;">
+                <div style="font-weight:700; color:#DC2626; margin-bottom:6px;">🔴 Sudah Lewat</div>
+                <p style="font-size:.85rem; color:#7f1d1d;">Masa probation sudah lewat tapi belum dinilai. Wajib segera diproses!</p>
+            </div>
+        </div>
+
+        <div class="info-box">
+            💡 <strong>Tips:</strong> Selalu cek kolom merah (Sudah Lewat) terlebih dahulu setiap kali membuka halaman ini, supaya tidak ada karyawan yang terlewat penilaiannya.
+        </div>
+
+        <p style="font-size:.95rem; margin:20px 0 12px; font-weight:600;">Cara Menilai Banyak Karyawan Sekaligus (Batch):</p>
+
+        <div class="step">
+            <div class="step-num" style="background:#7c3aed;">1</div>
+            <div class="step-content">
+                <h4>Klik nama karyawan dari salah satu kolom</h4>
+                <p>Pilih dari kolom Hijau/Kuning/Merah, atau cari manual di kotak "Cari Karyawan". Karyawan yang dipilih akan di-highlight.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:#7c3aed;">2</div>
+            <div class="step-content">
+                <h4>Cari dan pilih evaluator</h4>
+                <p>Ketik nama evaluator di kotak "Cari &amp; Pilih Evaluator". Boleh pilih lebih dari satu orang untuk satu karyawan.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:#7c3aed;">3</div>
+            <div class="step-content">
+                <h4>Klik "+ Tambahkan ke Daftar Batch"</h4>
+                <p>Karyawan dan evaluatornya masuk ke Daftar Batch di bawah halaman.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:#7c3aed;">4</div>
+            <div class="step-content">
+                <h4>Ulangi untuk karyawan lain</h4>
+                <p>Boleh evaluator berbeda untuk tiap karyawan — misalnya Karyawan A dinilai 3 orang, Karyawan B dinilai 1 orang.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num" style="background:#7c3aed;">5</div>
+            <div class="step-content">
+                <h4>Klik "Generate Semua Draft Appraisal"</h4>
+                <p>Semua draft appraisal langsung terbuat sekaligus. HRD tidak perlu buat satu per satu lagi.</p>
+            </div>
+        </div>
+
+        <div class="warn-box" style="margin-top:16px;">
+            <strong>Catatan Penting</strong>
+            Status probation (hijau/kuning/merah) dihitung otomatis dari Tanggal Bergabung karyawan + 3 bulan, karena data status di sistem lama belum semuanya akurat. Jika ada karyawan yang masa probationnya berbeda dari aturan standar, silakan update manual di profil karyawan tersebut.
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 3 — MODES
+    ═══════════════════════════════════════ -->
+    <div class="section" id="modes">
+        <div class="section-header">
+            <div class="section-num" style="background:#0ea5e9;">3</div>
+            <div>
+                <h2>3 Mode Penugasan</h2>
+                <div class="subtitle">Sesuaikan dengan konteks penilaian yang ingin dilakukan</div>
+            </div>
+        </div>
+
+        <div class="mode-cards">
+            <div class="mode-card" style="border-color:#fbbf24; border-width:2px;">
+                <span class="mode-tag" style="background:#fef3c7; color:#92400e;">Mode Probation</span>
+                <div class="mode-title">Masa Percobaan</div>
+                <p>Otomatis menampilkan karyawan yang join_date-nya dalam window ±30 hari dari hari ini. Cocok untuk penilaian akhir masa percobaan rutin.</p>
+                <p style="margin-top:8px; font-size:.8rem; color:#92400e;"><strong>Trigger default:</strong> probation_timeline</p>
+            </div>
+            <div class="mode-card" style="border-color:#a78bfa; border-width:2px;">
+                <span class="mode-tag" style="background:#ede9fe; color:#5b21b6;">Mode Manual</span>
+                <div class="mode-title">Pencarian Bebas</div>
+                <p>Live search untuk memilih karyawan spesifik. Ketik minimal 2 karakter, hasil muncul real-time. Bisa memilih evaluator yang berbeda per karyawan.</p>
+                <p style="margin-top:8px; font-size:.8rem; color:#5b21b6;"><strong>Trigger default:</strong> manual_acceleration</p>
+            </div>
+            <div class="mode-card" style="border-color:#6ee7b7; border-width:2px;">
+                <span class="mode-tag" style="background:#d1fae5; color:#065f46;">Mode Semua</span>
+                <div class="mode-title">Semua Karyawan</div>
+                <p>Menampilkan semua karyawan aktif (non-resigned). Cocok untuk penilaian tahunan atau review menyeluruh seluruh tim.</p>
+                <p style="margin-top:8px; font-size:.8rem; color:#065f46;"><strong>Trigger default:</strong> manual_acceleration</p>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>Tips: Kapan pakai mode apa?</strong>
+            Gunakan <strong>Probation</strong> untuk karyawan baru setelah 3 bulan · Gunakan <strong>Manual</strong> untuk penilaian mid-year individu tertentu · Gunakan <strong>Semua</strong> untuk annual review akhir tahun.
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 4 — KOMPONEN & FORMULA
+    ═══════════════════════════════════════ -->
+    <div class="section" id="komponen">
+        <div class="section-header">
+            <div class="section-num" style="background:#8b5cf6;">4</div>
+            <div>
+                <h2>Komponen Penilaian & Formula Skor</h2>
+                <div class="subtitle">Cara sistem menghitung skor akhir 0–100</div>
+            </div>
+        </div>
+
+        <div class="formula-box">
+            <strong>Formula Skor Akhir (0–100)</strong>
+            <code style="font-size:1rem;">Skor Akhir = (KPI × 30%) + (Training × 20%) + (Rata-rata Bintang × 20 × 50%)</code>
+            <p style="margin-top:8px;">Bintang 1-5 dikonversi ke 0-100 dengan mengalikan ×20 sebelum dihitung dalam formula.</p>
+        </div>
+
+        <table class="comp-table">
+            <thead>
+                <tr>
+                    <th>Komponen</th>
+                    <th>Bobot</th>
+                    <th>Input</th>
+                    <th>Rentang</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>KPI</strong><br><span style="font-size:.8rem; color:#64748b;">Pencapaian Target Kerja</span></td>
+                    <td><span class="weight-badge" style="background:#fef3c7; color:#92400e;">30%</span></td>
+                    <td>Persentase (0–100)</td>
+                    <td>0 – 100</td>
+                    <td>Isi angka persentase pencapaian. Contoh: target 100%, tercapai 85% → isi <strong>85</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Training</strong><br><span style="font-size:.8rem; color:#64748b;">Hasil Training/Pelatihan</span></td>
+                    <td><span class="weight-badge" style="background:#d1fae5; color:#065f46;">20%</span></td>
+                    <td>Multi-entry nilai per materi</td>
+                    <td>0 – 100 (avg)</td>
+                    <td>Input setiap materi training yang diikuti. Rata-rata dihitung otomatis.</td>
+                </tr>
+                <tr>
+                    <td><strong>Kriteria Bintang</strong><br><span style="font-size:.8rem; color:#64748b;">11 indikator kompetensi</span></td>
+                    <td><span class="weight-badge" style="background:#ede9fe; color:#5b21b6;">50%</span></td>
+                    <td>Bintang 1–5 per indikator</td>
+                    <td>1 – 5 (dikonversi ×20)</td>
+                    <td>Setiap kriteria diberi bintang. Rata-rata tertimbang dihitung dari 11 indikator.</td>
+                </tr>
+                <tr style="background:#f8fafc;">
+                    <td colspan="2"><strong>Kompetensi Keahlian</strong> (opsional)<br><span style="font-size:.8rem; color:#64748b;">Aktifkan di form generate</span></td>
+                    <td>Manual (angka 1-5)</td>
+                    <td>1 – 5</td>
+                    <td>Diisi HRD/evaluator berdasarkan observasi. Tidak masuk formula utama.</td>
+                </tr>
+                <tr style="background:#f8fafc;">
+                    <td colspan="2"><strong>Kompetensi Posisi/Jabatan</strong> (opsional)<br><span style="font-size:.8rem; color:#64748b;">Aktifkan di form generate</span></td>
+                    <td>Manual (angka 1-5)</td>
+                    <td>1 – 5</td>
+                    <td>Diisi HRD/evaluator. Tidak masuk formula utama.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="result-grid">
+            <div class="result-item" style="background:#dcfce7; color:#166534;">
+                <div class="score">≥ 90</div>
+                <div class="label">Luar Biasa</div>
+            </div>
+            <div class="result-item" style="background:#d1fae5; color:#065f46;">
+                <div class="score">≥ 70</div>
+                <div class="label">Sangat Bagus</div>
+            </div>
+            <div class="result-item" style="background:#fef9c3; color:#713f12;">
+                <div class="score">≥ 50</div>
+                <div class="label">Bagus</div>
+            </div>
+            <div class="result-item" style="background:#fed7aa; color:#9a3412;">
+                <div class="score">≥ 30</div>
+                <div class="label">Cukup</div>
+            </div>
+            <div class="result-item" style="background:#fee2e2; color:#991b1b;">
+                <div class="score">&lt; 30</div>
+                <div class="label">Buruk</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 5 — FORM EVALUASI
+    ═══════════════════════════════════════ -->
+    <div class="section" id="form-evaluasi">
+        <div class="section-header">
+            <div class="section-num" style="background:#10b981;">5</div>
+            <div>
+                <h2>Mengisi Form Evaluasi</h2>
+                <div class="subtitle">Langkah-langkah mengisi penilaian sebagai evaluator</div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+                <h4>Buka appraisal karyawan</h4>
+                <p>Di halaman Appraisal → Semua Penilaian, cari nama karyawan lalu klik <strong>Lihat Detail / Isi Evaluasi</strong>.</p>
+            </div>
+        </div>
+
+        <div class="step highlight">
+            <div class="step-num">2</div>
+            <div class="step-content">
+                <h4>Isi KPI — Persentase Pencapaian</h4>
+                <p>Masukkan angka 0–100 yang merepresentasikan persentase pencapaian KPI karyawan.</p>
+                <ul>
+                    <li>Target 100%, tercapai 90% → isi <strong>90</strong></li>
+                    <li>Tidak ada target KPI → isi <strong>0</strong> atau kosongkan</li>
+                    <li>Tambahkan catatan di kolom "Catatan KPI" jika perlu penjelasan</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step highlight">
+            <div class="step-num">3</div>
+            <div class="step-content">
+                <h4>Isi Training — Tabel Multi-Entry</h4>
+                <p>Untuk setiap pelatihan yang diikuti karyawan:</p>
+                <ul>
+                    <li>Klik <strong>+ Tambah Materi</strong></li>
+                    <li>Isi nama materi training</li>
+                    <li>Isi nilai (0–100)</li>
+                    <li>Rata-rata akan dihitung otomatis di bagian bawah</li>
+                    <li>Jika data training sudah ada di sistem LMS, akan muncul otomatis</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="step highlight">
+            <div class="step-num">4</div>
+            <div class="step-content">
+                <h4>Isi Kriteria — Star Rating 1–5 Bintang</h4>
+                <p>Untuk setiap kriteria dari 11 indikator:</p>
+                <ul>
+                    <li>Klik bintang yang sesuai (1 = paling buruk, 5 = luar biasa)</li>
+                    <li>Hover untuk preview sebelum klik</li>
+                    <li>Label otomatis muncul: Buruk / Cukup / Bagus / Sangat Bagus / Luar Biasa</li>
+                </ul>
+                <div style="margin-top:10px;">
+                    <div class="star-row"><span class="star-label">1 Bintang</span><span class="star-example">★☆☆☆☆</span><span style="font-size:.82rem; color:#64748b; margin-left:8px;">Buruk</span></div>
+                    <div class="star-row"><span class="star-label">2 Bintang</span><span class="star-example">★★☆☆☆</span><span style="font-size:.82rem; color:#64748b; margin-left:8px;">Cukup</span></div>
+                    <div class="star-row"><span class="star-label">3 Bintang</span><span class="star-example">★★★☆☆</span><span style="font-size:.82rem; color:#64748b; margin-left:8px;">Bagus</span></div>
+                    <div class="star-row"><span class="star-label">4 Bintang</span><span class="star-example">★★★★☆</span><span style="font-size:.82rem; color:#64748b; margin-left:8px;">Sangat Bagus</span></div>
+                    <div class="star-row"><span class="star-label">5 Bintang</span><span class="star-example">★★★★★</span><span style="font-size:.82rem; color:#64748b; margin-left:8px;">Luar Biasa</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-content">
+                <h4>Isi Saran & Rekomendasi (opsional)</h4>
+                <p>Isi kolom <strong>Pencapaian</strong> dan <strong>Rekomendasi Training</strong> untuk feedback kualitatif kepada karyawan.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">6</div>
+            <div class="step-content">
+                <h4>Klik Submit Evaluasi</h4>
+                <p>Sistem akan menghitung skor akhir otomatis dan menyimpan hasilnya. Status berubah ke <strong>Evaluator Review</strong>. HRD kemudian bisa melakukan approval.</p>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>Skor dihitung otomatis</strong>
+            Setelah submit, sistem langsung menghitung skor akhir berdasarkan formula. Tidak perlu menghitung manual — cukup isi semua komponen dengan benar.
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 6 — 11 KRITERIA
+    ═══════════════════════════════════════ -->
+    <div class="section" id="kriteria">
+        <div class="section-header">
+            <div class="section-num" style="background:#f59e0b;">6</div>
+            <div>
+                <h2>11 Indikator Kriteria Penilaian</h2>
+                <div class="subtitle">Referensi lengkap semua indikator dan bobotnya</div>
+            </div>
+        </div>
+
+        <p style="margin-bottom:14px;">Setiap indikator diberi bintang 1–5. Bobot total = 100. Rata-rata tertimbang dihitung dari semua indikator yang diisi.</p>
+
+        <div class="criteria-grid">
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#6366f1;"></div>
+                <div>
+                    <div style="font-weight:600;">Pengetahuan Pekerjaan</div>
+                    <div style="font-size:.78rem; color:#64748b;">Kompetensi Kerja</div>
+                </div>
+                <span class="criteria-weight">10%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#6366f1;"></div>
+                <div>
+                    <div style="font-weight:600;">Kualitas Kerja</div>
+                    <div style="font-size:.78rem; color:#64748b;">Kompetensi Kerja</div>
+                </div>
+                <span class="criteria-weight">10%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#6366f1;"></div>
+                <div>
+                    <div style="font-weight:600;">Produktivitas</div>
+                    <div style="font-size:.78rem; color:#64748b;">Kompetensi Kerja</div>
+                </div>
+                <span class="criteria-weight">10%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#10b981;"></div>
+                <div>
+                    <div style="font-weight:600;">Keandalan</div>
+                    <div style="font-size:.78rem; color:#64748b;">Karakter</div>
+                </div>
+                <span class="criteria-weight">10%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#10b981;"></div>
+                <div>
+                    <div style="font-weight:600;">Komunikasi</div>
+                    <div style="font-size:.78rem; color:#64748b;">Karakter</div>
+                </div>
+                <span class="criteria-weight">8%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#10b981;"></div>
+                <div>
+                    <div style="font-weight:600;">Hubungan Kerja</div>
+                    <div style="font-size:.78rem; color:#64748b;">Karakter</div>
+                </div>
+                <span class="criteria-weight">8%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#10b981;"></div>
+                <div>
+                    <div style="font-weight:600;">Keselamatan</div>
+                    <div style="font-size:.78rem; color:#64748b;">Karakter</div>
+                </div>
+                <span class="criteria-weight">8%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#f59e0b;"></div>
+                <div>
+                    <div style="font-weight:600;">Kesopanan</div>
+                    <div style="font-size:.78rem; color:#64748b;">Sikap</div>
+                </div>
+                <span class="criteria-weight">8%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#f59e0b;"></div>
+                <div>
+                    <div style="font-weight:600;">Motivasi</div>
+                    <div style="font-size:.78rem; color:#64748b;">Sikap</div>
+                </div>
+                <span class="criteria-weight">9%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#f59e0b;"></div>
+                <div>
+                    <div style="font-weight:600;">Leadership</div>
+                    <div style="font-size:.78rem; color:#64748b;">Sikap</div>
+                </div>
+                <span class="criteria-weight">9%</span>
+            </div>
+            <div class="criteria-item">
+                <div class="criteria-dot" style="background:#ec4899;"></div>
+                <div>
+                    <div style="font-weight:600;">Kehadiran</div>
+                    <div style="font-size:.78rem; color:#64748b;">Kehadiran</div>
+                </div>
+                <span class="criteria-weight">10%</span>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:8px; font-size:.82rem;">
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#6366f1;display:inline-block;"></span> Kompetensi Kerja (30%)</span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;"></span> Karakter (34%)</span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> Sikap (26%)</span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#ec4899;display:inline-block;"></span> Kehadiran (10%)</span>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 7 — MONITORING & APPROVAL
+    ═══════════════════════════════════════ -->
+    <div class="section" id="approval">
+        <div class="section-header">
+            <div class="section-num" style="background:#6366f1;">7</div>
+            <div>
+                <h2>Monitoring & Approval</h2>
+                <div class="subtitle">Pantau progress dan setujui hasil penilaian</div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+                <h4>Pantau Status di Halaman Index</h4>
+                <p>Buka <strong>Appraisal → Semua Penilaian</strong>. Gunakan filter Status, Periode, dan Outlet untuk mempersempit tampilan.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+                <h4>Cek Appraisal yang Siap Diapprove</h4>
+                <p>Appraisal dengan status <strong>Evaluator Review</strong> berarti evaluator sudah selesai mengisi. Klik untuk membuka detail.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+                <h4>Review Hasil Evaluasi</h4>
+                <p>Periksa skor per komponen, bintang per kriteria, dan catatan evaluator. Pastikan semua terisi dengan benar sebelum approval.</p>
+            </div>
+        </div>
+
+        <div class="step highlight">
+            <div class="step-num">4</div>
+            <div class="step-content">
+                <h4>Klik Approve</h4>
+                <p>Setelah review, klik tombol <strong>Approve Penilaian</strong>. Status berubah ke <strong>Approved</strong> dan skor akhir terkunci. Karyawan bisa melihat hasilnya jika fitur self-service aktif.</p>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>Catatan</strong>
+            Setelah Approved, data tidak bisa diubah kecuali HRD membatalkan approval terlebih dahulu. Gunakan fitur ini dengan hati-hati.
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 8 — HASIL
+    ═══════════════════════════════════════ -->
+    <div class="section" id="hasil">
+        <div class="section-header">
+            <div class="section-num" style="background:#0ea5e9;">8</div>
+            <div>
+                <h2>Membaca Hasil Penilaian</h2>
+                <div class="subtitle">Interpretasi skor akhir dan label hasil</div>
+            </div>
+        </div>
+
+        <p>Hasil penilaian ditampilkan sebagai <strong>skor 0–100</strong> dengan label hasil:</p>
+
+        <table class="comp-table" style="margin-top:14px;">
+            <thead>
+                <tr>
+                    <th>Label Hasil</th>
+                    <th>Rentang Skor</th>
+                    <th>Arti</th>
+                    <th>Rekomendasi Tindak Lanjut</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong style="color:#16a34a;">Luar Biasa</strong></td>
+                    <td>≥ 90</td>
+                    <td>Performa sangat melampaui ekspektasi</td>
+                    <td>Pertimbangkan promosi atau kenaikan gaji</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:#059669;">Sangat Bagus</strong></td>
+                    <td>70 – 89</td>
+                    <td>Performa di atas rata-rata</td>
+                    <td>Pertahankan dan berikan challenge baru</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:#d97706;">Bagus</strong></td>
+                    <td>50 – 69</td>
+                    <td>Performa sesuai ekspektasi</td>
+                    <td>Lanjutkan kontrak, coaching minor</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:#ea580c;">Cukup</strong></td>
+                    <td>30 – 49</td>
+                    <td>Performa di bawah ekspektasi</td>
+                    <td>PIP (Performance Improvement Plan)</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:#dc2626;">Buruk</strong></td>
+                    <td>&lt; 30</td>
+                    <td>Performa jauh di bawah standar</td>
+                    <td>Evaluasi lanjut, pertimbangkan terminasi</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="warn-box">
+            <strong>Contoh perhitungan</strong>
+            KPI 80% × 30% = 24 · Training avg 75 × 20% = 15 · Bintang rata-rata 3.5 × 20 × 50% = 35 → <strong>Skor Akhir = 24 + 15 + 35 = 74 → Sangat Bagus</strong>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+         SECTION 9 — FAQ
+    ═══════════════════════════════════════ -->
+    <div class="section" id="faq">
+        <div class="section-header">
+            <div class="section-num" style="background:#64748b;">9</div>
+            <div>
+                <h2>FAQ & Troubleshooting</h2>
+                <div class="subtitle">Pertanyaan umum dan cara mengatasinya</div>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num" style="background:#64748b;">?</div>
+            <div class="step-content">
+                <h4>Live search tidak muncul hasilnya</h4>
+                <p>Pastikan input minimal 2 karakter. Tunggu sebentar (ada delay 300ms untuk debounce). Jika masih tidak muncul, coba refresh halaman dan pastikan koneksi internet stabil.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num" style="background:#64748b;">?</div>
+            <div class="step-content">
+                <h4>Data training muncul otomatis, apakah bisa diedit?</h4>
+                <p>Ya. Data yang ter-sync dari LMS (label "Dari sistem") bisa diedit atau dihapus. Klik ikon hapus di baris training, lalu tambahkan manual jika ada koreksi.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num" style="background:#64748b;">?</div>
+            <div class="step-content">
+                <h4>Apakah KPI harus diisi?</h4>
+                <p>KPI diaktifkan secara default saat generate appraisal. Jika karyawan tidak memiliki KPI yang terukur, HRD bisa menonaktifkan komponen ini saat generate, atau isi dengan 0.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num" style="background:#64748b;">?</div>
+            <div class="step-content">
+                <h4>Skor akhir berbeda dari yang saya ekspektasi</h4>
+                <p>Periksa: (1) Apakah semua bintang terisi? Kriteria yang tidak diisi tidak dihitung. (2) Cek rata-rata training — sistem hitung avg semua materi. (3) Ingat bahwa bintang dikali ×20 sebelum masuk formula.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num" style="background:#64748b;">?</div>
+            <div class="step-content">
+                <h4>Appraisal sudah Approved tapi perlu dikoreksi</h4>
+                <p>Hubungi Admin untuk membatalkan status approval. Setelah status kembali ke Draft atau Evaluator Review, evaluator bisa merevisi dan submit ulang.</p>
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num" style="background:#64748b;">?</div>
+            <div class="step-content">
+                <h4>Mode Probation tidak menampilkan karyawan yang seharusnya</h4>
+                <p>Sistem mengambil karyawan dengan <code>join_date</code> dalam ±30 hari dari hari ini. Pastikan data <code>join_date</code> karyawan sudah diisi dengan benar di profil karyawan.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="doc-footer">
+        Omeo HR Suite — Tutorial Appraisal HRD · Versi 9.2 · Diterbitkan 29 Juni 2026 · Update terakhir 30 Juni 2026<br>
+        Untuk pertanyaan teknis, hubungi tim IT atau Development.
+    </div>
+
+</div><!-- /container -->
+</body>
+</html>

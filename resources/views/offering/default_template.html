@@ -1,0 +1,58 @@
+<!--
+  Copy-paste this HTML into document_templates.content_html (type='offering')
+  It works with OfferingController::fillTemplate() placeholders.
+  Logo and signature are simple <img> tags - adjust the asset URLs.
+-->
+<div style="font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px;">
+  <div style="display:flex; align-items:center; gap:12px;">
+    <img src="{{ public_path('images/brand/logo.png') }}" style="height:48px;" alt="Logo">
+    <div>
+      <div style="font-size:16px; font-weight:bold;">OMEŌ HR Suite</div>
+      <div style="color:#666;">Offering Letter</div>
+    </div>
+  </div>
+
+  <hr style="margin:16px 0;">
+
+  <p>Tanggal: {TODAY}</p>
+
+  <p>Yth. <strong>{FULL_NAME}</strong><br>
+  NIK: {NIK}</p>
+
+  <p>Dengan hormat,</p>
+  <p>
+    Berdasarkan hasil seleksi yang telah Anda ikuti, kami dengan ini menyampaikan penawaran kerja dengan detail sebagai berikut:
+  </p>
+
+  <table style="width:100%; border-collapse: collapse; margin:12px 0;">
+    <tr>
+      <td style="padding:6px 0; width:220px;">Tanggal Bergabung</td>
+      <td style="padding:6px 0;">: {JOIN_DATE}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;">Status</td>
+      <td style="padding:6px 0;">: {STATUS_EMPLOYMENT}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px 0;">Akhir Masa Probation</td>
+      <td style="padding:6px 0;">: {PROBATION_END_DATE}</td>
+    </tr>
+  </table>
+
+  <p>
+    Apabila Anda menyetujui penawaran ini, mohon konfirmasi kepada tim HRD.
+  </p>
+
+  <div style="margin-top:42px; display:flex; justify-content:space-between;">
+    <div>
+      <div>Hormat kami,</div>
+      <div style="height:72px;"></div>
+      <div><strong>HRD</strong></div>
+    </div>
+    <div style="text-align:right;">
+      <div>Disetujui oleh,</div>
+      <img src="{{ public_path('images/brand/signature.png') }}" style="height:72px; margin:6px 0;" alt="Tanda tangan">
+      <div><strong>Direktur / User</strong></div>
+    </div>
+  </div>
+</div>

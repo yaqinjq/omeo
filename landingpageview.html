@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Aplikasi HRIS & Management Karyawan FnB Terbaik | OMEŌ HR Suite</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="OMEŌ HR Suite adalah Aplikasi HRIS, Sistem As A Service HRD Recruitment, Appraisal, dan Management Karyawan terbaik untuk bisnis Franchise FnB di seluruh Indonesia.">
+    <meta name="keywords" content="HRIS, Aplikasi HRIS, Aplikasi Management Karyawan, Website Management Karyawan, Sistem As A Service HRD Rekrutment dan Management Karyawan, Sistem Apraisal Karyawan, HRIS FnB, My Kopi O Group">
+    <meta name="author" content="OMEŌ HR Suite - My Kopi O! Group">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph for Social Media sharing -->
+    <meta property="og:title" content="Aplikasi HRIS & Management Karyawan FnB Terbaik">
+    <meta property="og:description" content="Sistem HRD modern untuk kelola kandidat, probation, appraisal, dan LMS. Khusus didesain untuk perusahaan FnB multibranch.">
+    <meta property="og:type" content="website">
+
+    <!-- Fonts: Plus Jakarta Sans for clean, modern, iOS-like typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Tailwind Configuration & Custom CSS -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            DEFAULT: '#E4A853', // Premium Coffee Gold/Orange
+                            dark: '#C88A3A',
+                            light: '#F2C98A',
+                        },
+                        dark: {
+                            900: '#120F0D', // Very dark espresso
+                            800: '#1E1915',
+                            700: '#2A241E',
+                        }
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                        'hero-pattern': "url('https://images.unsplash.com/photo-1559925393-8be0ec4767c8?q=80&w=2070&auto=format&fit=crop')",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(30, 25, 21, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #120F0D;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2A241E;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #E4A853;
+        }
+        
+        /* Hide scrollbar for tab navigation but keep functionality */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background: linear-gradient(to right, #E4A853, #F2C98A);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        /* Floating Animation */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        .animate-float-delayed {
+            animation: float 6s ease-in-out 3s infinite;
+        }
+        
+        /* Tab Active State */
+        .tab-active {
+            background-color: #E4A853 !important;
+            color: #120F0D !important;
+            font-weight: 700 !important;
+            border-color: #E4A853 !important;
+        }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-100 font-sans antialiased selection:bg-brand selection:text-dark-900 overflow-x-hidden">
+
+    <!-- Background Overlay for Hero -->
+    <div class="fixed inset-0 z-[-1] bg-hero-pattern bg-cover bg-center opacity-20 mix-blend-luminosity"></div>
+    <div class="fixed inset-0 z-[-1] bg-gradient-to-b from-dark-900/80 via-dark-900/95 to-dark-900"></div>
+
+    <!-- Navigation (Sticky & Glass) -->
+    <nav class="fixed w-full z-50 transition-all duration-300" id="navbar">
+        <div class="glass mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-4 rounded-3xl">
+            <div class="flex items-center justify-between h-16 lg:h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-dark-900 font-bold">O</div>
+                    <span class="font-bold text-xl tracking-tight hidden sm:block">OMEŌ <span class="text-brand font-light">HR Suite</span></span>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden lg:flex flex-1 justify-center items-center space-x-6">
+                    <a href="#fitur" class="text-sm font-medium text-gray-300 hover:text-brand transition-colors">Fitur</a>
+                    <a href="#tim" class="text-sm font-medium text-gray-300 hover:text-brand transition-colors">Tim HR</a>
+                    <a href="#karir" class="text-sm font-medium text-gray-300 hover:text-brand transition-colors">Karir</a>
+                    <a href="#walkin" class="text-sm font-medium text-gray-300 hover:text-brand transition-colors">Walk In</a>
+                    <a href="#seo-area" class="text-sm font-medium text-gray-300 hover:text-brand transition-colors">Area</a>
+                </div>
+
+                <!-- CTA Buttons -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <a href="/login" class="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-sm font-medium transition-all border border-white/5">Login</a>
+                    <a href="/register" class="px-5 py-2.5 rounded-full bg-brand hover:bg-brand-dark text-dark-900 text-sm font-bold transition-all shadow-[0_0_15px_rgba(228,168,83,0.4)]">Daftar Sekarang</a>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="lg:hidden flex items-center gap-4">
+                    <a href="/login" class="md:hidden px-4 py-2 rounded-full bg-brand text-dark-900 text-xs font-bold">Login</a>
+                    <button class="text-gray-300 hover:text-white focus:outline-none p-2">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <main class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <!-- Glow Effects -->
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-brand/20 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-emerald-900/20 rounded-full blur-[150px] pointer-events-none"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+                
+                <!-- Left Content -->
+                <div class="col-span-12 lg:col-span-6 lg:pr-8">
+                    <!-- Status Badge -->
+                    <div class="inline-flex items-center gap-3 rounded-full border border-brand/30 bg-brand/10 px-4 py-2 text-xs md:text-sm text-brand font-medium backdrop-blur-md mb-6 w-max">
+                        <span class="relative flex h-2.5 w-2.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand shadow-[0_0_10px_#E4A853]"></span>
+                        </span>
+                        Sistem HRD & Rekrutmen Terpadu
+                    </div>
+
+                    <!-- Main Headline -->
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight mb-6">
+                        OMEŌ HR Suite <br/>
+                        <span class="text-gradient">HRD Console.</span>
+                    </h1>
+
+                    <!-- Subheadline -->
+                    <p class="text-gray-400 text-lg md:text-xl leading-relaxed mb-10 max-w-xl">
+                        Sistem Management Karyawan modern. Kelola seleksi kandidat, pengingat probation, penilaian appraisal, presensi, hingga LMS—dalam satu alur kerja terpusat untuk bisnis Franchise Anda.
+                    </p>
+
+                    <!-- CTAs -->
+                    <div class="flex flex-col sm:flex-row flex-wrap items-center gap-4">
+                        <a href="/dashboard" class="w-full sm:w-auto px-8 py-4 rounded-full bg-brand hover:bg-brand-dark text-dark-900 font-bold text-lg transition-all flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(228,168,83,0.3)] group">
+                            Masuk Dashboard
+                            <i data-lucide="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform"></i>
+                        </a>
+                        <a href="#karir" class="w-full sm:w-auto px-8 py-4 rounded-full glass hover:bg-white/10 text-white font-medium text-lg transition-all flex items-center justify-center border border-white/10">
+                            Lihat Lowongan
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right Content (Mockup/Dashboard UI) -->
+                <div class="col-span-12 lg:col-span-6 mt-12 lg:mt-0 relative">
+                    <!-- Glass Card Mockup -->
+                    <div class="glass-card rounded-[2rem] p-6 md:p-8 relative z-10 border-t border-l border-white/20 animate-float">
+                        
+                        <!-- Mockup Header -->
+                        <div class="flex items-center justify-between mb-8 pb-6 border-b border-white/10">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center shadow-lg">
+                                    <i data-lucide="coffee" class="text-dark-900 w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-brand font-medium">My Kopi O! Group</div>
+                                    <div class="text-xl font-semibold">HR Dashboard UI</div>
+                                </div>
+                            </div>
+                            <div class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full bg-green-500"></div> Live
+                            </div>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-2 gap-4 md:gap-6 mb-6">
+                            <div class="bg-dark-800/50 rounded-2xl p-5 border border-white/5 hover:border-brand/50 transition-colors group">
+                                <div class="text-sm text-gray-400 mb-2 flex items-center justify-between">
+                                    Total Karyawan
+                                    <i data-lucide="users" class="w-4 h-4 text-gray-500 group-hover:text-brand transition-colors"></i>
+                                </div>
+                                <div class="text-4xl font-bold text-white">458</div>
+                                <div class="text-xs text-green-400 mt-2 flex items-center gap-1">
+                                    <i data-lucide="trending-up" class="w-3 h-3"></i> Tersebar di 16 Kota
+                                </div>
+                            </div>
+                            
+                            <div class="bg-dark-800/50 rounded-2xl p-5 border border-white/5 hover:border-brand/50 transition-colors group">
+                                <div class="text-sm text-gray-400 mb-2 flex items-center justify-between">
+                                    Antrian Walk In
+                                    <i data-lucide="clipboard-list" class="w-4 h-4 text-gray-500 group-hover:text-brand transition-colors"></i>
+                                </div>
+                                <div class="text-4xl font-bold text-white">24</div>
+                                <div class="text-xs text-brand mt-2 flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i> Sesi Besok Pagi
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Full Width Card -->
+                        <div class="bg-gradient-to-r from-dark-800/80 to-dark-800/40 rounded-2xl p-5 border border-white/5">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="text-sm font-medium text-gray-300">Karyawan Akhir Probation</div>
+                                <button class="text-xs text-brand hover:underline">Lihat Semua</button>
+                            </div>
+                            <!-- Mini list items -->
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-white/10">
+                                    <div class="flex-1">
+                                        <div class="text-sm font-semibold">Budi Santoso</div>
+                                        <div class="text-xs text-gray-400">Barista - Cabang Sidoarjo</div>
+                                    </div>
+                                    <div class="text-xs font-bold text-red-400">2 Hari lagi</div>
+                                </div>
+                                <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-white/10">
+                                    <div class="flex-1">
+                                        <div class="text-sm font-semibold">Ahmad Reza</div>
+                                        <div class="text-xs text-gray-400">Supervisor - Cabang Malang</div>
+                                    </div>
+                                    <div class="text-xs font-bold text-brand">5 Hari lagi</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <!-- Decorative Elements -->
+                    <div class="absolute -top-6 -right-6 w-24 h-24 bg-brand rounded-full blur-[60px] opacity-50"></div>
+                    <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-600 rounded-full blur-[80px] opacity-30"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- WALK IN INTERVIEW SECTION -->
+    <section id="walkin" class="py-20 relative bg-dark-800 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+                <div class="max-w-2xl">
+                    <h2 class="text-brand text-sm font-bold tracking-widest uppercase mb-2">Jadwal Terbuka</h2>
+                    <h3 class="text-3xl md:text-4xl font-bold">Walk In Interview</h3>
+                    <p class="mt-4 text-gray-400">Pilih jadwal Walk In Interview terdekat dan daftarkan diri Anda secara online untuk mendapatkan nomor antrian prioritas.</p>
+                </div>
+                <a href="#karir" class="inline-flex items-center gap-2 text-brand hover:text-white transition-colors font-medium">
+                    Lihat Semua Lowongan <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Jadwal 1 -->
+                <div class="glass-card rounded-[2rem] p-6 border border-white/10 hover:border-brand/50 transition-colors relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 bg-green-500/20 text-green-400 text-[10px] font-bold px-4 py-1.5 rounded-bl-xl backdrop-blur-md">AKTIF</div>
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center text-brand flex-shrink-0">
+                            <span class="text-xs font-semibold uppercase">Mei</span>
+                            <span class="text-2xl font-bold leading-none">15</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Surabaya Walk In</h4>
+                            <p class="text-sm text-gray-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 09:00 - 14:00 WIB</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3 mb-6 text-sm">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-gray-500 mt-0.5"></i>
+                            <span class="text-gray-300">My Kopi O! Head Office, Jl. Tenggilis Mejoyo, Surabaya</span>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="briefcase" class="w-4 h-4 text-gray-500 mt-0.5"></i>
+                            <span class="text-gray-300">Posisi: Barista, Kasir, Waiter/Waitress</span>
+                        </div>
+                    </div>
+                    <button class="w-full py-3 rounded-xl bg-white/5 hover:bg-brand hover:text-dark-900 text-white font-semibold transition-all border border-white/10 text-sm">Daftar Antrian</button>
+                </div>
+
+                <!-- Jadwal 2 -->
+                <div class="glass-card rounded-[2rem] p-6 border border-white/10 hover:border-brand/50 transition-colors relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 bg-green-500/20 text-green-400 text-[10px] font-bold px-4 py-1.5 rounded-bl-xl backdrop-blur-md">AKTIF</div>
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center text-brand flex-shrink-0">
+                            <span class="text-xs font-semibold uppercase">Mei</span>
+                            <span class="text-2xl font-bold leading-none">22</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Malang Raya Hiring</h4>
+                            <p class="text-sm text-gray-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 08:00 - 15:00 WIB</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3 mb-6 text-sm">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-gray-500 mt-0.5"></i>
+                            <span class="text-gray-300">My Kopi O! Malang, Jl. Kawi Raya No. 10</span>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="briefcase" class="w-4 h-4 text-gray-500 mt-0.5"></i>
+                            <span class="text-gray-300">Posisi: Supervisor, Cook, Steward</span>
+                        </div>
+                    </div>
+                    <button class="w-full py-3 rounded-xl bg-white/5 hover:bg-brand hover:text-dark-900 text-white font-semibold transition-all border border-white/10 text-sm">Daftar Antrian</button>
+                </div>
+                
+                <!-- Jadwal 3 (Coming Soon) -->
+                <div class="glass-card rounded-[2rem] p-6 border border-white/10 opacity-70 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-gray-500/20 text-gray-400 text-[10px] font-bold px-4 py-1.5 rounded-bl-xl backdrop-blur-md">COMING SOON</div>
+                    <div class="flex items-start gap-4 mb-6 grayscale">
+                        <div class="w-16 h-16 rounded-2xl bg-gray-500/10 border border-gray-500/20 flex flex-col items-center justify-center text-gray-400 flex-shrink-0">
+                            <span class="text-xs font-semibold uppercase">Jun</span>
+                            <span class="text-2xl font-bold leading-none">05</span>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1 text-gray-300">Jakarta Ekspansi</h4>
+                            <p class="text-sm text-gray-500 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Menunggu Konfirmasi</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3 mb-6 text-sm">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-gray-600 mt-0.5"></i>
+                            <span class="text-gray-400">Area Bendungan Hilir / Tanjung Duren</span>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="briefcase" class="w-4 h-4 text-gray-600 mt-0.5"></i>
+                            <span class="text-gray-400">Semua Posisi Operasional</span>
+                        </div>
+                    </div>
+                    <button disabled class="w-full py-3 rounded-xl bg-white/5 text-gray-500 font-semibold border border-white/5 text-sm cursor-not-allowed">Belum Dibuka</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- KARIR / DEPARTEMEN SECTION -->
+    <section id="karir" class="py-20 relative bg-dark-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <h2 class="text-brand text-sm font-bold tracking-widest uppercase mb-2">Buka Potensi Anda</h2>
+                <h3 class="text-3xl md:text-4xl font-bold">Peluang Karir Departemen</h3>
+                <p class="mt-4 text-gray-400">Temukan peran yang sesuai dengan passion Anda di My Kopi O! Group.</p>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex overflow-x-auto no-scrollbar gap-2 pb-4 mb-8 border-b border-white/10 mask-image-linear-edges" id="departmentTabs">
+                <!-- Javascript will populate tabs here -->
+            </div>
+
+            <!-- Job Listings Container -->
+            <div class="min-h-[300px]" id="jobListings">
+                <!-- Javascript will populate job cards here -->
+            </div>
+        </div>
+        <style>
+            .mask-image-linear-edges {
+                -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+                mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+            }
+        </style>
+    </section>
+
+    <!-- TIM HR SECTION -->
+    <section id="tim" class="py-20 relative bg-dark-800 border-t border-b border-white/5 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-radial from-brand/5 to-transparent opacity-50"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-brand text-sm font-bold tracking-widest uppercase mb-2">Kenali Kami</h2>
+                <h3 class="text-3xl md:text-4xl font-bold">Tim Human Resource</h3>
+                <p class="mt-4 text-gray-400">Dedikasi kami adalah menemukan, membina, dan mengembangkan talenta-talenta terbaik untuk kemajuan perusahaan.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Profile 1 -->
+                <div class="glass-card rounded-[2rem] p-6 text-center group">
+                    <div class="relative w-24 h-24 mx-auto mb-4 rounded-full p-1 border-2 border-white/10 group-hover:border-brand transition-colors">
+                        <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80" alt="HR Manager" class="w-full h-full rounded-full object-cover">
+                    </div>
+                    <h4 class="text-lg font-bold">Andi Wibowo</h4>
+                    <p class="text-brand text-sm mb-3">HR Director</p>
+                    <div class="flex justify-center gap-3 text-gray-400">
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="mail" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+                <!-- Profile 2 -->
+                <div class="glass-card rounded-[2rem] p-6 text-center group">
+                    <div class="relative w-24 h-24 mx-auto mb-4 rounded-full p-1 border-2 border-white/10 group-hover:border-brand transition-colors">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80" alt="Recruitment Specialist" class="w-full h-full rounded-full object-cover">
+                    </div>
+                    <h4 class="text-lg font-bold">Siti Nurbaya</h4>
+                    <p class="text-brand text-sm mb-3">Recruitment Lead</p>
+                    <div class="flex justify-center gap-3 text-gray-400">
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="mail" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+                <!-- Profile 3 -->
+                <div class="glass-card rounded-[2rem] p-6 text-center group">
+                    <div class="relative w-24 h-24 mx-auto mb-4 rounded-full p-1 border-2 border-white/10 group-hover:border-brand transition-colors">
+                        <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=200&q=80" alt="Training Manager" class="w-full h-full rounded-full object-cover">
+                    </div>
+                    <h4 class="text-lg font-bold">Bagas Pratama</h4>
+                    <p class="text-brand text-sm mb-3">Training & LMS Dept</p>
+                    <div class="flex justify-center gap-3 text-gray-400">
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="mail" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+                <!-- Profile 4 -->
+                <div class="glass-card rounded-[2rem] p-6 text-center group">
+                    <div class="relative w-24 h-24 mx-auto mb-4 rounded-full p-1 border-2 border-white/10 group-hover:border-brand transition-colors">
+                        <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80" alt="Payroll Specialist" class="w-full h-full rounded-full object-cover">
+                    </div>
+                    <h4 class="text-lg font-bold">Rina Amelia</h4>
+                    <p class="text-brand text-sm mb-3">Comp & Benefit</p>
+                    <div class="flex justify-center gap-3 text-gray-400">
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+                        <a href="#" class="hover:text-white transition-colors"><i data-lucide="mail" class="w-4 h-4"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CORE FEATURES SECTION (Expanded to 10 Features) -->
+    <section id="fitur" class="py-20 relative bg-dark-900 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-brand text-sm font-bold tracking-widest uppercase mb-2">10 Modul Terintegrasi</h2>
+                <h3 class="text-3xl md:text-4xl font-bold">Aplikasi HRIS Ekosistem Penuh</h3>
+                <p class="mt-4 text-gray-400">Otomatisasi seluruh siklus manajemen SDM Anda dari hari pertama rekrutmen hingga evaluasi performa tahunan.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- 1. Recruitment -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="user-plus" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Recruitment</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Application form dinamis, tracking status kandidat, dan database talent pool terpusat.</p>
+                </div>
+
+                <!-- 2. Walk In Interview (NEW) -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-brand text-dark-900 text-[10px] font-bold px-3 py-1 rounded-bl-xl">HOT</div>
+                    <div class="w-12 h-12 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Walk In Interview</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Manajemen antrian pendaftaran massal, validasi QR, dan sinkronisasi jadwal kandidat.</p>
+                </div>
+
+                <!-- 3. Test IQ & Psikotes (NEW) -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="brain" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Test IQ & Psikotes</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Modul asesmen kognitif (Pre-test) yang otomatis memberi skor kompetensi kandidat.</p>
+                </div>
+
+                <!-- 4. Probation -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="clock" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Probation Management</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Reminder otomatis H-30 & H-14 sebelum kontrak masa percobaan habis.</p>
+                </div>
+
+                <!-- 5. Presensi & Attendance (NEW) -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="calendar-clock" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Presensi & Attendance</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Tracking kehadiran berbasis GPS/Selfie dan terintegrasi dengan mesin sidik jari.</p>
+                </div>
+
+                <!-- 6. Penugasan & Tunjangan (NEW) -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-500/10 text-yellow-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="briefcase" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Penugasan & Tunjangan</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Kelola shift, mutasi cabang, promosi, dan sistem tunjangan operasional dinamis.</p>
+                </div>
+
+                <!-- 7. Appraisal -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="star" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Appraisal (KPI)</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Penilaian performa (360-degree) lintas departemen yang objektif dan transparan.</p>
+                </div>
+
+                <!-- 8. LMS Modul -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Learning Management</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Platform materi SOP video, Post-test dengan standar KKM kelulusan untuk barista/staff.</p>
+                </div>
+
+                <!-- 9. Profile Karyawan (NEW) -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="user-circle" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Profile Karyawan Digital</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Bank data digital untuk dokumen kontrak, SP, history karir, dan BPJS.</p>
+                </div>
+
+                <!-- 10. API Integration (NEW) -->
+                <div class="glass-card rounded-[2rem] p-6 group hover:-translate-y-2 transition-all duration-300 cursor-pointer lg:col-start-2">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                        <i data-lucide="webhook" class="w-6 h-6"></i>
+                    </div>
+                    <h4 class="text-lg font-bold mb-2">Open API Ready</h4>
+                    <p class="text-gray-400 text-sm leading-relaxed">Siap diintegrasikan dengan sistem kasir (POS), ERP (SAP/Odoo), atau software eksternal.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- LOCAL SEO & TARGET AUDIENCE SECTION (Expanded Cities) -->
+    <section id="seo-area" class="py-24 relative overflow-hidden bg-dark-800">
+        <div class="absolute right-0 top-0 w-1/2 h-full opacity-20 hidden lg:block">
+            <img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=1000&q=80" alt="Tim Karyawan Indonesia" class="w-full h-full object-cover object-left mask-image-linear-left">
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-r from-dark-800 via-dark-800/95 to-transparent"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/5 border border-white/10 text-sm text-gray-300 mb-6">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-brand"></i> Jangkauan Area Nasional
+                </div>
+                <h2 class="text-3xl md:text-5xl font-bold mb-6 leading-tight">Sistem As A Service HRD Pilihan Pemilik Franchise Nasional</h2>
+                <p class="text-lg text-gray-400 mb-8 leading-relaxed">
+                    Memiliki banyak cabang antar kota namun belum memiliki sistem pengelolaan karyawan yang terpusat? OMEŌ HR Suite dirancang khusus untuk memecahkan masalah operasional FnB skala besar.
+                </p>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-10 text-sm">
+                    <!-- Jawa Timur -->
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Surabaya</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Malang</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Sidoarjo</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Pandaan</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Pasuruan</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Bangil & Sukodono</div>
+                    
+                    <!-- Area Baru -->
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Yogyakarta</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Solo</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Semarang</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Samarinda</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Tanjung Duren (JKT)</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Bendungan Hilir (JKT)</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Depok</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Lombok</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Makassar</div>
+                    <div class="flex items-center gap-2"><i data-lucide="check-circle" class="text-brand w-4 h-4"></i> Palembang</div>
+                </div>
+
+                <div class="glass p-6 rounded-2xl border-l-4 border-l-brand">
+                    <p class="text-gray-300 italic">"Sangat cocok untuk bisnis Franchise FnB yang membutuhkan standarisasi training (LMS), tracking absensi, mutasi penugasan, dan rekruitmen kasir/barista secara masif di berbagai provinsi."</p>
+                </div>
+            </div>
+        </div>
+        <style>
+            .mask-image-linear-left {
+                -webkit-mask-image: linear-gradient(to right, transparent, black 60%);
+                mask-image: linear-gradient(to right, transparent, black 60%);
+            }
+        </style>
+    </section>
+
+    <!-- CALL TO ACTION / CONTACT -->
+    <section class="py-20 relative bg-brand">
+        <div class="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9IiMwMDAiLz48L3N2Zz4=')]"></div>
+        
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="bg-dark-900 rounded-[3rem] p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl">
+                <div class="text-center md:text-left">
+                    <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Siap Transformasi HR Anda?</h2>
+                    <p class="text-gray-400 text-lg">Tingkatkan efisiensi management karyawan di semua cabang Anda sekarang.</p>
+                </div>
+                <div class="flex-shrink-0 w-full md:w-auto">
+                    <a href="/register" class="block w-full text-center px-10 py-5 rounded-full bg-brand hover:bg-white text-dark-900 font-bold text-xl transition-colors shadow-xl">
+                        Mulai Gratis Sekarang
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-dark-900 pt-16 pb-8 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-dark-900 font-bold">O</div>
+                        <span class="font-bold text-xl tracking-tight text-white">OMEŌ</span>
+                    </div>
+                    <p class="text-gray-400 text-sm max-w-sm mb-6">
+                        Aplikasi Management Karyawan & HRIS SaaS terpercaya untuk mengelola rekrutmen, appraisal, absensi, dan operasional HRD Franchise Anda.
+                    </p>
+                    <div class="text-xs text-gray-500">
+                        Part of <strong>My Kopi O! Group</strong>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Akses Cepat</h4>
+                    <ul class="space-y-3 text-sm text-gray-400">
+                        <li><a href="#fitur" class="hover:text-brand transition-colors">Modul Aplikasi</a></li>
+                        <li><a href="#karir" class="hover:text-brand transition-colors">Lowongan Karir</a></li>
+                        <li><a href="#walkin" class="hover:text-brand transition-colors">Walk In Interview</a></li>
+                        <li><a href="#tim" class="hover:text-brand transition-colors">Tim HR Kami</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Kantor Pusat</h4>
+                    <ul class="space-y-3 text-sm text-gray-400">
+                        <li class="flex items-start gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                            <span>Surabaya, Jawa Timur, Indonesia</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                            <span>hrd@mykopio.com</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="pt-8 border-t border-white/10 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center">
+                <p>&copy; 2024 OMEŌ HR Suite. All rights reserved.</p>
+                <div class="flex gap-4 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-white">Privacy Policy</a>
+                    <a href="#" class="hover:text-white">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // 1. Sticky Navbar Logic
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 20) {
+                nav.classList.add('py-2');
+                nav.classList.remove('py-4');
+            } else {
+                nav.classList.add('py-4');
+                nav.classList.remove('py-2');
+            }
+        });
+
+        // 2. Karir / Department Tab Logic
+        const departments = [
+            "DESIGN MARKETING", "FINANCE AND ACCOUNTING", "HUMAN RESOURCE DEPARTMEN", 
+            "KITCHEN OUTLET", "KITCHEN PRODUCTION", "MAINTENANCE", 
+            "MANAGEMENT", "OFFICE PRODUCTION", "PURCHASING", "SERVICE"
+        ];
+
+        // Dummy Data for Jobs based on Department
+        const jobsData = {
+            "DESIGN MARKETING": [
+                { title: "Graphic Designer", location: "Surabaya", type: "Full-Time" },
+                { title: "Social Media Specialist", location: "Jakarta", type: "Full-Time" }
+            ],
+            "FINANCE AND ACCOUNTING": [
+                { title: "Finance Staff", location: "Malang", type: "Full-Time" },
+                { title: "Tax Supervisor", location: "Surabaya", type: "Full-Time" }
+            ],
+            "HUMAN RESOURCE DEPARTMEN": [
+                { title: "Recruitment Specialist", location: "Surabaya", type: "Full-Time" },
+                { title: "Trainer (LMS)", location: "Yogyakarta", type: "Full-Time" }
+            ],
+            "KITCHEN OUTLET": [
+                { title: "Head Cook", location: "Semarang", type: "Full-Time" },
+                { title: "Cook Helper", location: "Depok", type: "Full-Time" }
+            ],
+            "KITCHEN PRODUCTION": [
+                { title: "Pastry Chef", location: "Surabaya", type: "Full-Time" },
+                { title: "Production Crew", location: "Surabaya", type: "Contract" }
+            ],
+            "MAINTENANCE": [
+                { title: "Teknisi Mesin Kopi", location: "Nasional", type: "Full-Time" },
+                { title: "Staff General Affair", location: "Malang", type: "Full-Time" }
+            ],
+            "MANAGEMENT": [
+                { title: "Area Manager", location: "Jawa Timur", type: "Full-Time" },
+                { title: "Store Manager", location: "Makassar", type: "Full-Time" }
+            ],
+            "OFFICE PRODUCTION": [
+                { title: "Admin Produksi", location: "Surabaya", type: "Full-Time" },
+                { title: "Quality Control", location: "Sidoarjo", type: "Full-Time" }
+            ],
+            "PURCHASING": [
+                { title: "Purchasing Staff", location: "Surabaya", type: "Full-Time" },
+                { title: "Supply Chain Analyst", location: "Surabaya", type: "Full-Time" }
+            ],
+            "SERVICE": [
+                { title: "Barista", location: "Banyak Lokasi", type: "Walk-In / Full-Time" },
+                { title: "Waitress / Waiter", location: "Banyak Lokasi", type: "Full-Time" },
+                { title: "Kasir", location: "Banyak Lokasi", type: "Full-Time" }
+            ]
+        };
+
+        const tabContainer = document.getElementById('departmentTabs');
+        const jobsContainer = document.getElementById('jobListings');
+
+        // Render Tabs
+        function renderTabs() {
+            departments.forEach((dept, index) => {
+                const btn = document.createElement('button');
+                btn.className = `whitespace-nowrap px-6 py-3 rounded-full text-sm font-medium border border-white/10 transition-all ${index === 0 ? 'tab-active' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`;
+                btn.textContent = dept;
+                btn.onclick = (e) => {
+                    // Remove active class from all
+                    document.querySelectorAll('#departmentTabs button').forEach(b => {
+                        b.classList.remove('tab-active');
+                        b.classList.add('bg-white/5', 'text-gray-300');
+                    });
+                    // Add active class to clicked
+                    e.target.classList.add('tab-active');
+                    e.target.classList.remove('bg-white/5', 'text-gray-300');
+                    
+                    // Render Jobs
+                    renderJobs(dept);
+                };
+                tabContainer.appendChild(btn);
+            });
+        }
+
+        // Render Jobs
+        function renderJobs(deptName) {
+            jobsContainer.innerHTML = ''; // Clear current
+            const jobs = jobsData[deptName] || [];
+
+            if (jobs.length === 0) {
+                jobsContainer.innerHTML = `
+                    <div class="text-center py-12 glass rounded-[2rem] border border-white/10">
+                        <i data-lucide="inbox" class="w-12 h-12 text-gray-500 mx-auto mb-4"></i>
+                        <p class="text-gray-400">Belum ada lowongan tersedia untuk departemen ini.</p>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+
+            jobs.forEach(job => {
+                const card = document.createElement('div');
+                card.className = 'glass-card p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-brand/50 transition-colors cursor-pointer group';
+                card.innerHTML = `
+                    <div>
+                        <h4 class="text-xl font-bold mb-1 group-hover:text-brand transition-colors">${job.title}</h4>
+                        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-400">
+                            <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${job.location}</span>
+                            <span class="flex items-center gap-1"><i data-lucide="briefcase" class="w-3 h-3"></i> ${job.type}</span>
+                        </div>
+                    </div>
+                    <a href="/register" class="px-5 py-2.5 rounded-full bg-white/5 hover:bg-brand hover:text-dark-900 border border-white/10 text-sm font-semibold transition-all whitespace-nowrap">
+                        Lamar Posisi
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+
+            jobsContainer.appendChild(grid);
+            lucide.createIcons(); // Re-init icons for new DOM elements
+        }
+
+        // Init
+        renderTabs();
+        renderJobs(departments[0]); // Load first tab by default
+    </script>
+</body>
+</html>

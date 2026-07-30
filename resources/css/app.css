@@ -1,0 +1,379 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --base: 248 250 252;
+  --baseText: 15 23 42;
+  --muted: 71 85 105;
+  --card: 255 255 255;
+  --topbar: 255 255 255;
+  --stroke: 203 213 225;
+  --brand: 217 119 6;
+  --brand2: 14 165 233;
+  --danger: 220 38 38;
+}
+
+.dark{
+  --base: 10 14 23;
+  --baseText: 226 232 240;
+  --muted: 148 163 184;
+  --card: 15 23 42;
+  --topbar: 15 23 42;
+  --stroke: 71 85 105;
+  --brand: 245 158 11;
+  --brand2: 56 189 248;
+  --danger: 248 113 113;
+}
+
+@layer base {
+  body{
+    background:
+      radial-gradient(1100px 680px at 20% 0%, rgba(var(--brand),0.12), transparent 55%),
+      radial-gradient(900px 620px at 80% 8%, rgba(var(--brand2),0.10), transparent 60%),
+      linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0));
+    background-color: rgb(var(--base));
+    color: rgb(var(--baseText));
+  }
+
+  .dark body{
+    background:
+      radial-gradient(1100px 680px at 15% 0%, rgba(var(--brand),0.10), transparent 55%),
+      radial-gradient(950px 650px at 85% 8%, rgba(var(--brand2),0.09), transparent 60%),
+      linear-gradient(to bottom, rgba(255,255,255,0.01), rgba(255,255,255,0));
+    background-color: rgb(var(--base));
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@layer components {
+  .card{
+    @apply rounded-2xl border;
+    border-color: rgba(var(--stroke), .78);
+    background: rgba(var(--card), .94);
+    color: rgb(var(--baseText));
+    box-shadow:
+      0 14px 34px rgba(15, 23, 42, .08),
+      0 2px 8px rgba(15, 23, 42, .04);
+    backdrop-filter: blur(18px);
+  }
+
+  .dark .card{
+    border-color: rgba(var(--stroke), .42);
+    background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(15,23,42,.90));
+    box-shadow:
+      0 18px 40px rgba(2, 6, 23, .42),
+      inset 0 1px 0 rgba(255,255,255,.05);
+  }
+
+  .shadow-3d{
+    box-shadow:
+      0 12px 24px rgba(15, 23, 42, .16),
+      inset 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  .btn{
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium border;
+    border-color: rgba(var(--stroke), .9);
+    background: rgba(255,255,255,.96);
+    color: rgb(30 41 59);
+    box-shadow: 0 8px 20px rgba(15,23,42,.06);
+  }
+
+  .btn:hover{
+    background: rgba(248,250,252,1);
+    border-color: rgba(148,163,184,.95);
+  }
+
+  .dark .btn{
+    border-color: rgba(var(--stroke), .55);
+    background: rgba(30,41,59,.88);
+    color: rgb(226 232 240);
+    box-shadow: 0 12px 24px rgba(2,6,23,.24);
+  }
+
+  .dark .btn:hover{
+    background: rgba(51,65,85,.92);
+    border-color: rgba(148,163,184,.65);
+  }
+
+  .btn-primary{
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border;
+    border-color: rgba(180, 83, 9, .24);
+    background: linear-gradient(180deg, rgba(251,191,36,.22), rgba(245,158,11,.18));
+    color: rgb(120 53 15);
+    box-shadow: 0 10px 22px rgba(217,119,6,.12);
+  }
+
+  .btn-primary:hover{
+    background: linear-gradient(180deg, rgba(251,191,36,.28), rgba(245,158,11,.22));
+    border-color: rgba(180, 83, 9, .32);
+  }
+
+  .dark .btn-primary{
+    border-color: rgba(251,191,36,.26);
+    background: linear-gradient(180deg, rgba(245,158,11,.26), rgba(217,119,6,.18));
+    color: rgb(255 237 213);
+    box-shadow: 0 12px 24px rgba(245,158,11,.12);
+  }
+
+  .btn-outline{
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold border;
+    border-color: rgba(148,163,184,.88);
+    background: rgba(255,255,255,.78);
+    color: rgb(51 65 85);
+  }
+
+  .btn-outline:hover{
+    background: rgba(248,250,252,1);
+    border-color: rgba(100,116,139,.9);
+  }
+
+  .dark .btn-outline{
+    border-color: rgba(148,163,184,.5);
+    background: rgba(15,23,42,.28);
+    color: rgb(226 232 240);
+  }
+
+  .dark .btn-outline:hover{
+    background: rgba(30,41,59,.52);
+    border-color: rgba(148,163,184,.68);
+  }
+
+  .btn-ghost{
+    @apply inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm border;
+    border-color: rgba(var(--stroke), .72);
+    background: rgba(255,255,255,.70);
+    color: rgb(51 65 85);
+  }
+
+  .btn-ghost:hover{
+    background: rgba(255,255,255,.96);
+  }
+
+  .dark .btn-ghost{
+    border-color: rgba(var(--stroke), .45);
+    background: rgba(30,41,59,.64);
+    color: rgb(226 232 240);
+  }
+
+  .dark .btn-ghost:hover{
+    background: rgba(51,65,85,.88);
+  }
+
+  .btn-danger{
+    @apply inline-flex items-center rounded-xl px-3 py-2 text-sm font-medium border;
+    background: rgba(var(--danger), .12);
+    border-color: rgba(var(--danger), .24);
+    color: rgb(153 27 27);
+  }
+
+  .dark .btn-danger{
+    color: rgb(254 226 226);
+    background: rgba(var(--danger), .18);
+    border-color: rgba(var(--danger), .32);
+  }
+
+  .badge{
+    @apply text-xs rounded-xl px-2 py-1 border;
+    border-color: rgba(var(--stroke), .78);
+    background: rgba(248,250,252,.95);
+    color: rgb(71 85 105);
+  }
+
+  .dark .badge{
+    border-color: rgba(var(--stroke), .45);
+    background: rgba(30,41,59,.82);
+    color: rgb(203 213 225);
+  }
+
+  .badge-pill{
+    @apply text-[11px] px-2 py-0.5 rounded-full;
+    background: rgba(var(--brand), .16);
+    border: 1px solid rgba(var(--brand), .26);
+    color: rgb(146 64 14);
+  }
+
+  .dark .badge-pill{
+    color: rgb(255 237 213);
+    background: rgba(var(--brand), .22);
+    border-color: rgba(var(--brand), .34);
+  }
+
+  .navlink{
+    @apply flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-transparent;
+    color: rgb(var(--baseText));
+  }
+
+  .navlink:hover{
+    background: rgba(255,255,255,.72);
+    border-color: rgba(var(--stroke), .72);
+  }
+
+  .dark .navlink:hover{
+    background: rgba(30,41,59,.72);
+    border-color: rgba(var(--stroke), .42);
+  }
+
+  .alert-success{
+    @apply rounded-2xl p-4 border;
+    background: rgba(34, 197, 94, .12);
+    border-color: rgba(34, 197, 94, .25);
+    color: rgb(22 101 52);
+  }
+
+  .dark .alert-success{
+    color: rgb(220 252 231);
+    background: rgba(34, 197, 94, .16);
+  }
+
+  .alert-danger{
+    @apply rounded-2xl p-4 border;
+    background: rgba(239, 68, 68, .10);
+    border-color: rgba(239, 68, 68, .25);
+    color: rgb(153 27 27);
+  }
+
+  .dark .alert-danger{
+    color: rgb(254 226 226);
+    background: rgba(239, 68, 68, .14);
+  }
+
+  .menu-item{
+    @apply flex items-center gap-3 rounded-2xl border border-transparent px-3 py-2.5;
+    color: rgb(var(--baseText));
+    transition: all .2s ease;
+  }
+
+  .menu-item:hover{
+    background: rgba(255,255,255,.88);
+    border-color: rgba(var(--stroke), .76);
+    box-shadow: 0 6px 18px rgba(15,23,42,.05);
+  }
+
+  .dark .menu-item:hover{
+    background: rgba(30,41,59,.88);
+    border-color: rgba(var(--stroke), .46);
+    box-shadow: none;
+  }
+
+  .menu-item.is-active{
+    background: linear-gradient(180deg, rgba(251,191,36,.22), rgba(245,158,11,.14));
+    border-color: rgba(var(--brand), .30);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.30);
+  }
+
+  .dark .menu-item.is-active{
+    background: linear-gradient(180deg, rgba(245,158,11,.24), rgba(245,158,11,.14));
+    border-color: rgba(var(--brand), .34);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+
+  .menu-ico{
+    @apply inline-flex items-center justify-center rounded-xl;
+    width: 2rem;
+    height: 2rem;
+    background: linear-gradient(180deg, rgba(251,191,36,.28), rgba(245,158,11,.18));
+    color: rgb(146 64 14);
+    border: 1px solid rgba(217,119,6,.16);
+    flex-shrink: 0;
+  }
+
+  .dark .menu-ico{
+    background: linear-gradient(180deg, rgba(245,158,11,.22), rgba(217,119,6,.16));
+    color: rgb(255 237 213);
+    border-color: rgba(251,191,36,.18);
+  }
+
+  .menu-item.is-active .menu-ico{
+    background: linear-gradient(180deg, rgba(251,191,36,.34), rgba(245,158,11,.24));
+    color: rgb(120 53 15);
+  }
+
+  .dark .menu-item.is-active .menu-ico{
+    color: rgb(255 251 235);
+  }
+
+  .menu-ico svg{
+    width: 1.1rem;
+    height: 1.1rem;
+    display: block;
+    stroke-width: 2.05;
+  }
+
+  .topbar-icon-btn{
+    @apply relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border;
+    border-color: rgba(var(--stroke), .78);
+    color: rgb(51 65 85);
+    background: rgba(255,255,255,.86);
+    box-shadow: 0 8px 18px rgba(15,23,42,.05);
+  }
+
+  .topbar-icon-btn:hover{
+    background: rgba(255,255,255,.98);
+    border-color: rgba(148,163,184,.86);
+  }
+
+  .dark .topbar-icon-btn{
+    border-color: rgba(var(--stroke), .45);
+    color: rgb(226 232 240);
+    background: rgba(30,41,59,.82);
+    box-shadow: 0 10px 24px rgba(2,6,23,.24);
+  }
+
+  .dark .topbar-icon-btn:hover{
+    background: rgba(51,65,85,.92);
+    border-color: rgba(148,163,184,.6);
+  }
+
+  .topbar-badge{
+    @apply absolute -right-1 -top-1 inline-flex min-h-[1.2rem] min-w-[1.2rem] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white;
+    background: rgb(var(--danger));
+    box-shadow: 0 4px 12px rgba(239, 68, 68, .35);
+  }
+
+  .topbar-dropdown{
+    @apply absolute z-50 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-xl;
+    border-color: rgba(var(--stroke), .8);
+    background: rgba(255,255,255,.98);
+  }
+
+  .dark .topbar-dropdown{
+    border-color: rgba(var(--stroke), .45);
+    background: rgba(2,6,23,.94);
+  }
+
+  .topbar-notification-item{
+    @apply block rounded-2xl border border-transparent px-3 py-3;
+  }
+
+  .topbar-notification-item:hover{
+    background: rgba(248,250,252,.96);
+    border-color: rgba(var(--stroke), .78);
+  }
+
+  .dark .topbar-notification-item:hover{
+    background: rgba(30,41,59,.72);
+    border-color: rgba(var(--stroke), .45);
+  }
+
+  .topbar-notification-icon{
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200;
+  }
+
+  .topbar-notification-icon.is-unread{
+    @apply bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-100;
+  }
+}
+
+@layer utilities{
+  .bg-base{ background-color: rgb(var(--base)); }
+  .text-baseText{ color: rgb(var(--baseText)); }
+  .text-muted{ color: rgb(var(--muted)); }
+  .bg-topbar{ background-color: rgb(var(--topbar)); }
+  .text-brand{ color: rgb(var(--brand)); }
+  .bg-brand{ background-color: rgb(var(--brand)); }
+}
