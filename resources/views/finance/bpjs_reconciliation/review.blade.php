@@ -197,7 +197,7 @@ document.querySelectorAll('.nama-cell').forEach(function(cell) {
                 return;
             }
 
-            fetch(`{{ route('finance.bpjs-reconciliation.rows.update-nama', '') }}/${rowId}`, {
+            fetch(`/finance/bpjs-reconciliation/rows/${rowId}/update-nama`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -282,7 +282,7 @@ document.querySelectorAll('.nik-cell').forEach(function(cell) {
                 return;
             }
 
-            fetch(`{{ route('finance.bpjs-reconciliation.rows.update-nik', '') }}/${rowId}`, {
+            fetch(`/finance/bpjs-reconciliation/rows/${rowId}/update-nik`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -320,7 +320,7 @@ document.querySelectorAll('.swap-nik-btn').forEach(function(btn) {
         const rowId    = this.dataset.id;
         const direction = this.dataset.direction;
 
-        fetch(`{{ route('finance.bpjs-reconciliation.rows.swap-nik', '') }}/${rowId}`, {
+        fetch(`/finance/bpjs-reconciliation/rows/${rowId}/swap-nik`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
