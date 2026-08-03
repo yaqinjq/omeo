@@ -30,11 +30,11 @@
         <span style="font-size:20px;">⚠️</span>
         <div>
             <div style="font-weight:700; color:#92400E; font-size:14px;">
-                Ditemukan {{ $warningCount }} nama yang perlu diperiksa
+                Ditemukan {{ $warningCount }} baris yang perlu diperiksa
             </div>
             <div style="font-size:12px; color:#92400E; margin-top:2px;">
-                Nama berwarna kuning = 1 kata (kemungkinan terpotong) ·
-                Nama berwarna merah = total iuran tidak wajar
+                Baris kuning ⚠️ = NIK belum ada di data karyawan OMEO (nama masih tebakan dari PDF) ·
+                Baris merah = total iuran tidak wajar
             </div>
         </div>
     </div>
@@ -49,7 +49,7 @@
 
     {{-- Instruksi --}}
     <p class="text-sm text-slate-600">
-        Klik nama atau NIK untuk mengedit langsung. Kalau nama & NIK ketuker sama baris sebelah (akibat nama yang patah 2 baris di PDF), pakai tombol ▲▼ untuk tukar NIK dengan baris tetangga — lebih cepat daripada ketik ulang 16 digit.
+        Nama karyawan diambil otomatis dari data OMEO berdasarkan NIK di PDF — bukan dari teks nama di PDF (yang gampang salah baca kalau nama panjang/patah 2 baris). Baris dengan tanda ✅ hijau sudah cocok. Baris ⚠️ kuning artinya NIK-nya belum ada di data karyawan OMEO — klik NIK untuk edit kalau salah baca (nama otomatis dicek ulang), atau pakai tombol ▲▼ untuk tukar NIK dengan baris tetangga.
     </p>
 
     {{-- Tabel --}}
@@ -92,40 +92,34 @@
                         </div>
                     </td>
 
-                    {{-- Nama: inline editable --}}
-                    <td class="px-4 py-2.5">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <div class="nama-cell"
-                                 data-id="{{ $row->id }}"
-                                 data-original="{{ $row->nama }}"
-                                 style="cursor:pointer; padding:5px 8px;
-                                        border-radius:6px; border:2px solid transparent;
-                                        display:inline-flex; align-items:center; gap:4px;
-                                        max-width:100%;
-                                        {{ $row->warning === 'fragment' ? 'background:#FEF9C3; border-color:#F59E0B;' : '' }}
-                                        {{ $row->warning === 'total'    ? 'background:#FEE2E2; border-color:#EF4444;' : '' }}"
-                                 title="Klik untuk edit">
-
-                                @if($row->warning)
-                                <span title="{{ $row->warning === 'fragment'
-                                               ? 'Nama hanya 1 kata — kemungkinan terpotong'
-                                               : 'Total iuran tidak wajar — kemungkinan grand total tersedot' }}">
-                                    ⚠️
-                                </span>
-                                @endif
-
-                                <span class="nama-text font-medium text-slate-800">{{ $row->nama }}</span>
-                                <span class="edit-hint text-slate-300 text-xs">✏️</span>
+                    {{-- Nama: dari data karyawan OMEO (via NIK) kalau cocok, else perlu diisi manual --}}
+                    <td class="px-4 py-2.5" id="nama-td-{{ $row->id }}">
+                        @if($row->employee)
+                            <div style="display:inline-flex; align-items:center; gap:4px; padding:5px 8px; border-radius:6px; background:#F0FDF4; border:1.5px solid #86EFAC;">
+                                <span title="Nama diambil dari data karyawan OMEO, bukan dari PDF">✅</span>
+                                <span class="font-medium text-slate-800">{{ $row->employee->full_name }}</span>
                             </div>
-
-                            @if($row->warning === 'fragment')
-                            <button type="button" class="merge-up-btn" data-id="{{ $row->id }}"
-                                    title="Gabung nama ini ke baris di atasnya, lalu geser nama baris di bawahnya naik satu (NIK/Total tidak berubah) — untuk nama yang patah 2 baris di PDF"
-                                    style="font-size:10px; padding:3px 8px; border:1px solid #F59E0B; border-radius:6px; background:#FFFBEB; color:#92400E; cursor:pointer; white-space:nowrap;">
-                                🔗 Gabung ke atas
-                            </button>
-                            @endif
-                        </div>
+                            <div class="text-xs text-slate-400 mt-1">Cocok via NIK — nama dari sistem OMEO</div>
+                        @else
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <div class="nama-cell"
+                                     data-id="{{ $row->id }}"
+                                     data-original="{{ $row->nama }}"
+                                     style="cursor:pointer; padding:5px 8px; border-radius:6px; border:2px solid #F59E0B; background:#FEF9C3;
+                                            display:inline-flex; align-items:center; gap:4px; max-width:100%;"
+                                     title="Klik untuk edit — ini cuma tebakan dari teks PDF, belum tentu akurat">
+                                    <span title="NIK tidak ditemukan di data karyawan OMEO">⚠️</span>
+                                    <span class="nama-text font-medium text-slate-800">{{ $row->nama }}</span>
+                                    <span class="edit-hint text-slate-300 text-xs">✏️</span>
+                                </div>
+                                <button type="button" class="merge-up-btn" data-id="{{ $row->id }}"
+                                        title="Gabung nama ini ke baris di atasnya, lalu geser nama baris di bawahnya naik satu (NIK/Total tidak berubah) — untuk nama yang patah 2 baris di PDF"
+                                        style="font-size:10px; padding:3px 8px; border:1px solid #F59E0B; border-radius:6px; background:#FFFBEB; color:#92400E; cursor:pointer; white-space:nowrap;">
+                                    🔗 Gabung ke atas
+                                </button>
+                            </div>
+                            <div class="text-xs text-amber-600 mt-1">Belum ada di sistem — teks di atas cuma tebakan dari PDF, silakan cek manual</div>
+                        @endif
                     </td>
 
                     <td class="px-4 py-2.5 text-right font-mono text-xs
@@ -304,11 +298,10 @@ document.querySelectorAll('.nik-cell').forEach(function(cell) {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    cell.innerHTML = `
-                        <span class="nik-text font-mono text-xs" style="color:#059669;">✓ ${data.new}</span>
-                    `;
-                    cell.style.borderColor = '#86EFAC';
-                    cell.style.background  = '#F0FDF4';
+                    // Reload supaya kolom Nama ikut ter-update konsisten dari
+                    // server (NIK baru bisa saja langsung cocok/tidak cocok
+                    // dengan karyawan yang berbeda).
+                    window.location.reload();
                 } else {
                     restoreOriginal();
                 }
@@ -376,13 +369,9 @@ document.querySelectorAll('.swap-nik-btn').forEach(function(btn) {
                 alert(data.message || 'Gagal menukar NIK.');
                 return;
             }
-            const rowCell = document.querySelector(`.nik-cell[data-id="${rowId}"] .nik-text`);
-            if (rowCell) { rowCell.textContent = data.row_nik; }
-            document.querySelector(`.nik-cell[data-id="${rowId}"]`).dataset.original = data.row_nik;
-
-            const neighborCell = document.querySelector(`.nik-cell[data-id="${data.neighbor_id}"] .nik-text`);
-            if (neighborCell) { neighborCell.textContent = data.neighbor_nik; }
-            document.querySelector(`.nik-cell[data-id="${data.neighbor_id}"]`).dataset.original = data.neighbor_nik;
+            // Reload supaya kolom Nama kedua baris ikut ter-update konsisten
+            // dari server (NIK yang ditukar bisa saja cocok ke karyawan lain).
+            window.location.reload();
         })
         .catch(() => alert('Gagal menukar NIK, coba lagi.'));
     });

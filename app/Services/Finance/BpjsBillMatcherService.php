@@ -109,6 +109,23 @@ class BpjsBillMatcherService
         return $resetCount;
     }
 
+    /**
+     * Re-match a single row (e.g. after its NIK was manually corrected on the
+     * review page) without touching the rest of the bill.
+     */
+    public function matchRow(BpjsOfficialBillRow $row): BpjsOfficialBillRow
+    {
+        $result = $this->matchEmployee((string) ($row->nik ?? ''));
+        $row->update([
+            'match_status'     => $result['match_status'],
+            'employee_id'      => $result['employee_id'],
+            'match_confidence' => $result['match_confidence'],
+            'match_note'       => $result['match_note'],
+        ]);
+
+        return $row->fresh();
+    }
+
     // ── Private ───────────────────────────────────────────────────────────────
 
     private function matchEmployee(string $nik): array
@@ -138,11 +155,27 @@ class BpjsBillMatcherService
             ];
         }
 
+        // Fallback: sebagian karyawan mungkin belum terisi employees.nik tapi
+        // sudah punya employees.nokom yang kebetulan sama dengan NIK di tagihan.
+        $employee = DB::table('employees')
+            ->whereRaw("REPLACE(REPLACE(nokom, ' ', ''), '-', '') = ?", [$nikClean])
+            ->whereNull('deleted_at')
+            ->first(['id', 'nik', 'nokom', 'full_name', 'employee_number']);
+
+        if ($employee) {
+            return [
+                'employee_id'      => $employee->id,
+                'match_status'     => 'auto',
+                'match_confidence' => 90.00,
+                'match_note'       => 'Cocok via nokom (bukan NIK): ' . $employee->nokom,
+            ];
+        }
+
         return [
             'employee_id'      => null,
             'match_status'     => 'not_found',
             'match_confidence' => 0,
-            'match_note'       => 'NIK ' . $nik . ' tidak ditemukan di database OMEO',
+            'match_note'       => 'NIK ' . $nik . ' tidak ditemukan di database OMEO (dicoba lewat nik & nokom)',
         ];
     }
 }

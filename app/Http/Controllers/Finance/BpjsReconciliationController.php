@@ -305,19 +305,23 @@ class BpjsReconciliationController extends Controller
         $bill = BpjsOfficialBill::findOrFail($billId);
 
         $rows = BpjsOfficialBillRow::where('bill_id', $billId)
+            ->with('employee:id,full_name')
             ->orderBy('id')
-            ->get(['id', 'nik', 'nama', 'total_iuran']);
+            ->get(['id', 'nik', 'nama', 'total_iuran', 'employee_id', 'match_status']);
 
         $totals    = $rows->pluck('total_iuran')->sort()->values();
         $medianIdx = (int) ($totals->count() / 2);
         $median    = $totals[$medianIdx] ?? 0;
 
         $rows = $rows->map(function ($row) use ($median) {
-            $wordCount    = count(explode(' ', trim($row->nama)));
             $row->warning = null;
 
-            if ($wordCount === 1) {
-                $row->warning = 'fragment';
+            // Nama dari PDF tidak lagi dianggap sumber kebenaran — nama
+            // resmi diambil dari data karyawan OMEO via NIK. Baris yang NIK-
+            // nya tidak ketemu di sistem yang butuh perhatian HRD, bukan lagi
+            // baris yang "nama-nya cuma 1 kata".
+            if ($row->match_status === 'not_found') {
+                $row->warning = 'not_found';
             } elseif ($median > 0 && $row->total_iuran > $median * 5) {
                 $row->warning = 'total';
             }
@@ -364,10 +368,16 @@ class BpjsReconciliationController extends Controller
         $old = $row->nik;
         $row->update(['nik' => $request->nik]);
 
+        // NIK berubah → status match lama jadi basi, cocokkan ulang baris ini
+        // saja supaya nama karyawan yang tampil langsung ikut update.
+        $row = $this->matcher->matchRow($row)->load('employee:id,full_name');
+
         return response()->json([
-            'success' => true,
-            'old'     => $old,
-            'new'     => $row->nik,
+            'success'        => true,
+            'old'            => $old,
+            'new'            => $row->nik,
+            'match_status'   => $row->match_status,
+            'employee_name'  => $row->employee?->full_name,
         ]);
     }
 
@@ -446,11 +456,20 @@ class BpjsReconciliationController extends Controller
         $row->update(['nik' => $neighborNik]);
         $neighbor->update(['nik' => $rowNik]);
 
+        // Kedua baris kini punya NIK baru — status match lama sudah tidak
+        // relevan lagi, cocokkan ulang keduanya.
+        $row      = $this->matcher->matchRow($row)->load('employee:id,full_name');
+        $neighbor = $this->matcher->matchRow($neighbor)->load('employee:id,full_name');
+
         return response()->json([
-            'success'      => true,
-            'row_nik'      => $row->nik,
-            'neighbor_id'  => $neighbor->id,
-            'neighbor_nik' => $neighbor->nik,
+            'success'               => true,
+            'row_nik'               => $row->nik,
+            'row_employee_name'     => $row->employee?->full_name,
+            'row_match_status'      => $row->match_status,
+            'neighbor_id'           => $neighbor->id,
+            'neighbor_nik'          => $neighbor->nik,
+            'neighbor_employee_name'=> $neighbor->employee?->full_name,
+            'neighbor_match_status' => $neighbor->match_status,
         ]);
     }
 
