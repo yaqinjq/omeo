@@ -30,7 +30,7 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
         6  => 'CV LOMBOK KOPITIAM MANDIRI',        // AH PEK KOPITIAM MATARAM
         7  => 'PT SUBUR MAKMUR BOGATAMA',          // AHPEK KOPITIAM SAMARINDA
         9  => 'PT MAKMUR GEMILANG KOPIJAYA',       // AH PEK TUNJUNGAN
-        10 => 'CV MULTIRASA KOPIJAYA',             // AH PEK KUPANG INDAH
+        10 => 'CV MULTIRASA KOPIJAYA',             // AH PEK KUPANG INDAH — NOTE: mirip tapi beda ejaan dgn id 14 "CV MULTIRASA KOPI JAYA", belum pasti perusahaan sama atau beda, dibiarkan terpisah
         11 => 'PT MANDIRI KOPIJAYA MAKMUR',        // AH PEK KOPITIAM MERR 221
         12 => 'PT MAKMUR GEMILANG KOPIJAYA',       // AH PEK GRESS MALL
         14 => 'CV MULTIRASA KOPI JAYA',            // BE ON 3
@@ -54,7 +54,7 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
         42 => 'PT IMPERIAL PRIMA FOOD',            // QUA-LI GALAXY MALL
         43 => 'CV. WINDU MAKMUR LESTARI',          // QUA-LI AMBARUKMO PLAZA
         45 => 'PT. BERJAYA LANCAR TERUS',          // Production Penangs Surabaya
-        46 => 'PT BERJAYA LANCAR TERUS',           // Dimsum Production
+        46 => 'PT. BERJAYA LANCAR TERUS',          // Dimsum Production (sama dgn id 45, daftar sumber sempat beda titik)
         47 => 'CV IMPERIAL PRIMA FOOD',            // Production Quali Surabaya
         48 => 'CV IMPERIAL CIPTA KARYA',           // Production Quali Surabaya 2
         49 => 'CV IMPERIAL SELARAS RASA',          // Production Quali Surabaya 3
@@ -92,6 +92,23 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
         56 => 'PRODUCTION MATARAM — tidak ada padanan jelas di daftar sumber',
     ];
 
+    /**
+     * Existing legal_entities.name sering TANPA prefix "PT"/"CV"/"UD" (mis.
+     * "Sayap Mandiri Kopitiam"), sedangkan daftar sumber pimpinan SELALU
+     * pakai prefix ("PT SAYAP MANDIRI KOPITIAM"). Exact-string match saja
+     * akan membuat entity duplikat untuk perusahaan yang sebenarnya sudah
+     * ada — jadi dibandingkan setelah prefix & tanda baca dibuang.
+     */
+    private function normalizeCompanyName(string $name): string
+    {
+        $name = strtoupper(trim($name));
+        $name = preg_replace('/^(PT|CV|UD|FIRMA)\.?\s+/', '', $name);
+        $name = preg_replace('/[.\-]/', ' ', $name);
+        $name = preg_replace('/\s+/', ' ', $name);
+
+        return trim($name);
+    }
+
     public function handle(): int
     {
         $isDryRun = $this->option('dry-run');
@@ -99,8 +116,16 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
 
         $updated = 0;
         $alreadySet = 0;
+        $linkedToExisting = 0;
         $outletNotFound = [];
         $legalEntityCreated = 0;
+
+        $existingEntities = LegalEntity::all();
+        // Nama yang sudah "akan dibuat" dalam run ini — dipakai supaya
+        // dry-run tidak melapor "buat baru" berkali-kali untuk PT yang sama
+        // dipakai di beberapa outlet (baru benar-benar tersimpan di DB kalau
+        // bukan dry-run, jadi query exact-match belum bisa menemukannya).
+        $queuedNewNames = [];
 
         DB::beginTransaction();
 
@@ -114,7 +139,37 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
                 }
 
                 $companyName = trim($companyName);
+                $normalized  = $this->normalizeCompanyName($companyName);
+
+                // 1) Cari exact match dulu (kalau daftar sumber kebetulan
+                //    persis sama dengan yang sudah tercatat).
                 $legalEntity = LegalEntity::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($companyName)])->first();
+
+                // 2) Kalau tidak ada, cari lagi setelah prefix PT/CV/UD dan
+                //    tanda baca dibuang dari KEDUA sisi — ini yang menangkap
+                //    kasus "Sayap Mandiri Kopitiam" (sistem) vs "PT SAYAP
+                //    MANDIRI KOPITIAM" (daftar sumber).
+                if (! $legalEntity) {
+                    $normalizedMatches = $existingEntities->filter(
+                        fn ($e) => $this->normalizeCompanyName($e->name) === $normalized
+                    );
+
+                    if ($normalizedMatches->count() > 1) {
+                        // Ambigu — ada >1 entity tercatat dengan nama dasar
+                        // yang sama (mis. "IMPERIAL PRIMA FOOD" tercatat 2x).
+                        // Jangan asal pilih salah satu, lewati outlet ini dan
+                        // laporkan supaya pimpinan yang putuskan.
+                        $ids = $normalizedMatches->pluck('id')->implode(', ');
+                        $this->warn("  AMBIGU: \"{$companyName}\" cocok dengan {$normalizedMatches->count()} PT/CV berbeda yang sudah ada (id: {$ids}) — outlet id={$outletId} DILEWATI, putuskan manual dulu lewat Master Outlet.");
+                        continue;
+                    }
+
+                    if ($normalizedMatches->count() === 1) {
+                        $legalEntity = $normalizedMatches->first();
+                        $this->line("  COCOK (setelah buang prefix PT/CV): \"{$companyName}\" = \"{$legalEntity->name}\" (id={$legalEntity->id}), TIDAK dibuat baru");
+                        $linkedToExisting++;
+                    }
+                }
 
                 if (! $legalEntity) {
                     $entityType = 'Lainnya';
@@ -122,7 +177,12 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
                     elseif (preg_match('/^CV\.?\s/i', $companyName)) $entityType = 'CV';
                     elseif (preg_match('/^UD\.?\s/i', $companyName)) $entityType = 'UD';
 
-                    $this->line("  BUAT PT/CV baru: {$companyName} ({$entityType})");
+                    if (isset($queuedNewNames[$normalized])) {
+                        $this->line("  (pakai PT/CV baru yang sama dengan baris sebelumnya): {$companyName}");
+                    } else {
+                        $this->line("  BUAT PT/CV baru: {$companyName} ({$entityType})");
+                        $queuedNewNames[$normalized] = true;
+                    }
 
                     if (! $isDryRun) {
                         $legalEntity = LegalEntity::create([
@@ -130,6 +190,7 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
                             'entity_type' => $entityType,
                             'is_active' => true,
                         ]);
+                        $existingEntities->push($legalEntity);
                     }
                     $legalEntityCreated++;
                 }
@@ -165,7 +226,7 @@ class BackfillOutletLegalEntitiesFromListCommand extends Command
         }
 
         $this->newLine();
-        $this->info("Diupdate: {$updated} | Sudah benar sebelumnya: {$alreadySet} | PT/CV baru dibuat: {$legalEntityCreated}");
+        $this->info("Diupdate: {$updated} | Sudah benar sebelumnya: {$alreadySet} | Terhubung ke PT yang sudah ada: {$linkedToExisting} | PT/CV baru dibuat: {$legalEntityCreated}");
 
         if (! empty($outletNotFound)) {
             $this->warn('Outlet ID tidak ditemukan (' . count($outletNotFound) . '):');
