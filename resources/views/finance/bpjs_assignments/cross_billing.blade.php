@@ -155,6 +155,7 @@
                             <th class="px-4 py-3 text-right">BPJS JKES</th>
                             <th class="px-4 py-3 text-right">Total Iuran</th>
                             <th class="px-4 py-3 text-center">Status Data</th>
+                            <th class="px-4 py-3 text-left">Ditagih ke</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -190,6 +191,22 @@
                                         </span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3">
+                                    @if(is_null($r->needs_cross_billing))
+                                        <span class="text-xs text-amber-600" title="Outlet asal karyawan ini belum diisi PT/Badan Hukum di Master Outlet">
+                                            ⚠ PT outlet asal belum diisi
+                                        </span>
+                                    @elseif((int) $r->needs_cross_billing === 1)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                                              style="background-color:#FFEDD5;color:#9A3412;"
+                                              title="PT BPJS ({{ $r->pt_name }}) beda dengan PT payroll asal karyawan — perlu ditagihkan">
+                                            → {{ $r->origin_pt_name }}
+                                        </span>
+                                        <div class="text-[10px] text-gray-400 mt-0.5">outlet asal: {{ $r->origin_outlet_name ?? '—' }}</div>
+                                    @else
+                                        <span class="text-xs text-gray-400">— (PT sama)</span>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -202,6 +219,7 @@
                             <td class="px-4 py-3 text-right font-bold text-gray-900">
                                 Rp {{ number_format($summary['total_iuran'], 0, ',', '.') }}
                             </td>
+                            <td></td>
                             <td></td>
                         </tr>
                     </tfoot>

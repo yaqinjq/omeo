@@ -276,6 +276,8 @@ class BpjsAssignmentController extends Controller
         $query = DB::table('employee_bpjs_assignments as eba')
             ->join('employees as e', 'eba.employee_id', '=', 'e.id')
             ->join('legal_entities as le', 'eba.legal_entity_id', '=', 'le.id')
+            ->leftJoin('outlets as origin_outlet', 'e.outlet_id', '=', 'origin_outlet.id')
+            ->leftJoin('legal_entities as origin_le', 'origin_outlet.legal_entity_id', '=', 'origin_le.id')
             ->leftJoinSub($fbrAgg, 'fbr', function ($join) {
                 $join->whereRaw('fbr.no_komp_int = CAST(e.nokom AS UNSIGNED)');
             })
@@ -295,6 +297,14 @@ class BpjsAssignmentController extends Controller
                 'e.full_name',
                 'e.nik',
                 'e.nokom as no_komp',
+                'origin_outlet.name as origin_outlet_name',
+                'origin_outlet.legal_entity_id as origin_legal_entity_id',
+                'origin_le.name as origin_pt_name',
+                DB::raw('CASE
+                    WHEN origin_outlet.legal_entity_id IS NULL THEN NULL
+                    WHEN origin_outlet.legal_entity_id = eba.legal_entity_id THEN 0
+                    ELSE 1
+                END as needs_cross_billing'),
                 DB::raw('COALESCE(fbr.bpjs_tk_employee, 0)  as bpjs_tk_employee'),
                 DB::raw('COALESCE(fbr.bpjs_jkes_employee, 0) as bpjs_jkes_employee'),
                 DB::raw('COALESCE(fbr.bpjs_tk_employer, 0)  as bpjs_tk_employer'),
@@ -457,8 +467,8 @@ class BpjsAssignmentController extends Controller
 
             $sheet->setCellValue('A1', "Laporan Cross-billing BPJS — {$ptName}");
             $sheet->setCellValue('A2', "Periode: {$periode}");
-            $sheet->mergeCells('A1:H1');
-            $sheet->mergeCells('A2:H2');
+            $sheet->mergeCells('A1:I1');
+            $sheet->mergeCells('A2:I2');
             $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
 
             foreach ([
@@ -466,19 +476,26 @@ class BpjsAssignmentController extends Controller
                 'D4' => 'No. Komp',
                 'E4' => 'BPJS TK (Pekerja)', 'F4' => 'BPJS TK (Perusahaan)',
                 'G4' => 'BPJS JKES', 'H4' => 'Total Iuran',
+                'I4' => 'Ditagih ke (PT Asal)',
             ] as $cell => $val) {
                 $sheet->setCellValue($cell, $val);
             }
 
-            $sheet->getStyle('A4:H4')->getFont()->setBold(true);
-            $sheet->getStyle('A4:H4')->getFill()
+            $sheet->getStyle('A4:I4')->getFont()->setBold(true);
+            $sheet->getStyle('A4:I4')->getFill()
                 ->setFillType(Fill::FILL_SOLID)
                 ->getStartColor()->setRGB('7C3AED');
-            $sheet->getStyle('A4:H4')->getFont()->getColor()->setRGB('FFFFFF');
+            $sheet->getStyle('A4:I4')->getFont()->getColor()->setRGB('FFFFFF');
 
             $row = 5;
             $no  = 1;
             foreach ($rows as $r) {
+                $billedTo = is_null($r->needs_cross_billing)
+                    ? 'PT outlet asal belum diisi'
+                    : ((int) $r->needs_cross_billing === 1
+                        ? $r->origin_pt_name . ' (outlet: ' . ($r->origin_outlet_name ?? '-') . ')'
+                        : '-');
+
                 $sheet->fromArray([
                     $no++,
                     $r->full_name,
@@ -488,6 +505,7 @@ class BpjsAssignmentController extends Controller
                     (float) $r->bpjs_tk_employer,
                     (float) ($r->bpjs_jkes_employee + $r->bpjs_jkes_employer),
                     (float) $r->total_iuran,
+                    $billedTo,
                 ], null, "A{$row}");
                 $row++;
             }
