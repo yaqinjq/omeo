@@ -140,6 +140,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('role:admin,hrd,manager')->name('dashboard');
             Route::get('/users', [UserRoleManagementController::class, 'index'])->middleware('permission:settings.manage,users_roles.manage')->name('users.index');
             Route::patch('/users/{user}/role', [UserRoleManagementController::class, 'updateRole'])->middleware('permission:settings.manage,users_roles.manage')->name('users.role.update');
+            Route::patch('/users/{user}/email', [UserRoleManagementController::class, 'updateEmail'])->middleware('permission:settings.manage,users_roles.manage')->name('users.email.update');
             Route::get('/roles', [RolePermissionController::class, 'index'])->middleware('permission:settings.manage,users_roles.manage')->name('roles.index');
             Route::get('/roles/create', [RolePermissionController::class, 'create'])->middleware('permission:settings.manage,users_roles.manage')->name('roles.create');
             Route::post('/roles', [RolePermissionController::class, 'store'])->middleware('permission:settings.manage,users_roles.manage')->name('roles.store');

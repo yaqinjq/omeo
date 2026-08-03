@@ -158,6 +158,27 @@ class UserRoleManagementController extends Controller
         return back()->with('success', 'Role user berhasil diperbarui.');
     }
 
+    public function updateEmail(Request $request, User $user): RedirectResponse
+    {
+        if (! $this->actorCanManageRoles($request->user())) {
+            return back()->withErrors([
+                'email' => 'Anda tidak memiliki izin untuk mengubah email login user.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+        ]);
+
+        $oldEmail = $user->email;
+
+        if ($oldEmail !== $data['email']) {
+            $user->forceFill(['email' => $data['email']])->save();
+        }
+
+        return back()->with('success', "Email login {$user->name} berhasil diubah dari {$oldEmail} ke {$data['email']}.");
+    }
+
     public function storeRole(Request $request): RedirectResponse
     {
         if (! $this->actorCanManageRoles($request->user())) {

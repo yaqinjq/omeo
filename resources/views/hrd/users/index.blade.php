@@ -56,6 +56,20 @@
                 <td class="px-4 py-3 align-top">
                   <div class="text-gray-800 dark:text-gray-200">{{ $user->email }}</div>
                   <div class="text-xs text-gray-500 dark:text-gray-400">NIK: {{ $currentNik ?: '-' }}</div>
+                  @if($canManageRoles)
+                    <details class="mt-1.5">
+                      <summary class="cursor-pointer text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">✏️ Ubah email login</summary>
+                      <form method="POST" action="{{ route('hrd.users.email.update', $user) }}" class="mt-2 flex flex-col gap-2">
+                        @csrf
+                        @method('PATCH')
+                        <input type="email" name="email" required value="{{ old('email', $user->email) }}"
+                               class="w-full rounded-lg border-gray-300 text-xs focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100">
+                        <button type="submit" class="inline-flex items-center justify-center self-start rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                          Simpan Email
+                        </button>
+                      </form>
+                    </details>
+                  @endif
                 </td>
                 <td class="px-4 py-3 align-top">
                   <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">
