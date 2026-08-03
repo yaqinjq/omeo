@@ -19,6 +19,23 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.11',
+                'date'    => '3 Agustus 2026',
+                'label'   => 'BPJS: Nama dari Data Karyawan, Email Login, Cross-Billing per PT',
+                'color'   => '#DC2626',
+                'items'   => [
+                    'Fix akar masalah nama/NIK bergeser saat upload tagihan BPJS PDF — nama karyawan di halaman Review sekarang diambil langsung dari data karyawan OMEO berdasarkan NIK, bukan dibaca dari teks PDF yang gampang salah kalau nama panjang/patah 2 baris',
+                    'Baris yang NIK-nya belum terdaftar di OMEO ditandai "Belum ada di sistem" dengan jelas, tidak lagi ditebak dari teks PDF',
+                    'Fitur baru di halaman Review: edit NIK langsung + tombol tukar NIK dengan baris atas/bawah (▲▼) — begitu NIK diedit/ditukar, sistem otomatis cocokkan ulang ke data karyawan tanpa langkah tambahan',
+                    'Fitur baru: tombol "Gabung ke atas" untuk baris nama yang nyasar akibat patah 2 baris di PDF — hanya kolom Nama yang bergeser (seperti geser sel di Excel), NIK dan data lain di setiap baris tetap aman tidak ikut terhapus',
+                    'Fix upload Excel BPJS yang sebelumnya error "Row and Column Ids..." — sekarang pesan errornya jelas dan lebih toleran terhadap file hasil convert PDF-ke-Excel',
+                    'Fix bug lama: tombol "Re-parse PDF" tidak pernah menjalankan pencocokan NIK ke data karyawan, sehingga tagihan yang di-reparse selalu terlihat "belum ada di sistem" semua walau datanya benar',
+                    'Fitur baru: HRD/Admin bisa ubah email login user langsung dari halaman Users & Roles — tidak perlu lagi akses database',
+                    'Cross-Billing BPJS: tab "Per PT" sekarang menampilkan kolom "Ditagih ke" — kalau PT penanggung BPJS beda dengan PT payroll asal karyawan, langsung kelihatan PT/outlet mana yang harus ditagih',
+                    'Cross-Billing BPJS: command backfill data PT per outlet (berdasarkan daftar resmi dari pimpinan), dengan deteksi otomatis supaya tidak membuat PT duplikat untuk yang sudah tercatat',
+                ],
+            ],
+            [
                 'version' => 'v3.3.10',
                 'date'    => '30 Juli 2026',
                 'label'   => 'Appraisal: Monitoring per Karyawan, Koreksi Nilai, Print Out PDF',
@@ -493,6 +510,19 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '3 Agustus 2026',
+                'title'   => 'BPJS: Nama dari Data Karyawan, Email Login, Cross-Billing per PT (v3.3.11)',
+                'summary' => 'Perbaikan besar untuk masalah nama karyawan yang sering salah/geser saat upload tagihan BPJS PDF. Akar masalahnya sudah ditemukan: sistem sebelumnya membaca nama dari teks PDF, yang gampang salah kalau nama karyawan panjang dan terpaksa ditulis 2 baris di dokumen aslinya. Sekarang nama diambil langsung dari data karyawan OMEO berdasarkan NIK (yang selalu terbaca akurat dari PDF) — jauh lebih bisa diandalkan. Kalau NIK belum terdaftar, sistem kasih tahu jelas "belum ada di sistem" alih-alih menampilkan nama yang mungkin salah. HRD juga dikasih alat koreksi manual: edit NIK langsung, tukar NIK dengan baris tetangga, atau gabung nama yang nyasar — semuanya aman, tidak ada data yang terhapus. Selain itu, HRD sekarang bisa ganti email login karyawan langsung dari halaman Users & Roles (sebelumnya harus lewat database), dan laporan Cross-Billing BPJS per PT sekarang menunjukkan jelas PT/outlet mana yang harus ditagih kalau ada selisih penanggung BPJS.',
+                'access'  => 'Finance → Rekonsiliasi BPJS → Review Nama Karyawan | HRD → Users & Roles | Finance → Cross-Billing BPJS → tab Per PT',
+                'howto'   => [
+                    'Review BPJS: upload tagihan seperti biasa, nama karyawan otomatis muncul dari data OMEO kalau NIK cocok (tanda ✅ hijau). Kalau muncul tanda ⚠️ kuning "Belum ada di sistem", cek NIK-nya — kalau salah baca, klik NIK untuk edit, nama akan otomatis ketemu lagi',
+                    'Kalau posisi NIK & baris tertukar dengan baris sebelah, pakai tombol ▲▼ di sebelah NIK untuk menukar',
+                    'Ubah email login: buka HRD → Users & Roles, cari nama user, klik "Ubah email login" di kolom email',
+                    'Cross-Billing per PT: buka Finance → Cross-Billing BPJS, lihat kolom "Ditagih ke" di sebelah kanan tiap karyawan',
+                ],
+                'stats'   => '✅ Bug kritikal nama/NIK BPJS diperbaiki (akar masalah, bukan tambal sulam) | Fitur baru: Edit Email Login, Cross-Billing "Ditagih ke" | File diubah/baru: 12',
+            ],
             [
                 'date'    => '30 Juli 2026',
                 'title'   => 'Appraisal: Monitoring per Karyawan, Koreksi Nilai, Print Out PDF (v3.3.10)',
