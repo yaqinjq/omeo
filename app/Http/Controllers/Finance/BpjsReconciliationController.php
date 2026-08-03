@@ -540,6 +540,12 @@ class BpjsReconciliationController extends Controller
             return back()->with('error', 'Re-parse gagal: ' . $e->getMessage());
         }
 
+        // Sama seperti alur upload — cocokkan NIK ke data karyawan langsung
+        // setelah baris baru tersimpan, supaya halaman Review tidak menampilkan
+        // semua baris sebagai "belum ada di sistem" gara-gara belum pernah
+        // dicocokkan sama sekali (status masih 'pending', bukan 'not_found').
+        $this->matcher->matchBill($bill->fresh());
+
         return redirect()
             ->route('finance.bpjs-reconciliation.review', $billId)
             ->with('success', 'Re-parse selesai: ' . count($rows) . ' baris. Silakan review nama karyawan.');
