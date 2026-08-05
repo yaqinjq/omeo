@@ -72,10 +72,10 @@ h1 { font-size: 14px; font-weight: bold; color: #0f172a; margin: 10px 0 3px; }
 .appr-tbl { width: 100%; border-collapse: collapse; margin-top: 8px; }
 .appr-tbl td {
     width: 25%; border: 1px solid #d1d5db; text-align: center;
-    padding: 6px 4px; vertical-align: top; height: 70px;
+    padding: 4px 4px; vertical-align: top; height: 38px;
 }
 .appr-lbl { font-size: 8px; font-weight: bold; color: #374151; margin-bottom: 4px; }
-.appr-space { height: 52px; }
+.appr-space { height: 22px; }
 
 /* ── UTILS ── */
 .page-break { page-break-before: always; }

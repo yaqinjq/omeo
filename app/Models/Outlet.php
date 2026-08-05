@@ -25,6 +25,7 @@ class Outlet extends Model
         'legal_entity_id',
         'region_id',
         'outlet_type',
+        'owner_in_charge_name',
         'is_active',
     ];
 

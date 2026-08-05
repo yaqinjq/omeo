@@ -56,16 +56,7 @@
     <td class="lbl">Jumlah Evaluator</td>
     <td class="val">{{ $evaluatorCount }}</td>
     <td class="lbl">Rata-rata Akhir</td>
-    @php
-        $ratingLabel = match(true) {
-            $overallAvg !== null && $overallAvg >= 4.0 => 'Sangat Baik',
-            $overallAvg !== null && $overallAvg >= 3.0 => 'Baik',
-            $overallAvg !== null && $overallAvg >= 2.0 => 'Cukup',
-            $overallAvg !== null                       => 'Kurang',
-            default                                    => '-',
-        };
-    @endphp
-    <td class="val">{{ $overallAvg !== null ? number_format($overallAvg, 2) . ' (' . $ratingLabel . ')' : '-' }}</td>
+    <td class="val">{{ $overallAvg !== null ? number_format($overallAvg, 2) . ' (' . $overallGrade . ')' : '-' }}</td>
 </tr>
 <tr>
     <td class="lbl">Nama Evaluator Range</td>
@@ -122,7 +113,7 @@
         {{ $ea !== null ? number_format($ea, 2) : '-' }}
     </td>
     @endforeach
-    <td>{{ $overallAvg !== null ? number_format($overallAvg, 2) : '-' }}</td>
+    <td>{{ $matrixOverallAvg !== null ? number_format($matrixOverallAvg, 2) : '-' }}</td>
 </tr>
 </tbody>
 </table>
@@ -169,7 +160,7 @@
 <tr>
     <td class="lbl">Tanda Tangan Karyawan</td>
     <td colspan="3">
-        <div style="height:44px;"></div>
+        <div style="height:20px;"></div>
         <div style="font-size:8px; color:#6b7280;">Belum ditandatangani</div>
         <div style="font-size:8px; color:#6b7280; margin-top:2px;">Nama signer:</div>
     </td>

@@ -46,6 +46,7 @@
       'department' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/></svg>',
       'position' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><path d="M12 2v20M2 12h20"/></svg>',
       'outlet' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10z"/></svg>',
+      'clock' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
       'verification' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
       'onboarding' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
       'offering' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
@@ -133,6 +134,7 @@
   if ($l = $routeItem('departments.index', 'Master Departemen', 'department')) $employees[] = $l;
   if ($l = $routeItem('positions.index', 'Master Posisi', 'position')) $employees[] = $l;
   if ($l = $routeItem('outlets.index', 'Master Outlet', 'outlet')) $employees[] = $l;
+  if ($l = $routeItem('master-shifts.index', 'Master Shift Kerja', 'clock')) $employees[] = $l;
   if (count($employees)) $hrdGroups[] = ['label' => 'Employees', 'items' => $employees];
 
   $trainingLms = [];

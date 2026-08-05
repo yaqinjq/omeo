@@ -424,6 +424,7 @@ class OutletController extends Controller
             'timezone' => ['required', 'string', Rule::in(timezone_identifiers_list())],
             'work_start_time' => ['nullable', 'date_format:H:i'],
             'work_end_time' => ['nullable', 'date_format:H:i'],
+            'owner_in_charge_name' => ['nullable', 'string', 'max:150'],
         ];
 
         $data = $request->validate($rules, [
@@ -438,6 +439,7 @@ class OutletController extends Controller
         $data['outlet_type'] = $data['outlet_type'] ?? 'operational';
         $data['external_id'] = $this->normalizeExternalId($data['external_id'] ?? null);
         $data['location'] = trim((string) ($data['location'] ?? '')) ?: null;
+        $data['owner_in_charge_name'] = trim((string) ($data['owner_in_charge_name'] ?? '')) ?: null;
 
         [$parsedLat, $parsedLng] = $this->extractCoordinatesFromReference(
             (string) ($data['maps_reference'] ?? ''),

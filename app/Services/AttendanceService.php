@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AttendanceLeave;
 use App\Models\AttendanceSchedule;
 use App\Models\AttendanceSession;
+use App\Models\MasterShift;
 use App\Models\Outlet;
 use App\Models\User;
 use Carbon\Carbon;
@@ -61,9 +62,11 @@ class AttendanceService
     }
 
     /**
+     * @param  ?Carbon  $actualLocalTime  Jam scan sebenarnya (waktu lokal outlet), dipakai untuk
+     *                                    auto-cocokkan shift terdekat kalau tidak ada jadwal eksplisit.
      * @return array{shift_code:?string,scheduled_in_local:?string,scheduled_out_local:?string,outlet_mismatch:bool,schedule_mismatch:bool}
      */
-    public function resolveSchedule(User $user, Outlet $outlet, string $workDate): array
+    public function resolveSchedule(User $user, Outlet $outlet, string $workDate, ?Carbon $actualLocalTime = null): array
     {
         $schedule = AttendanceSchedule::query()
             ->with('shift:id,code,in_time,out_time')
@@ -72,6 +75,18 @@ class AttendanceService
             ->first();
 
         if (! $schedule) {
+            $nearestShift = $actualLocalTime ? $this->nearestShiftForOutlet($outlet, $actualLocalTime) : null;
+
+            if ($nearestShift) {
+                return [
+                    'shift_code' => $nearestShift->code,
+                    'scheduled_in_local' => $nearestShift->in_time,
+                    'scheduled_out_local' => $nearestShift->out_time,
+                    'outlet_mismatch' => false,
+                    'schedule_mismatch' => false,
+                ];
+            }
+
             return [
                 'shift_code' => 'REG',
                 'scheduled_in_local' => $outlet->work_start_time,
@@ -91,6 +106,36 @@ class AttendanceService
             'outlet_mismatch' => $schedule->outlet_id !== null && (int) $schedule->outlet_id !== (int) $outlet->id,
             'schedule_mismatch' => $schedule->master_shift_id !== null && $schedule->shift === null,
         ];
+    }
+
+    /**
+     * Cari shift outlet yang jam masuknya (in_time) paling dekat dengan jam
+     * scan sebenarnya — dipakai saat karyawan belum punya jadwal eksplisit
+     * (attendance_schedules) supaya presensi tetap dinilai terhadap shift
+     * yang benar, bukan selalu jam kerja tunggal outlet. Kalau outlet belum
+     * punya shift terdaftar sama sekali, return null (fallback ke jam kerja
+     * outlet seperti sebelumnya — behavior lama tidak berubah).
+     */
+    private function nearestShiftForOutlet(Outlet $outlet, Carbon $actualLocalTime): ?MasterShift
+    {
+        $shifts = MasterShift::query()
+            ->where('outlet_id', $outlet->id)
+            ->where('is_active', true)
+            ->get();
+
+        if ($shifts->isEmpty()) {
+            return null;
+        }
+
+        $actualMinutes = ((int) $actualLocalTime->format('H')) * 60 + (int) $actualLocalTime->format('i');
+
+        return $shifts->sortBy(function (MasterShift $shift) use ($actualMinutes) {
+            [$h, $m] = array_map('intval', explode(':', $shift->in_time));
+            $shiftMinutes = $h * 60 + $m;
+            $diff = abs($shiftMinutes - $actualMinutes);
+
+            return min($diff, 1440 - $diff);
+        })->first();
     }
 
     public function isOnApprovedLeave(int $userId, string $workDate): bool

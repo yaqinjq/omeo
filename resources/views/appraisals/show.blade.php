@@ -216,8 +216,8 @@
                     @endif
                   </div>
                   <div class="md:col-span-4">
-                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator</label>
-                    <textarea name="comments[{{ $ind->id }}]" rows="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
+                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
+                    <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit) @required($canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
                   </div>
                 </div>
               </div>

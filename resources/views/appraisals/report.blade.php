@@ -95,7 +95,7 @@
             ['label'=>'Selesai (Approved)', 'value'=>$stats['approved'],         'color'=>'#059669','bg'=>'#DCFCE7','icon'=>'✅'],
             ['label'=>'Dalam Proses',       'value'=>$stats['submitted'],        'color'=>'#1D4ED8','bg'=>'#DBEAFE','icon'=>'⏳'],
             ['label'=>'Draft',              'value'=>$stats['draft'],            'color'=>'#92400E','bg'=>'#FEF9C3','icon'=>'📝'],
-            ['label'=>'Rata-rata Skor',     'value'=>number_format($avgScore ?? 0, 1),'color'=>'#0369A1','bg'=>'#F0FDF4','icon'=>'⭐'],
+            ['label'=>'Rata-rata Skor',     'value'=>number_format(($avgScore ?? 0) / 20, 2),'color'=>'#0369A1','bg'=>'#F0FDF4','icon'=>'⭐'],
         ] as $card)
         <div style="background:{{ $card['bg'] }}; border-radius:12px; padding:14px 16px; text-align:center;">
             <div style="font-size:22px; margin-bottom:4px;">{{ $card['icon'] }}</div>
@@ -163,12 +163,14 @@
 
                 @forelse($paginator as $idx => $row)
                 @php
-                    $avgS = $row->avg_score;
-                    $scoreStyle = ($avgS === null)
-                        ? 'background:#F1F5F9;color:#94A3B8;'
-                        : (floatval($avgS) >= 80 ? 'background:#DCFCE7;color:#166534;'
-                        : (floatval($avgS) >= 60 ? 'background:#FEF9C3;color:#854D0E;'
-                        : 'background:#FEE2E2;color:#991B1B;'));
+                    // Rata-rata ditampilkan dalam skala 1-5 (final_score/20), sama
+                    // seperti halaman detail per karyawan — satu skala konsisten,
+                    // warnanya ikut band AppraisalGrading yang sama dengan "Hasil".
+                    $avgS  = $row->avg_score !== null ? round($row->avg_score / 20, 2) : null;
+                    $avgBand = $avgS !== null ? \App\Support\AppraisalGrading::band(\App\Support\AppraisalGrading::classify($avgS)) : null;
+                    $scoreStyle = $avgBand
+                        ? "background:{$avgBand['bg']};color:{$avgBand['color']};"
+                        : 'background:#F1F5F9;color:#94A3B8;';
 
                     $badgeColors = [
                         'Lulus'=>'background:#DCFCE7;color:#166534;','Promosi'=>'background:#F3E8FF;color:#7C3AED;',
@@ -229,7 +231,7 @@
 
                         <td style="padding:12px 14px; text-align:center;">
                             <span style="{{ $scoreStyle }} padding:4px 10px; border-radius:8px; font-size:13px; font-weight:800;">
-                                {{ $avgS !== null ? number_format(floatval($avgS), 1) : '—' }}
+                                {{ $avgS !== null ? number_format($avgS, 2) : '—' }}
                             </span>
                         </td>
 

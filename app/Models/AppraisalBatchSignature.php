@@ -49,10 +49,18 @@ class AppraisalBatchSignature extends Model
         return $this->belongsTo(User::class, 'signer_director_id');
     }
 
+    public function slots()
+    {
+        return $this->hasMany(AppraisalBatchSignatureSlot::class, 'batch_signature_id')->orderBy('slot_order');
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
     public function signedCount(): int
     {
-        return collect(['sig_employee', 'sig_hrd', 'sig_supervisor', 'sig_manager', 'sig_director'])
-            ->filter(fn ($f) => ! empty($this->$f))
-            ->count();
+        return $this->slots->filter(fn ($slot) => ! empty($slot->signature_data))->count();
     }
 }

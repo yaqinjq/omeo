@@ -43,6 +43,7 @@ use App\Http\Controllers\Trainer\TrainingEventController as TrainerTrainingEvent
 use App\Http\Controllers\Master\DepartmentController;
 use App\Http\Controllers\Master\PositionController;
 use App\Http\Controllers\Master\OutletController;
+use App\Http\Controllers\Master\MasterShiftController;
 use App\Http\Controllers\Applicant\DailyWorkerContractController as ApplicantDailyWorkerContractController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\Recruitment\WalkinController as RecruitmentWalkinController;
@@ -182,6 +183,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('outlets/{outlet}/permits/{permit}', [OutletController::class, 'destroyPermit'])->name('outlets.permits.destroy');
         Route::delete('outlets/{outlet}/permits/{permit}/attachments/{attachment}', [OutletController::class, 'destroyPermitAttachment'])->name('outlets.permits.attachments.destroy');
         Route::resource('outlets', OutletController::class)->except(['show']);
+        Route::resource('master-shifts', MasterShiftController::class)->except(['show']);
 
         Route::get('employees/export', [EmployeeController::class, 'export'])->name('employees.export');
         Route::get('employees/export/hris', [EmployeeController::class, 'exportHris'])->name('employees.export.hris');
@@ -307,6 +309,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('appraisals/report/employee/{employeeId}', [AppraisalController::class, 'reportEmployee'])->name('appraisals.report-employee')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/signer', [AppraisalController::class, 'saveSigner'])->name('appraisals.report-employee.save-signer')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/sign', [AppraisalController::class, 'saveSignature'])->name('appraisals.report-employee.sign')->whereNumber('employeeId');
+        Route::post('appraisals/report/employee/{employeeId}/signature-slots', [AppraisalController::class, 'addSignatureSlot'])->name('appraisals.report-employee.add-signature-slot')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/extend-due-date-bulk', [AppraisalController::class, 'extendDueDateBulk'])->name('appraisals.report-employee.extend-due-date-bulk')->whereNumber('employeeId');
         Route::get('appraisals/export-report', [AppraisalController::class, 'exportReport'])->name('appraisals.export-report');
         Route::get('appraisals/export-bulk-pdf', [AppraisalController::class, 'exportBulkPdf'])->name('appraisals.export-bulk-pdf');

@@ -106,6 +106,13 @@
       </div>
     </div>
 
+    <div>
+      <label class="block text-sm text-gray-600">Owner In Charge</label>
+      <input name="owner_in_charge_name" value="{{ old('owner_in_charge_name', $outlet->owner_in_charge_name) }}" class="border rounded px-3 py-2 w-full" placeholder="Nama pemilik outlet cabang/franchise">
+      <p class="text-xs text-gray-400 mt-1">Dipakai sebagai pilihan penanda tangan appraisal "Owner In Charge" — bukan login sistem, cuma nama untuk dicetak di dokumen.</p>
+      @error('owner_in_charge_name')<div class="text-red-600 text-sm">{{ $message }}</div>@enderror
+    </div>
+
     <div class="flex gap-2">
       <button class="px-4 py-2 rounded bg-gray-900 text-white">Simpan</button>
       <a href="{{ route('outlets.index') }}" class="px-4 py-2 rounded border">Kembali</a>

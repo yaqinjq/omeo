@@ -18,6 +18,37 @@ use Illuminate\Support\Facades\Schema;
 
 class AppraisalAssignmentController extends Controller
 {
+    public function __construct(
+        private readonly \App\Services\Notifications\UnifiedNotificationService $unifiedNotificationService,
+    ) {
+    }
+
+    /**
+     * Sama seperti AppraisalController::sendAppraisalEmail() — $user=null
+     * supaya hanya kanal email yang jalan, notifikasi internal tetap lewat
+     * kode HrNotification yang sudah ada di notifyAppraiser() di bawah.
+     */
+    private function sendAppraisalEmail(string $eventKey, ?int $userId, string $title, string $message): void
+    {
+        if (! $userId) {
+            return;
+        }
+
+        $user = User::find($userId);
+        $email = trim((string) ($user?->email ?: $user?->employee?->email_private ?: ''));
+        if ($email === '') {
+            return;
+        }
+
+        $this->unifiedNotificationService->dispatch(
+            eventKey: $eventKey,
+            user: null,
+            email: $email,
+            whatsappNumber: '',
+            payload: ['title' => $title, 'message' => $message]
+        );
+    }
+
     public function index(Request $request)
     {
         $mode       = in_array($request->get('mode'), ['probation', 'manual'], true) ? $request->get('mode') : 'probation';
@@ -333,6 +364,13 @@ class AppraisalAssignmentController extends Controller
         }
 
         HrNotification::query()->create($payload);
+
+        $this->sendAppraisalEmail(
+            'appraisal_invitation',
+            $appraisal->appraiser_id,
+            'Invitation evaluator appraisal',
+            'Anda mendapat assignment appraisal untuk ' . ($appraisal->employee?->full_name ?? 'karyawan') . '.'
+        );
 
         if (Schema::hasTable('appraisal_invitation_logs')) {
             AppraisalInvitationLog::query()->create([

@@ -18,15 +18,15 @@
     Kriteria di halaman ini bukan lagi dimaksudkan sebagai modul teknis yang berdiri sendiri. Fungsinya adalah menjadi bank butir evaluasi agar form evaluator tetap familiar dan mudah dibaca HRD. Kriteria dikelompokkan per <strong>Template</strong> — karyawan Office dan Operational Outlet bisa punya butir penilaian yang berbeda.
   </div>
 
-  <form method="GET" class="flex items-center gap-2">
-    <label class="text-sm text-slate-600">Filter template:</label>
-    <select name="template_id" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" onchange="this.form.submit()">
-      <option value="">Semua Template</option>
-      @foreach($templates as $t)
-        <option value="{{ $t->id }}" @selected(request('template_id') == $t->id)>{{ $t->name }}</option>
-      @endforeach
-    </select>
-  </form>
+  <div class="flex gap-1 border-b border-slate-200">
+    @foreach($tabs as $key => $cfg)
+      <a href="{{ route('appraisal-indicators.index', ['tab' => $key]) }}"
+         class="px-4 py-2 text-sm font-semibold transition-colors {{ $activeTab === $key ? 'border-b-2 border-indigo-600 text-indigo-700' : 'text-slate-500 hover:text-slate-700' }}">
+        {{ $cfg['label'] }}
+        <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs {{ $activeTab === $key ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500' }}">{{ $tabCounts[$key] ?? 0 }}</span>
+      </a>
+    @endforeach
+  </div>
 
   <div class="card overflow-hidden p-0">
     <div class="overflow-auto">

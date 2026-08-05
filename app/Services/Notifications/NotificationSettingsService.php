@@ -49,6 +49,12 @@ class NotificationSettingsService
             'candidate_status_shortlisted' => 'Peserta lolos administrasi / shortlist',
             'candidate_status_accepted' => 'Peserta diterima / lanjut onboarding',
             'employee_profile_change_reviewed' => 'Karyawan menerima hasil review perubahan data',
+            'appraisal_invitation' => 'Appraisal: evaluator ditunjuk',
+            'appraisal_reminder' => 'Appraisal: reminder pengisian penilaian',
+            'appraisal_edit_request' => 'Appraisal: evaluator ajukan izin edit',
+            'appraisal_edit_approved' => 'Appraisal: izin edit disetujui HRD',
+            'appraisal_edit_rejected' => 'Appraisal: izin edit ditolak HRD',
+            'appraisal_due_date_extended' => 'Appraisal: due date diperpanjang',
         ];
     }
 
@@ -70,6 +76,36 @@ class NotificationSettingsService
                 'email' => true,
                 'whatsapp' => true,
             ],
+            'appraisal_invitation' => [
+                'internal' => true,
+                'email' => true,
+                'whatsapp' => false,
+            ],
+            'appraisal_reminder' => [
+                'internal' => true,
+                'email' => true,
+                'whatsapp' => false,
+            ],
+            'appraisal_edit_request' => [
+                'internal' => true,
+                'email' => true,
+                'whatsapp' => false,
+            ],
+            'appraisal_edit_approved' => [
+                'internal' => true,
+                'email' => true,
+                'whatsapp' => false,
+            ],
+            'appraisal_edit_rejected' => [
+                'internal' => true,
+                'email' => true,
+                'whatsapp' => false,
+            ],
+            'appraisal_due_date_extended' => [
+                'internal' => true,
+                'email' => true,
+                'whatsapp' => false,
+            ],
         ];
     }
 
@@ -87,6 +123,30 @@ class NotificationSettingsService
             'employee_profile_change_reviewed' => [
                 'title' => 'Update pengajuan data karyawan',
                 'body' => 'Halo {name}, {message} Buka aplikasi OMEO untuk melihat detail terbaru.',
+            ],
+            'appraisal_invitation' => [
+                'title' => 'Invitation evaluator appraisal',
+                'body' => 'Halo {name}, {message}',
+            ],
+            'appraisal_reminder' => [
+                'title' => 'Reminder pengisian appraisal',
+                'body' => 'Halo {name}, {message}',
+            ],
+            'appraisal_edit_request' => [
+                'title' => 'Permintaan edit penilaian appraisal',
+                'body' => 'Halo {name}, {message}',
+            ],
+            'appraisal_edit_approved' => [
+                'title' => 'Permintaan edit penilaian disetujui',
+                'body' => 'Halo {name}, {message}',
+            ],
+            'appraisal_edit_rejected' => [
+                'title' => 'Permintaan edit penilaian ditolak',
+                'body' => 'Halo {name}, {message}',
+            ],
+            'appraisal_due_date_extended' => [
+                'title' => 'Due date appraisal diperpanjang',
+                'body' => 'Halo {name}, {message}',
             ],
         ];
     }

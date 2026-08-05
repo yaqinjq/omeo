@@ -86,9 +86,35 @@
     </details>
     @endif
 
+    @if($pendingAppraisals->isNotEmpty())
+    <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:700; color:#92400E; margin-bottom:8px;">&#8987; Evaluator Belum Mengisi ({{ $pendingAppraisals->count() }})</div>
+        @foreach($pendingAppraisals as $pa)
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid #FEF3C7;">
+                <div style="font-size:12px; color:#78350F;">
+                    <b>{{ $pa->appraiser?->name ?? 'Evaluator' }}</b>
+                    @if($pa->due_date)
+                        <span style="color:#B45309;">&middot; due date {{ $pa->due_date->format('d-m-Y') }}</span>
+                    @endif
+                    @if($pa->last_reminded_at)
+                        <span style="color:#B45309;">&middot; terakhir di-remind {{ $pa->last_reminded_at->format('d-m-Y H:i') }}</span>
+                    @endif
+                </div>
+                @if(in_array((string) auth()->user()->role, ['admin','hrd'], true))
+                <form method="POST" action="{{ route('appraisals.remind', $pa) }}" style="flex-shrink:0;">
+                    @csrf
+                    <button type="submit" style="font-size:11px; background:#D97706; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer;">Kirim Reminder</button>
+                </form>
+                @endif
+            </div>
+        @endforeach
+    </div>
+    @endif
+
     {{-- ── INFO BAR ── --}}
     @php
-        $sigCount   = $sigBatch?->signedCount() ?? 0;
+        $sigCount    = $sigBatch?->signedCount() ?? 0;
+        $sigSlotTotal = $sigBatch?->slots->count() ?? 0;
         $evalNames  = $appraisals->map(fn($a) => $a->appraiser?->name ?? 'Evaluator')->join(', ');
         $chunks     = $appraisals->chunk(8);
         $chunkCount = $chunks->count();
@@ -109,8 +135,8 @@
         </div>
         <div style="text-align:right; flex-shrink:0;">
             <div style="font-size:11px; color:#3b82f6; font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px;">STATUS SIGNATURE BATCH</div>
-            <div style="font-size:28px; font-weight:900; color:{{ $sigCount >= 5 ? '#166534' : ($sigCount > 0 ? '#1D4ED8' : '#94A3B8') }};">
-                {{ $sigCount }} / 5
+            <div style="font-size:28px; font-weight:900; color:{{ $sigSlotTotal > 0 && $sigCount >= $sigSlotTotal ? '#166534' : ($sigCount > 0 ? '#1D4ED8' : '#94A3B8') }};">
+                {{ $sigCount }} / {{ $sigSlotTotal }}
             </div>
             <div style="font-size:11px; color:#64748B;">slot ditandatangani</div>
             @if($sigBatch)
@@ -207,7 +233,7 @@
                         'Tgl. Join'        => $employee->join_date?->format('d M Y') ?? '-',
                         'Jumlah Penilai'   => $appraisals->count() . ' evaluator',
                         'Batch Signature'  => $sigBatch ? '#' . $sigBatch->id : '-',
-                        'Status Signature' => $sigCount . ' / 5 slot',
+                        'Status Signature' => $sigCount . ' / ' . $sigSlotTotal . ' slot',
                         'Chunk Matriks'    => $chunkCount . ' bagian',
                     ];
                 @endphp
@@ -221,20 +247,12 @@
             {{-- Right: Nilai rata-rata besar --}}
             <div style="padding:24px 28px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:180px;">
                 <div style="font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px;">NILAI RATA-RATA AKHIR</div>
-                <div style="font-size:52px; font-weight:900; color:{{ $overallAvg !== null && $overallAvg >= 3.0 ? '#166534' : ($overallAvg !== null && $overallAvg >= 2.0 ? '#854D0E' : '#991B1B') }}; line-height:1;">
+                @php $gradeBand = \App\Support\AppraisalGrading::band($overallGrade); @endphp
+                <div style="font-size:52px; font-weight:900; color:{{ $gradeBand['color'] ?? '#64748B' }}; line-height:1;">
                     {{ $overallAvg !== null ? number_format($overallAvg, 2) : '—' }}
                 </div>
-                @php
-                    $rLabel = match(true) {
-                        $overallAvg !== null && $overallAvg >= 4.0 => ['SANGAT BAIK', '#166534', '#DCFCE7'],
-                        $overallAvg !== null && $overallAvg >= 3.0 => ['BAIK', '#065F46', '#D1FAE5'],
-                        $overallAvg !== null && $overallAvg >= 2.0 => ['CUKUP', '#854D0E', '#FEF9C3'],
-                        $overallAvg !== null                       => ['KURANG', '#991B1B', '#FEE2E2'],
-                        default                                    => ['N/A', '#64748B', '#F1F5F9'],
-                    };
-                @endphp
-                <div style="margin-top:10px; padding:4px 16px; border-radius:99px; background:{{ $rLabel[2] }}; color:{{ $rLabel[1] }}; font-size:12px; font-weight:800; letter-spacing:.06em;">
-                    {{ $rLabel[0] }}
+                <div style="margin-top:10px; padding:4px 16px; border-radius:99px; background:{{ $gradeBand['bg'] ?? '#F1F5F9' }}; color:{{ $gradeBand['color'] ?? '#64748B' }}; font-size:12px; font-weight:800; letter-spacing:.06em;">
+                    {{ $overallGrade ?? 'N/A' }}
                 </div>
             </div>
         </div>
@@ -316,7 +334,7 @@
                             </td>
                             @endforeach
                             <td style="padding:9px 10px; text-align:center; font-weight:800; color:#1e3a8a; background:#BFDBFE;">
-                                {{ $overallAvg !== null ? number_format($overallAvg, 2) : '—' }}
+                                {{ $matrixOverallAvg !== null ? number_format($matrixOverallAvg, 2) : '—' }}
                             </td>
                         </tr>
                     </tbody>
@@ -371,22 +389,16 @@
 
     {{-- ── SECTION 3: TANDA TANGAN DIGITAL ── --}}
     @php
-        $sigSlots = [
-            ['role'=>'employee',   'label'=>'Karyawan',                   'color'=>'#7C3AED','bg'=>'#F3E8FF'],
-            ['role'=>'hrd',        'label'=>'HRD / Super Administrator',  'color'=>'#DC2626','bg'=>'#FEF2F2'],
-            ['role'=>'supervisor', 'label'=>'Supervisor / PIC',           'color'=>'#059669','bg'=>'#F0FDF4'],
-            ['role'=>'manager',    'label'=>'Manager / ASPV / ASM',       'color'=>'#D97706','bg'=>'#FEF3C7'],
-            ['role'=>'director',   'label'=>'Managing Director',          'color'=>'#0369A1','bg'=>'#E0F2FE'],
-        ];
         $currentUserId   = auth()->id();
         $canManageSigner = in_array(auth()->user()->role, ['admin','hrd']);
+        $slotCount       = $sigBatch?->slots->count() ?? 0;
     @endphp
 
     <div style="background:white; border-radius:14px; border:1.5px solid #E2E8F0; margin-bottom:24px; overflow:hidden;">
         <div style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; border-left:4px solid #2563EB; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:13px; font-weight:700; color:#1e3a8a;">&#128396; Section 3: Tanda Tangan Digital Appraisal</span>
             @if($sigBatch)
-            <span style="font-size:11px; color:#94A3B8;">Batch #{{ $sigBatch->id }} &mdash; {{ $sigBatch->signedCount() }} / 5 ditandatangani</span>
+            <span style="font-size:11px; color:#94A3B8;">Batch #{{ $sigBatch->id }} &mdash; {{ $sigBatch->signedCount() }} / {{ $slotCount }} ditandatangani</span>
             @else
             <span style="font-size:11px; color:#94A3B8;">Belum ada batch signature</span>
             @endif
@@ -398,22 +410,21 @@
         </div>
         @else
         <div style="padding:18px;">
-            {{-- Row 1: Karyawan + HRD --}}
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
-                @foreach(array_slice($sigSlots, 0, 2) as $slot)
-                @include('appraisals.partials.sig_slot', ['slot'=>$slot, 'sigBatch'=>$sigBatch, 'currentUserId'=>$currentUserId, 'canManageSigner'=>$canManageSigner, 'allUsers'=>$allUsers, 'employeeId'=>$employee->id])
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-bottom:14px;">
+                @foreach($sigBatch->slots as $slot)
+                @include('appraisals.partials.sig_slot', ['slot'=>$slot, 'currentUserId'=>$currentUserId, 'canManageSigner'=>$canManageSigner, 'categoryCandidates'=>$categoryCandidates, 'employeeId'=>$employee->id])
                 @endforeach
             </div>
-            {{-- Row 2: Supervisor + Manager --}}
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
-                @foreach(array_slice($sigSlots, 2, 2) as $slot)
-                @include('appraisals.partials.sig_slot', ['slot'=>$slot, 'sigBatch'=>$sigBatch, 'currentUserId'=>$currentUserId, 'canManageSigner'=>$canManageSigner, 'allUsers'=>$allUsers, 'employeeId'=>$employee->id])
-                @endforeach
-            </div>
-            {{-- Row 3: Director --}}
-            <div style="max-width:50%;">
-                @include('appraisals.partials.sig_slot', ['slot'=>$sigSlots[4], 'sigBatch'=>$sigBatch, 'currentUserId'=>$currentUserId, 'canManageSigner'=>$canManageSigner, 'allUsers'=>$allUsers, 'employeeId'=>$employee->id])
-            </div>
+
+            @if($canManageSigner && $slotCount < \App\Models\AppraisalBatchSignatureSlot::MAX_SLOTS)
+            <form method="POST" action="{{ route('appraisals.report-employee.add-signature-slot', $employee->id) }}">
+                @csrf
+                <input type="hidden" name="batch_id" value="{{ $sigBatch->id }}">
+                <button type="submit" style="border:1.5px dashed #CBD5E1; color:#64748B; background:white; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                    + Tambah TTD (maks {{ \App\Models\AppraisalBatchSignatureSlot::MAX_SLOTS }})
+                </button>
+            </form>
+            @endif
         </div>
         @endif
     </div>
@@ -536,9 +547,8 @@
     {{-- Hidden form for signature POST --}}
     <form id="sig-form" method="POST" action="" style="display:none;">
         @csrf
-        <input type="hidden" id="sig-batch-id" name="batch_id">
-        <input type="hidden" id="sig-role"     name="role">
-        <input type="hidden" id="sig-data"     name="signature_data">
+        <input type="hidden" id="sig-slot-id" name="slot_id">
+        <input type="hidden" id="sig-data"    name="signature_data">
     </form>
 
 </div>
@@ -573,13 +583,12 @@ function sigModal() {
         roleLabel: '',
         sigPad: null,
 
-        openFor(batchId, role, label, actionUrl) {
+        openFor(batchId, slotId, label, actionUrl) {
             this.roleLabel = label;
             this.isOpen    = true;
             var form = document.getElementById('sig-form');
             form.action = actionUrl;
-            document.getElementById('sig-batch-id').value = batchId;
-            document.getElementById('sig-role').value     = role;
+            document.getElementById('sig-slot-id').value = slotId;
             this.$nextTick(function () {
                 var canvas = document.getElementById('sig-canvas');
                 if (this.sigPad) this.sigPad.off();

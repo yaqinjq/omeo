@@ -19,6 +19,36 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.13',
+                'date'    => '5 Agustus 2026',
+                'label'   => 'Appraisal: Skor Tunggal, Tab Kriteria, TTD Dinamis, Notifikasi Email, Shift Outlet',
+                'color'   => '#DC2626',
+                'items'   => [
+                    'Fix akar masalah kriteria penilaian ganda di form evaluator — appraisal lama tanpa template tersimpan sekarang otomatis pakai template sesuai kategori karyawan, bukan menampilkan kriteria dari semua template sekaligus',
+                    'Halaman Kelola Kriteria dirombak jadi tab Office / Operational (menggantikan filter dropdown "Semua Template" yang bikin HRD kebingungan lihat kriteria yang terlihat dobel)',
+                    'Komentar evaluator sekarang wajib diisi untuk setiap kriteria yang diberi nilai bintang',
+                    'Fix kebingungan angka rata-rata appraisal (79.2 vs 4.18) — ternyata dua sistem skor berbeda dihitung terpisah di 4 tempat kode dengan label klasifikasi yang tidak konsisten. Sekarang satu sumber angka (skala 1-5) dan satu klasifikasi dipakai di semua halaman & export',
+                    'Monitoring Appraisal: halaman detail per karyawan sekarang menampilkan evaluator yang belum mengisi (sebelumnya cuma menampilkan yang sudah), lengkap tombol kirim reminder',
+                    'Notifikasi appraisal (undangan evaluator, reminder, due date diperpanjang, permintaan edit diajukan/disetujui/ditolak) sekarang juga terkirim ke email evaluator, tidak cuma inbox internal',
+                    'Tanda Tangan Digital Appraisal dirombak total: dari 5 slot tetap (Karyawan/HRD/Supervisor/Manager/Director) jadi 3 slot default (Karyawan otomatis + 2 slot kategori bisa diganti HRD) dengan tombol "+ Tambah TTD" sampai maksimal 4. Kategori penanda tangan (PIC/HRD/Manager/Director/Owner In Charge) bisa difilter dari Master Data Posisi. Data tanda tangan lama dipindah otomatis, tidak ada yang hilang',
+                    'Ditambahkan kategori "Owner In Charge" untuk tanda tangan — diisi HRD lewat Master Outlet, dipakai untuk owner outlet cabang/franchise yang bukan pengguna sistem',
+                    'Fitur baru: Master Shift Kerja per outlet operational — presensi karyawan otomatis dicocokkan ke shift terdekat dari jam scan, bukan selalu memakai satu jam kerja tunggal outlet',
+                    'PDF export appraisal: ruang kosong di bagian tanda tangan dirapatkan supaya lebih hemat kertas',
+                ],
+            ],
+            [
+                'version' => 'v3.3.12',
+                'date'    => '3 Agustus 2026',
+                'label'   => 'Cross-Billing BPJS: Sinkronisasi Otomatis Karyawan-PT',
+                'color'   => '#DC2626',
+                'items'   => [
+                    'Relasi karyawan ke PT BPJS (employee_bpjs_assignments) sekarang tersinkron otomatis begitu HRD konfirmasi Review, jalankan ulang matching, atau konfirmasi match manual — tidak perlu lagi jalankan command manual di server setiap upload tagihan baru',
+                    'Sinkronisasi selalu insert-only (hanya menambah relasi baru, tidak pernah mengubah/menimpa data yang sudah ada) — aman dijalankan berkali-kali',
+                    'Command manual bpjs:backfill-employee-assignments tetap tersedia untuk audit/backfill data lama, kini pakai logika yang sama persis dengan sinkronisasi otomatis supaya hasilnya konsisten',
+                    'Pesan konfirmasi di halaman Review/Detail Tagihan menampilkan jumlah relasi karyawan-PT baru yang tercatat, supaya HRD langsung tahu tanpa cek database',
+                ],
+            ],
+            [
                 'version' => 'v3.3.11',
                 'date'    => '3 Agustus 2026',
                 'label'   => 'BPJS: Nama dari Data Karyawan, Email Login, Cross-Billing per PT',
@@ -510,6 +540,31 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '5 Agustus 2026',
+                'title'   => 'Appraisal: Skor Tunggal, TTD Dinamis, Notifikasi Email, Shift Outlet (v3.3.13)',
+                'summary' => 'Tindak lanjut dari review pimpinan Sabtu lalu atas modul Appraisal. Kriteria penilaian yang terlihat dobel di form evaluator ternyata bug nyata (bukan sekadar tampilan) — sudah diperbaiki dari akarnya, dan halaman Kelola Kriteria dirombak jadi tab Office/Operational sesuai arahan. Kebingungan angka rata-rata (79.2 vs 4.18) juga sudah ditelusuri: dua sistem skor berbeda dihitung terpisah di beberapa tempat kode dengan label yang tidak konsisten — sekarang disatukan jadi satu angka (skala 1-5) di semua halaman, sesuai arahan pimpinan. Fitur Tanda Tangan Digital dirombak total dari 5 slot tetap jadi 3 slot default (Karyawan otomatis, 2 kategori bisa diganti HRD) dengan tombol tambah sampai maksimal 4, plus kategori baru "Owner In Charge" untuk pemilik outlet cabang/franchise. Notifikasi appraisal sekarang juga masuk email, tidak cuma inbox internal. Terakhir, outlet operational sekarang bisa punya beberapa shift kerja dengan presensi yang otomatis mencocokkan ke shift terdekat.',
+                'access'  => 'Appraisal HRD → Laporan Appraisal → Detail Karyawan (skor, TTD) | Appraisal HRD → Kriteria Penilaian (tab Office/Operational) | Master Outlet → Master Shift Kerja | Master Outlet → edit outlet (Owner In Charge)',
+                'howto'   => [
+                    'Skor appraisal: buka Laporan Appraisal, angka yang ditampilkan sekarang konsisten skala 1-5 di semua halaman dan file export',
+                    'Tanda Tangan Digital: buka Detail Karyawan appraisal, pilih kategori tiap slot TTD (PIC/HRD/Manager/dst), klik "+ Tambah TTD" kalau butuh lebih dari 3',
+                    'Owner In Charge: isi dulu namanya di Master Outlet → edit outlet, baru bisa dipilih sebagai kategori TTD',
+                    'Master Shift Kerja: buka menu Master Shift Kerja, tambahkan shift per outlet operational (jam masuk/pulang) — presensi otomatis menyesuaikan',
+                ],
+                'stats'   => '✅ Bug kriteria duplikat & skor ganda diperbaiki (akar masalah) | Fitur baru: TTD Dinamis, Owner In Charge, Notifikasi Email, Master Shift | File diubah/baru: 30+',
+            ],
+            [
+                'date'    => '3 Agustus 2026',
+                'title'   => 'Cross-Billing BPJS: Sinkronisasi Otomatis Karyawan-PT (v3.3.12)',
+                'summary' => 'Penyempurnaan dari fitur Cross-Billing kemarin. Sebelumnya, setiap kali ada tagihan BPJS baru yang selesai direview, data relasi "karyawan ini bayar iuran lewat PT mana" harus di-update manual lewat command di server — kalau lupa dijalankan, tab Cross-Billing bisa terlihat kosong padahal tagihannya sudah lengkap direview. Sekarang prosesnya otomatis: begitu HRD klik "Konfirmasi Review", jalankan ulang matching, atau konfirmasi kecocokan karyawan secara manual, sistem langsung mencatat relasinya sendiri — tidak ada langkah tambahan yang perlu diingat. Sifatnya juga dijaga aman: proses ini hanya menambah data baru, tidak pernah mengubah atau menimpa data yang sudah benar sebelumnya, jadi kalaupun dijalankan berkali-kali hasilnya tetap konsisten.',
+                'access'  => 'Finance → Rekonsiliasi BPJS → (otomatis berjalan di balik layar saat Review dikonfirmasi)',
+                'howto'   => [
+                    'Tidak ada langkah tambahan — cukup lanjutkan alur seperti biasa: upload tagihan → review nama/NIK → klik "Konfirmasi Review"',
+                    'Setelah konfirmasi, pesan di layar akan menyebutkan berapa relasi karyawan-PT baru yang tercatat (kalau ada)',
+                    'Cek hasilnya di Finance → Cross-Billing BPJS → tab Per PT / Per Outlet, data akan langsung muncul tanpa perlu akses server',
+                ],
+                'stats'   => '✅ Otomatisasi sinkronisasi data Cross-Billing | Tidak ada lagi ketergantungan command manual di server | File diubah/baru: 3',
+            ],
             [
                 'date'    => '3 Agustus 2026',
                 'title'   => 'BPJS: Nama dari Data Karyawan, Email Login, Cross-Billing per PT (v3.3.11)',

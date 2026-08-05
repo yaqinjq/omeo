@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\AppSetting;
 use App\Models\Appraisal;
 use App\Models\AppraisalBatchSignature;
+use App\Models\AppraisalBatchSignatureSlot;
 use App\Models\AppraisalDetail;
 use App\Models\AppraisalEditRequest;
+use App\Models\AppraisalCriteriaTemplate;
 use App\Models\AppraisalIndicator;
 use App\Models\AppraisalInvitationLog;
 use App\Models\AppraisalWeightConfig;
@@ -22,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -29,8 +32,38 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class AppraisalController extends Controller
 {
-    public function __construct(private readonly AppraisalComponentService $componentService)
+    public function __construct(
+        private readonly AppraisalComponentService $componentService,
+        private readonly \App\Services\Notifications\UnifiedNotificationService $unifiedNotificationService,
+    ) {
+    }
+
+    /**
+     * Kirim email notifikasi appraisal ke satu user, memakai infra yang sudah
+     * ada (UnifiedNotificationService + PlainTextNotificationMail) — dipanggil
+     * $user=null supaya hanya kanal email yang jalan, notifikasi internal
+     * (hr_notifications) tetap dibuat terpisah lewat kode yang sudah ada
+     * supaya tidak dobel/berubah perilakunya.
+     */
+    private function sendAppraisalEmail(string $eventKey, ?int $userId, string $title, string $message): void
     {
+        if (! $userId) {
+            return;
+        }
+
+        $user = User::find($userId);
+        $email = trim((string) ($user?->email ?: $user?->employee?->email_private ?: ''));
+        if ($email === '') {
+            return;
+        }
+
+        $this->unifiedNotificationService->dispatch(
+            eventKey: $eventKey,
+            user: null,
+            email: $email,
+            whatsappNumber: '',
+            payload: ['title' => $title, 'message' => $message]
+        );
     }
 
     public function report(Request $request)
@@ -222,7 +255,7 @@ class AppraisalController extends Controller
             $sheet->setCellValue("D{$r}", $row->jabatan);
             $sheet->setCellValue("E{$r}", $row->period_name);
             $sheet->setCellValue("F{$r}", $row->evaluator_count);
-            $sheet->setCellValue("G{$r}", $row->avg_score !== null ? round((float) $row->avg_score, 1) : '-');
+            $sheet->setCellValue("G{$r}", $row->avg_score !== null ? round((float) $row->avg_score / 20, 2) : '-');
             $sheet->setCellValue("H{$r}", $row->latest_result);
             $sheet->setCellValue("I{$r}", $statusStr);
 
@@ -341,8 +374,19 @@ class AppraisalController extends Controller
             return [$a->id => $scores->isNotEmpty() ? round($scores->avg(), 2) : null];
         })->toArray();
 
-        $overallAvg     = collect($evalAvgs)->filter()->average();
-        $overallAvg     = $overallAvg ? round($overallAvg, 2) : null;
+        // Rata-rata mentah per-kriteria — dipakai hanya di baris "Rata-rata Per
+        // Evaluator" tabel Matriks, konsisten dengan baris itu sendiri.
+        $matrixOverallAvg = collect($evalAvgs)->filter()->average();
+        $matrixOverallAvg = $matrixOverallAvg ? round((float) $matrixOverallAvg, 2) : null;
+
+        // Nilai akhir resmi — SATU sumber kebenaran (final_score, sama persis
+        // dengan halaman daftar & report_employee on-screen), bukan dihitung
+        // ulang dari skor kriteria mentah saja.
+        $finalScores   = $appraisals->pluck('final_score')->filter(fn ($v) => $v !== null);
+        $overallAvg100 = $finalScores->isNotEmpty() ? round((float) $finalScores->avg(), 2) : null;
+        $overallAvg    = $overallAvg100 !== null ? round($overallAvg100 / 20, 2) : null;
+        $overallGrade  = $overallAvg !== null ? \App\Support\AppraisalGrading::classify($overallAvg) : null;
+
         $evaluatorCount = $appraisals->count();
         $approvedCount  = $appraisals->where('status', 'approved')->count();
 
@@ -390,7 +434,7 @@ class AppraisalController extends Controller
 
         return compact(
             'employee', 'appraisals', 'periodName', 'dateRange',
-            'matrix', 'evalAvgs', 'overallAvg',
+            'matrix', 'evalAvgs', 'matrixOverallAvg', 'overallAvg', 'overallGrade',
             'evaluatorCount', 'approvedCount', 'evaluatorNames', 'evaluatorNumber', 'showNames',
             'narratives', 'consensusStatus', 'latestAppraisal', 'appName'
         );
@@ -489,6 +533,17 @@ class AppraisalController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Evaluator yang sudah ditugaskan tapi belum submit — halaman ini
+        // dulunya cuma menampilkan yang SUDAH mengisi, jadi HRD tidak punya
+        // cara lihat siapa yang masih perlu di-remind dari Monitoring.
+        $pendingAppraisals = Appraisal::query()
+            ->with('appraiser:id,name')
+            ->where('employee_id', $employeeId)
+            ->where('status', 'draft')
+            ->when($periodId, fn ($q) => $q->where('appraisal_period_id', $periodId))
+            ->orderBy('due_date')
+            ->get();
+
         $indicatorIds = $appraisals
             ->flatMap(fn ($a) => $a->details->pluck('appraisal_indicator_id'))
             ->unique()->sort()->values();
@@ -513,10 +568,27 @@ class AppraisalController extends Controller
             return [$a->id => $scores->isNotEmpty() ? round($scores->avg(), 2) : null];
         })->toArray();
 
-        $overallAvg = collect($evalAvgs)
+        // Rata-rata mentah per-kriteria (dipakai HANYA di dalam tabel Matriks
+        // Section 1, konsisten dengan baris "RATA-RATA PER EVALUATOR" di tabel
+        // yang sama — bukan angka akhir yang ditampilkan di kartu besar).
+        $matrixOverallAvg = collect($evalAvgs)
             ->filter(fn ($avg, $appraisalId) => $avg !== null && $includedIds->contains($appraisalId))
             ->average();
-        $overallAvg      = $overallAvg ? round((float) $overallAvg, 2) : null;
+        $matrixOverallAvg = $matrixOverallAvg ? round((float) $matrixOverallAvg, 2) : null;
+
+        // Nilai akhir resmi appraisal — SATU sumber kebenaran (final_score,
+        // sudah termasuk KPI/Training/Skill/Posisi kalau diisi), sama persis
+        // dengan yang dipakai di halaman daftar (Appraisal::final_score).
+        // Ditampilkan dalam skala 1-5 supaya konsisten dengan klasifikasi
+        // 6-tingkat AppraisalGrading di semua halaman (tidak lagi dihitung
+        // ulang secara terpisah dari skor kriteria mentah).
+        $includedFinalScores = $appraisals
+            ->filter(fn ($a) => $includedIds->contains($a->id) && $a->final_score !== null)
+            ->pluck('final_score');
+        $overallAvg100 = $includedFinalScores->isNotEmpty() ? round((float) $includedFinalScores->avg(), 2) : null;
+        $overallAvg    = $overallAvg100 !== null ? round($overallAvg100 / 20, 2) : null;
+        $overallGrade  = $overallAvg !== null ? \App\Support\AppraisalGrading::classify($overallAvg) : null;
+
         $evaluatorNumber = $appraisals->mapWithKeys(fn ($a, $idx) => [$a->id => $idx + 1])->toArray();
 
         $narratives = $appraisals->map(fn ($a) => [
@@ -553,15 +625,64 @@ class AppraisalController extends Controller
                     'employee_id'        => $employeeId,
                     'appraisal_period_id'=> $periodId ? (int) $periodId : null,
                 ]);
+
+                // Default 3 slot: Karyawan (auto, tidak bisa dipilih manual —
+                // langsung terikat ke akun login karyawan yang dinilai), lalu
+                // 2 slot kategori yang bisa diubah HRD (default PIC & Manager).
+                // Bisa ditambah sampai maksimal 4 lewat tombol "+ Tambah TTD".
+                $employee->loadMissing('user');
+                $slotNow = now();
+                AppraisalBatchSignatureSlot::insert([
+                    [
+                        'batch_signature_id' => $sigBatch->id,
+                        'slot_order'          => 1,
+                        'slot_type'           => 'employee',
+                        'category'            => null,
+                        'label'               => 'Karyawan',
+                        'signer_user_id'      => $employee->user?->id,
+                        'external_name'       => null,
+                        'signature_data'      => null,
+                        'signed_at'           => null,
+                        'created_at'          => $slotNow,
+                        'updated_at'          => $slotNow,
+                    ],
+                    [
+                        'batch_signature_id' => $sigBatch->id,
+                        'slot_order'          => 2,
+                        'slot_type'           => 'category',
+                        'category'            => 'pic',
+                        'label'               => AppraisalBatchSignatureSlot::CATEGORIES['pic'],
+                        'signer_user_id'      => null,
+                        'external_name'       => null,
+                        'signature_data'      => null,
+                        'signed_at'           => null,
+                        'created_at'          => $slotNow,
+                        'updated_at'          => $slotNow,
+                    ],
+                    [
+                        'batch_signature_id' => $sigBatch->id,
+                        'slot_order'          => 3,
+                        'slot_type'           => 'category',
+                        'category'            => 'manager',
+                        'label'               => AppraisalBatchSignatureSlot::CATEGORIES['manager'],
+                        'signer_user_id'      => null,
+                        'external_name'       => null,
+                        'signature_data'      => null,
+                        'signed_at'           => null,
+                        'created_at'          => $slotNow,
+                        'updated_at'          => $slotNow,
+                    ],
+                ]);
             }
 
             if ($sigBatch) {
-                $sigBatch->load(['signerEmployee', 'signerHrd', 'signerSupervisor', 'signerManager', 'signerDirector']);
+                $sigBatch->load(['slots.signerUser']);
             }
         }
 
         $periods  = AppraisalPeriod::orderByDesc('created_at')->get();
         $allUsers = User::orderBy('name')->get(['id', 'name', 'role']);
+        $categoryCandidates = $this->resolveCategoryCandidates();
 
         $periodName = $periodId
             ? ($appraisals->first()?->period?->name ?? $periods->firstWhere('id', $periodId)?->name ?? 'Semua Periode')
@@ -584,56 +705,151 @@ class AppraisalController extends Controller
             : collect();
 
         return view('appraisals.report_employee', compact(
-            'employee', 'appraisals', 'matrix', 'evalAvgs', 'overallAvg',
+            'employee', 'appraisals', 'pendingAppraisals', 'matrix', 'evalAvgs', 'matrixOverallAvg',
+            'overallAvg', 'overallGrade',
             'evaluatorNumber', 'narratives', 'consensusStatus', 'latestAppraisal',
-            'sigBatch', 'periods', 'allUsers',
+            'sigBatch', 'periods', 'allUsers', 'categoryCandidates',
             'periodId', 'periodName', 'dateFrom', 'dateTo', 'dateMin', 'dateMax',
             'pendingEditRequests', 'editRequestCounts'
         ));
     }
 
+    /**
+     * Untuk tiap kategori penanda tangan (PIC/HRD/Supervisor/Manager/
+     * Director), cari karyawan yang Posisi-nya cocok (heuristik nama Posisi,
+     * mis. "PIC" untuk kategori pic). Position/department memang idealnya
+     * jadi sumber filter (sesuai arahan), tapi datanya belum banyak diisi
+     * HRD saat ini — kalau tidak ada yang cocok, kembalikan seluruh user
+     * sebagai fallback (filtered=false) supaya dropdown tidak kosong.
+     */
+    private function resolveCategoryCandidates(): array
+    {
+        $allUsers = User::orderBy('name')->get(['id', 'name', 'role']);
+
+        $patterns = [
+            'pic'        => ['pic'],
+            'hrd'        => ['hrd', 'human resource', 'personalia'],
+            'supervisor' => ['supervisor', 'spv'],
+            'manager'    => ['manager', 'aspv', 'asm', 'head'],
+            'director'   => ['director', 'direktur'],
+        ];
+
+        $result = [];
+        foreach ($patterns as $category => $needles) {
+            $matched = User::query()
+                ->whereHas('employee.position', function ($q) use ($needles) {
+                    $q->where(function ($qq) use ($needles) {
+                        foreach ($needles as $needle) {
+                            $qq->orWhere('name', 'LIKE', "%{$needle}%");
+                        }
+                    });
+                })
+                ->orderBy('name')
+                ->get(['id', 'name', 'role']);
+
+            $result[$category] = $matched->isNotEmpty()
+                ? ['users' => $matched, 'filtered' => true]
+                : ['users' => $allUsers, 'filtered' => false];
+        }
+
+        return $result;
+    }
+
     public function saveSigner(Request $request, int $employeeId): RedirectResponse
     {
-        abort_if(! Schema::hasTable('appraisal_batch_signatures'), 404);
+        abort_if(! Schema::hasTable('appraisal_batch_signature_slots'), 404);
         abort_if(! in_array((string) auth()->user()->role, ['admin', 'hrd'], true), 403);
 
         $data = $request->validate([
-            'batch_id'       => ['required', 'integer'],
-            'role'           => ['required', 'in:employee,hrd,supervisor,manager,director'],
+            'slot_id'        => ['required', 'integer', 'exists:appraisal_batch_signature_slots,id'],
+            'category'       => ['nullable', Rule::in(array_keys(AppraisalBatchSignatureSlot::CATEGORIES))],
             'signer_user_id' => ['nullable', 'exists:users,id'],
+            'external_name'  => ['nullable', 'string', 'max:150'],
         ]);
 
-        $batch = AppraisalBatchSignature::findOrFail($data['batch_id']);
-        abort_unless((int) $batch->employee_id === $employeeId, 403);
+        $slot = AppraisalBatchSignatureSlot::with('batch')->findOrFail($data['slot_id']);
+        abort_unless((int) $slot->batch->employee_id === $employeeId, 403);
 
-        $batch->update(["signer_{$data['role']}_id" => $data['signer_user_id'] ?: null]);
+        // Slot "Karyawan" (slot_order pertama, auto-bound ke akun karyawan
+        // bersangkutan) tidak bisa diubah kategorinya lewat form ini.
+        if ($slot->slot_type === 'employee') {
+            abort(403, 'Slot Karyawan tidak bisa diubah manual.');
+        }
+
+        $category = $data['category'] ?? $slot->category;
+        $isManual = $category === 'owner_in_charge';
+
+        $update = [
+            'category'  => $category,
+            'label'     => AppraisalBatchSignatureSlot::CATEGORIES[$category] ?? $slot->label,
+            'slot_type' => $isManual ? 'manual' : 'category',
+        ];
+
+        if ($isManual) {
+            $update['signer_user_id'] = null;
+            $update['external_name'] = $data['external_name']
+                ?? $slot->batch->employee?->outlet?->owner_in_charge_name
+                ?? null;
+        } else {
+            $update['signer_user_id'] = $data['signer_user_id'] ?: null;
+            $update['external_name'] = null;
+        }
+
+        $slot->update($update);
 
         return back()->with('success', 'Signer berhasil disimpan.');
     }
 
-    public function saveSignature(Request $request, int $employeeId): RedirectResponse
+    public function addSignatureSlot(Request $request, int $employeeId): RedirectResponse
     {
-        abort_if(! Schema::hasTable('appraisal_batch_signatures'), 404);
+        abort_if(! Schema::hasTable('appraisal_batch_signature_slots'), 404);
+        abort_if(! in_array((string) auth()->user()->role, ['admin', 'hrd'], true), 403);
 
         $data = $request->validate([
-            'batch_id'       => ['required', 'integer'],
-            'role'           => ['required', 'in:employee,hrd,supervisor,manager,director'],
-            'signature_data' => ['required', 'string'],
+            'batch_id' => ['required', 'integer', 'exists:appraisal_batch_signatures,id'],
         ]);
 
         $batch = AppraisalBatchSignature::findOrFail($data['batch_id']);
         abort_unless((int) $batch->employee_id === $employeeId, 403);
 
-        $signerField = "signer_{$data['role']}_id";
-        abort_unless((int) ($batch->$signerField ?? 0) === (int) auth()->id(), 403);
+        $currentCount = AppraisalBatchSignatureSlot::where('batch_signature_id', $batch->id)->count();
+        if ($currentCount >= AppraisalBatchSignatureSlot::MAX_SLOTS) {
+            return back()->with('error', 'Maksimal ' . AppraisalBatchSignatureSlot::MAX_SLOTS . ' penanda tangan per appraisal.');
+        }
+
+        $nextOrder = (int) AppraisalBatchSignatureSlot::where('batch_signature_id', $batch->id)->max('slot_order') + 1;
+
+        AppraisalBatchSignatureSlot::create([
+            'batch_signature_id' => $batch->id,
+            'slot_order'          => $nextOrder,
+            'slot_type'           => 'category',
+            'category'            => null,
+            'label'               => 'Belum dipilih',
+        ]);
+
+        return back()->with('success', 'Slot tanda tangan baru ditambahkan. Silakan pilih kategorinya.');
+    }
+
+    public function saveSignature(Request $request, int $employeeId): RedirectResponse
+    {
+        abort_if(! Schema::hasTable('appraisal_batch_signature_slots'), 404);
+
+        $data = $request->validate([
+            'slot_id'        => ['required', 'integer', 'exists:appraisal_batch_signature_slots,id'],
+            'signature_data' => ['required', 'string'],
+        ]);
+
+        $slot = AppraisalBatchSignatureSlot::with('batch')->findOrFail($data['slot_id']);
+        abort_unless((int) $slot->batch->employee_id === $employeeId, 403);
+        abort_unless((int) ($slot->signer_user_id ?? 0) === (int) auth()->id(), 403);
 
         if (! str_starts_with($data['signature_data'], 'data:image/')) {
             return back()->withErrors(['signature_data' => 'Format tanda tangan tidak valid.']);
         }
 
-        $batch->update([
-            "sig_{$data['role']}"      => $data['signature_data'],
-            "sig_{$data['role']}_at"   => now(),
+        $slot->update([
+            'signature_data' => $data['signature_data'],
+            'signed_at'      => now(),
         ]);
 
         return back()->with('success', 'Tanda tangan berhasil disimpan.');
@@ -693,8 +909,13 @@ class AppraisalController extends Controller
             return [$a->id => $scores->isNotEmpty() ? round($scores->avg(), 2) : null];
         })->toArray();
 
-        $overallAvg = collect($evalAvgs)->filter()->average();
-        $overallAvg = $overallAvg ? round((float) $overallAvg, 2) : null;
+        $matrixOverallAvg = collect($evalAvgs)->filter()->average();
+        $matrixOverallAvg = $matrixOverallAvg ? round((float) $matrixOverallAvg, 2) : null;
+
+        $finalScores   = $appraisals->pluck('final_score')->filter(fn ($v) => $v !== null);
+        $overallAvg100 = $finalScores->isNotEmpty() ? round((float) $finalScores->avg(), 2) : null;
+        $overallAvg    = $overallAvg100 !== null ? round($overallAvg100 / 20, 2) : null;
+        $overallGrade  = $overallAvg !== null ? \App\Support\AppraisalGrading::classify($overallAvg) : null;
 
         $evalCount = $appraisals->count();
         $lastCol   = Coordinate::stringFromColumnIndex($evalCount + 2);
@@ -707,7 +928,7 @@ class AppraisalController extends Controller
         $sheet->setCellValue('A2', 'Nama: ' . $employee->full_name);
         $sheet->setCellValue('A3', 'Departemen: ' . ($employee->department?->name ?? '-'));
         $sheet->setCellValue('A4', 'Jabatan: ' . ($employee->jabatan ?? '-'));
-        $sheet->setCellValue('A5', 'Rata-rata Akhir: ' . ($overallAvg !== null ? number_format($overallAvg, 2) . ' (' . $this->scoreRatingLabel($overallAvg) . ')' : '-'));
+        $sheet->setCellValue('A5', 'Rata-rata Akhir: ' . ($overallAvg !== null ? number_format($overallAvg, 2) . ' (' . $overallGrade . ')' : '-'));
         $sheet->setCellValue('A6', 'Tanggal Export: ' . now()->format('d M Y H:i'));
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->mergeCells("A1:{$lastCol}1");
@@ -740,7 +961,7 @@ class AppraisalController extends Controller
             $ea = $evalAvgs[$appr->id] ?? null;
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($idx + 2) . $avgRow, $ea !== null ? number_format($ea, 2) : '-');
         }
-        $sheet->setCellValue($lastCol . $avgRow, $overallAvg !== null ? number_format($overallAvg, 2) : '-');
+        $sheet->setCellValue($lastCol . $avgRow, $matrixOverallAvg !== null ? number_format($matrixOverallAvg, 2) : '-');
         $sheet->getStyle("A{$avgRow}:{$lastCol}{$avgRow}")->getFont()->setBold(true);
         $sheet->getStyle("A{$avgRow}:{$lastCol}{$avgRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFEFF6FF');
 
@@ -791,17 +1012,6 @@ class AppraisalController extends Controller
             'position_change' => 'POSITION CHANGE',
             'pending'         => 'PENDING',
             default           => '-',
-        };
-    }
-
-    private function scoreRatingLabel(?float $avg): string
-    {
-        if ($avg === null) return '-';
-        return match (true) {
-            $avg >= 4.0 => 'Sangat Baik',
-            $avg >= 3.0 => 'Baik',
-            $avg >= 2.0 => 'Cukup',
-            default     => 'Kurang',
         };
     }
 
@@ -984,10 +1194,17 @@ class AppraisalController extends Controller
         $existing = Schema::hasTable('appraisal_details') ? $appraisal->details->keyBy('appraisal_indicator_id') : collect();
 
         // Scope indicators to the template snapshotted when this appraisal was
-        // created. Legacy appraisals (no snapshot) keep seeing all indicators.
+        // created. Legacy appraisals (no snapshot) resolve one now from the
+        // employee's lokasi_kerja — same resolution used when new appraisals
+        // are generated — instead of falling through to every template's
+        // indicators concatenated together (the cause of HRD seeing what
+        // looked like duplicate criteria on the evaluation form).
         // Already-scored indicators are always included even if a later template
         // edit moved them elsewhere, so no historical answer is ever hidden.
         $templateId = Schema::hasColumn('appraisals', 'criteria_template_id') ? $appraisal->criteria_template_id : null;
+        if (! $templateId && Schema::hasTable('appraisal_criteria_templates')) {
+            $templateId = AppraisalCriteriaTemplate::resolveFor($appraisal->employee?->lokasi_kerja)?->id;
+        }
         $indicatorQuery = AppraisalIndicator::orderBy('category')->orderBy('id');
         if ($templateId) {
             $indicatorQuery->where(function ($q) use ($templateId, $existing) {
@@ -1144,6 +1361,25 @@ class AppraisalController extends Controller
             'final_result'             => 'nullable|string|max:50',
             'proposed_status'          => 'nullable|in:re_contract,discontinue,promoted,permanent,position_change,pending',
         ]);
+
+        // Komentar wajib diisi untuk setiap kriteria yang diberi nilai —
+        // dicek manual (bukan lewat rule bawaan) karena daftar kriteria per
+        // appraisal dinamis (beda template per kategori karyawan).
+        $missingComments = [];
+        foreach ($data['scores'] as $indicatorId => $score) {
+            if ($score === null || $score === '') {
+                continue;
+            }
+            if (trim((string) ($data['comments'][$indicatorId] ?? '')) === '') {
+                $missingComments[] = $indicatorId;
+            }
+        }
+
+        if (! empty($missingComments)) {
+            return back()->withInput()->withErrors([
+                'comments' => 'Komentar wajib diisi untuk setiap kriteria yang sudah diberi nilai bintang.',
+            ]);
+        }
 
         $indicators = AppraisalIndicator::all()->keyBy('id');
 
@@ -1388,6 +1624,7 @@ class AppraisalController extends Controller
                 ],
             ]);
         }
+        $this->notifyDueDateExtended($appraisal, $oldDueDate, $newDueDate);
 
         return back()->with('success', "Due date berhasil diubah dari {$oldDueDate} ke {$newDueDate}.");
     }
@@ -1435,6 +1672,7 @@ class AppraisalController extends Controller
                     ],
                 ]);
             }
+            $this->notifyDueDateExtended($appraisal, $oldDueDate, $data['new_due_date']);
         }
 
         return back()->with('success', "Due date {$appraisals->count()} evaluator berhasil diperpanjang ke {$data['new_due_date']}.");
@@ -1509,17 +1747,20 @@ class AppraisalController extends Controller
             'status'                => 'pending',
         ]);
 
+        $editRequestBody = ($user->name ?? 'Evaluator') . ' minta izin edit ulang penilaian untuk ' . ($appraisal->employee?->full_name ?? 'karyawan') . '. Alasan: ' . $data['reason'];
+
         if (Schema::hasTable('hr_notifications') && $appraisal->invited_by_user_id) {
             HrNotification::create([
                 'user_id'    => $appraisal->invited_by_user_id,
                 'type'       => 'appraisal_edit_request',
                 'title'      => 'Permintaan edit penilaian appraisal',
-                'body'       => ($user->name ?? 'Evaluator') . ' minta izin edit ulang penilaian untuk ' . ($appraisal->employee?->full_name ?? 'karyawan') . '. Alasan: ' . $data['reason'],
+                'body'       => $editRequestBody,
                 'is_read'    => false,
                 'unique_key' => 'appraisal-edit-request-' . $editRequest->id,
                 'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.report-employee', $appraisal->employee_id)],
             ]);
         }
+        $this->sendAppraisalEmail('appraisal_edit_request', $appraisal->invited_by_user_id, 'Permintaan edit penilaian appraisal', $editRequestBody);
 
         return back()->with('success', 'Permintaan edit sudah dikirim ke HRD, tunggu persetujuan.');
     }
@@ -1550,17 +1791,20 @@ class AppraisalController extends Controller
             ]);
         }
 
+        $approvedBody = 'HRD menyetujui permintaan edit Anda untuk penilaian ' . ($appraisal->employee?->full_name ?? 'karyawan') . '. Segera edit sebelum due date' . ($appraisal->due_date ? ' (' . $appraisal->due_date->format('d-m-Y') . ')' : '') . '.';
+
         if (Schema::hasTable('hr_notifications')) {
             HrNotification::create([
                 'user_id'    => $appraisal->appraiser_id,
                 'type'       => 'appraisal_edit_approved',
                 'title'      => 'Permintaan edit penilaian disetujui',
-                'body'       => 'HRD menyetujui permintaan edit Anda untuk penilaian ' . ($appraisal->employee?->full_name ?? 'karyawan') . '. Segera edit sebelum due date' . ($appraisal->due_date ? ' (' . $appraisal->due_date->format('d-m-Y') . ')' : '') . '.',
+                'body'       => $approvedBody,
                 'is_read'    => false,
                 'unique_key' => 'appraisal-edit-approved-' . $editRequest->id,
                 'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
             ]);
         }
+        $this->sendAppraisalEmail('appraisal_edit_approved', $appraisal->appraiser_id, 'Permintaan edit penilaian disetujui', $approvedBody);
 
         return back()->with('success', 'Permintaan edit disetujui. Evaluator sekarang bisa edit penilaiannya 1x.');
     }
@@ -1583,6 +1827,22 @@ class AppraisalController extends Controller
             'reviewed_at'          => now(),
             'review_note'          => $data['review_note'] ?? null,
         ]);
+
+        $appraisal = $editRequest->appraisal;
+        $rejectedBody = 'HRD menolak permintaan edit Anda untuk penilaian ' . ($appraisal->employee?->full_name ?? 'karyawan') . '.' . ($data['review_note'] ?? '' ? ' Catatan: ' . $data['review_note'] : '');
+
+        if (Schema::hasTable('hr_notifications')) {
+            HrNotification::create([
+                'user_id'    => $appraisal->appraiser_id,
+                'type'       => 'appraisal_edit_rejected',
+                'title'      => 'Permintaan edit penilaian ditolak',
+                'body'       => $rejectedBody,
+                'is_read'    => false,
+                'unique_key' => 'appraisal-edit-rejected-' . $editRequest->id,
+                'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
+            ]);
+        }
+        $this->sendAppraisalEmail('appraisal_edit_rejected', $appraisal->appraiser_id, 'Permintaan edit penilaian ditolak', $rejectedBody);
 
         return back()->with('success', 'Permintaan edit ditolak.');
     }
@@ -1622,6 +1882,31 @@ class AppraisalController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Perpanjangan due date sebelumnya cuma tercatat di audit log — evaluator
+     * tidak pernah diberitahu due date-nya berubah. Ditambahkan agar evaluator
+     * tahu tanpa perlu buka aplikasi duluan.
+     */
+    private function notifyDueDateExtended(Appraisal $appraisal, ?string $oldDueDate, string $newDueDate): void
+    {
+        $appraisal->loadMissing('employee');
+        $employeeName = $appraisal->employee?->full_name ?? 'karyawan';
+        $body = 'Due date appraisal untuk ' . $employeeName . ' diperpanjang dari ' . ($oldDueDate ?? '-') . ' ke ' . $newDueDate . '.';
+
+        if (Schema::hasTable('hr_notifications')) {
+            HrNotification::create([
+                'user_id'    => $appraisal->appraiser_id,
+                'type'       => 'appraisal_due_date_extended',
+                'title'      => 'Due date appraisal diperpanjang',
+                'body'       => $body,
+                'is_read'    => false,
+                'unique_key' => 'appraisal-due-date-extended-' . $appraisal->id . '-' . now()->format('YmdHi'),
+                'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
+            ]);
+        }
+        $this->sendAppraisalEmail('appraisal_due_date_extended', $appraisal->appraiser_id, 'Due date appraisal diperpanjang', $body);
     }
 
     private function notifyAppraiser(Appraisal $appraisal, bool $isReminder = false, ?int $actorUserId = null): void
@@ -1668,6 +1953,16 @@ class AppraisalController extends Controller
         }
 
         HrNotification::query()->create($payload);
+
+        $employeeName = $appraisal->employee?->full_name ?? 'karyawan';
+        $this->sendAppraisalEmail(
+            $isReminder ? 'appraisal_reminder' : 'appraisal_invitation',
+            $appraisal->appraiser_id,
+            $payload['title'],
+            $isReminder
+                ? 'Mohon segera lengkapi appraisal untuk ' . $employeeName . ' agar review probation tidak tertunda.'
+                : 'Anda ditunjuk sebagai evaluator appraisal untuk ' . $employeeName . '.'
+        );
 
         if (Schema::hasTable('appraisal_invitation_logs')) {
             AppraisalInvitationLog::query()->create([

@@ -207,7 +207,7 @@ class AttendanceController extends Controller
             ->first();
 
         if (! $session) {
-            $schedule = $this->attendanceService->resolveSchedule($user, $outlet, $workDate);
+            $schedule = $this->attendanceService->resolveSchedule($user, $outlet, $workDate, $nowLocal);
             $session = new AttendanceSession([
                 'user_id' => $user->id,
                 'work_date' => $workDate,

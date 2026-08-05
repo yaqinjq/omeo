@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MasterShift extends Model
 {
     protected $fillable = [
+        'outlet_id',
         'code',
         'name',
         'in_time',
@@ -17,4 +18,9 @@ class MasterShift extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function outlet()
+    {
+        return $this->belongsTo(Outlet::class);
+    }
 }
