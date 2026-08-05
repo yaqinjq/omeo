@@ -20,7 +20,12 @@ git pull origin main
 
 echo ""
 echo "=== Regenerate autoloader (composer.json pakai optimize-autoloader, jadi class PHP baru tidak otomatis kedetect tanpa ini) ==="
-composer dump-autoload --optimize --no-dev
+# PHP sistem default di server ini masih 8.1 (project butuh >=8.4), jadi
+# composer HARUS dijalankan lewat binary PHP 8.4 secara eksplisit, bukan
+# `composer` polos. JANGAN pakai --no-dev - project ini butuh dev deps
+# (mis. laravel/breeze) tetap ter-autoload walau di production, kalau
+# di-exclude semua command artisan langsung error "class not found".
+COMPOSER_ALLOW_SUPERUSER=1 "$PHP" "$(command -v composer)" dump-autoload --optimize
 
 echo ""
 echo "=== Jalankan migration ==="
