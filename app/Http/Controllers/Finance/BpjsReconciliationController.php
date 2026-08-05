@@ -9,6 +9,7 @@ use App\Models\BpjsOfficialBillRow;
 use App\Models\BpjsReconciliationResult;
 use App\Models\LegalEntity;
 use App\Services\Finance\BpjsBillMatcherService;
+use App\Services\Finance\BpjsEmployeeAssignmentSyncService;
 use App\Services\Finance\BpjsLegalEntityResolverService;
 use App\Services\Finance\BpjsOfficialBillParserService;
 use App\Services\Finance\BpjsReconciliationService;
@@ -24,6 +25,7 @@ class BpjsReconciliationController extends Controller
         private BpjsBillMatcherService        $matcher,
         private BpjsReconciliationService     $reconciler,
         private BpjsLegalEntityResolverService $legalEntityResolver,
+        private BpjsEmployeeAssignmentSyncService $assignmentSync,
     ) {}
 
     // ── Bill list ─────────────────────────────────────────────────────────
@@ -212,6 +214,10 @@ class BpjsReconciliationController extends Controller
             'unmatched_count' => BpjsOfficialBillRow::where('bill_id', $bill->id)->whereIn('match_status', ['not_found', 'flagged'])->count(),
         ]);
 
+        // Karyawan ini baru saja resmi ter-konfirmasi ke PT tagihan ini —
+        // sinkron ke employee_bpjs_assignments supaya tab Cross-Billing ikut update.
+        $this->assignmentSync->syncBill($bill->fresh());
+
         return back()->with('success', "Matching dikonfirmasi untuk {$row->nama}.");
     }
 
@@ -295,7 +301,14 @@ class BpjsReconciliationController extends Controller
         BpjsOfficialBillRow::where('bill_id', $bill->id)->update(['match_status' => 'pending', 'employee_id' => null]);
         $stats = $this->matcher->matchBill($bill);
         $auto  = $stats['auto'] ?? 0;
-        return back()->with('success', "Matching selesai: {$auto} auto-matched.");
+
+        $sync = $this->assignmentSync->syncBill($bill->fresh());
+        $msg  = "Matching selesai: {$auto} auto-matched.";
+        if ($sync['created'] > 0) {
+            $msg .= " {$sync['created']} relasi karyawan-PT baru tercatat untuk cross-billing.";
+        }
+
+        return back()->with('success', $msg);
     }
 
     // ── Review nama karyawan (Step 2 setelah upload) ─────────────────────────
@@ -485,9 +498,18 @@ class BpjsReconciliationController extends Controller
         $stats = $this->matcher->matchBill($bill);
         $auto  = $stats['auto'] ?? 0;
 
+        // Matching final setelah HRD review selesai — sinkron otomatis ke
+        // employee_bpjs_assignments supaya tab Cross-Billing (Per PT/Per Outlet)
+        // langsung terisi tanpa perlu jalankan command manual di server.
+        $sync = $this->assignmentSync->syncBill($bill->fresh());
+        $msg  = "Review selesai. {$auto} karyawan ter-match otomatis. Silakan tinjau hasil matching.";
+        if ($sync['created'] > 0) {
+            $msg .= " {$sync['created']} relasi karyawan-PT baru tercatat untuk cross-billing.";
+        }
+
         return redirect()
             ->route('finance.bpjs-reconciliation.show', $billId)
-            ->with('success', "Review selesai. {$auto} karyawan ter-match otomatis. Silakan tinjau hasil matching.");
+            ->with('success', $msg);
     }
 
     // ── Re-parse PDF dari storage ─────────────────────────────────────────────

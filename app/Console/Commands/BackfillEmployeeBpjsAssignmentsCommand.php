@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\EmployeeBpjsAssignment;
+use App\Services\Finance\BpjsEmployeeAssignmentSyncService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -10,7 +10,12 @@ class BackfillEmployeeBpjsAssignmentsCommand extends Command
 {
     protected $signature = 'bpjs:backfill-employee-assignments {--dry-run : Preview tanpa menyimpan}';
 
-    protected $description = 'Backfill employee_bpjs_assignments dari bpjs_official_bill_rows yang sudah ter-reconcile (match_status auto/manual_confirmed) dan bill-nya sudah punya legal_entity_id';
+    protected $description = 'Backfill employee_bpjs_assignments dari bpjs_official_bill_rows yang sudah ter-reconcile (match_status auto/manual_confirmed) dan bill-nya sudah punya legal_entity_id. Sejak fitur auto-sync ditambahkan, command ini hanya perlu dipakai untuk data lama / audit ulang — bill baru sudah otomatis tersinkron begitu review dikonfirmasi.';
+
+    public function __construct(private BpjsEmployeeAssignmentSyncService $syncService)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -45,27 +50,31 @@ class BackfillEmployeeBpjsAssignmentsCommand extends Command
             $earliestPeriode = $group->min('periode');
             $effectiveDate = $earliestPeriode . '-01';
 
-            $exists = EmployeeBpjsAssignment::where('employee_id', $employeeId)
-                ->where('legal_entity_id', $legalEntityId)
-                ->exists();
+            if ($isDryRun) {
+                // Dry-run tidak boleh menulis apa pun — cek exists manual di sini
+                // saja, jangan panggil ensureAssignment() (yang selalu menyimpan).
+                $exists = \App\Models\EmployeeBpjsAssignment::where('employee_id', $employeeId)
+                    ->where('legal_entity_id', $legalEntityId)
+                    ->exists();
 
-            if ($exists) {
+                if ($exists) {
+                    $skipped++;
+                    continue;
+                }
+
+                $this->line("  CREATE: employee_id={$employeeId} -> legal_entity_id={$legalEntityId}, effective_date={$effectiveDate} ({$group->count()} baris tagihan)");
+                $created++;
+                continue;
+            }
+
+            $wasCreated = $this->syncService->ensureAssignment($employeeId, $legalEntityId, $effectiveDate);
+
+            if (! $wasCreated) {
                 $skipped++;
                 continue;
             }
 
             $this->line("  CREATE: employee_id={$employeeId} -> legal_entity_id={$legalEntityId}, effective_date={$effectiveDate} ({$group->count()} baris tagihan)");
-
-            if (! $isDryRun) {
-                EmployeeBpjsAssignment::create([
-                    'employee_id'     => $employeeId,
-                    'legal_entity_id' => $legalEntityId,
-                    'effective_date'  => $effectiveDate,
-                    'reason'          => 'join',
-                    'notes'           => 'Auto-backfill dari data rekonsiliasi BPJS (bpjs_official_bill_rows).',
-                ]);
-            }
-
             $created++;
         }
 
