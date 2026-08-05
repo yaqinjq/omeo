@@ -73,7 +73,7 @@ class AttendanceController extends Controller
             'employee' => $employee,
             'assignedOutlet' => $assignedOutlet,
             'selectedOutlet' => $selectedOutlet,
-            'availableOutlets' => Outlet::query()->operational()->orderBy('name')->get(['id', 'name', 'timezone']),
+            'availableOutlets' => Outlet::query()->orderBy('name')->get(['id', 'name', 'timezone']),
             'timezone' => $timezone,
             'today' => $today,
             'todaySession' => $todaySession,
