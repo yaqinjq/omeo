@@ -35,6 +35,17 @@ class AppraisalCriteriaTemplate extends Model
             if ($match) {
                 return $match;
             }
+
+            // "Operational" mengelompokkan outlet+production jadi satu
+            // kategori (belum ada kebutuhan template terpisah untuk
+            // produksi) — kalau karyawan production tidak match langsung,
+            // coba template outlet dulu sebelum jatuh ke Default.
+            if ($lokasiKerja === 'production') {
+                $outletMatch = (clone $query)->where('lokasi_kerja', 'outlet')->first();
+                if ($outletMatch) {
+                    return $outletMatch;
+                }
+            }
         }
 
         return (clone $query)->where('is_default', true)->first();
