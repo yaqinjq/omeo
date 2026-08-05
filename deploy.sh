@@ -19,6 +19,10 @@ echo "=== Pull dari GitHub ==="
 git pull origin main
 
 echo ""
+echo "=== Regenerate autoloader (composer.json pakai optimize-autoloader, jadi class PHP baru tidak otomatis kedetect tanpa ini) ==="
+composer dump-autoload --optimize --no-dev
+
+echo ""
 echo "=== Jalankan migration ==="
 "$PHP" artisan migrate --force
 
