@@ -95,6 +95,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('changelog.index')
         ->middleware('role:admin,manager,finance');
 
+    Route::get('/panduan-penggunaan', [\App\Http\Controllers\TutorialController::class, 'index'])
+        ->name('tutorial.index')
+        ->middleware('role:admin,hrd,manager');
+
     // Walk-In Interview — Fase 1 (Recruitment module)
     Route::middleware(['role:admin,hrd,manager'])->prefix('recruitment/walkin')->name('walkin.')->group(function () {
         Route::get('/',                                        [RecruitmentWalkinController::class, 'index'])->name('index');

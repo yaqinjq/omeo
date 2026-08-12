@@ -19,6 +19,20 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.14',
+                'date'    => '12 Agustus 2026',
+                'label'   => 'Appraisal: Fix Data Tercampur Antar Periode, Error Perpanjang Due Date, Reminder & Template Email',
+                'color'   => '#DC2626',
+                'items'   => [
+                    'Fix akar masalah data appraisal tercampur antar periode — halaman Monitoring, Laporan, dan Detail Karyawan sebelumnya tidak punya filter periode default sama sekali, jadi appraisal periode berjalan tergabung dengan seluruh riwayat lama (termasuk migrasi Historis MEO) dalam satu angka (mis. muncul 22 evaluator padahal yang diundang cuma 5-6). Sekarang ketiga halaman otomatis menampilkan periode aktif saja secara default — "Semua Periode" tetap bisa dipilih manual kalau perlu lihat riwayat lengkap',
+                    'Fix error 500 saat HRD memperpanjang due date appraisal — akar masalahnya kode notifikasi memakai kunci unik berbasis menit, jadi kalau tombol diklik dua kali dalam menit yang sama, terjadi tabrakan data di database. Pola yang sama juga diperbaiki di tombol reminder',
+                    'Tombol "Kirim Reminder Evaluator" sekarang dibatasi jeda 24 jam (pakai data terakhir kirim reminder yang sudah ada) — tombol otomatis nonaktif dengan keterangan kapan bisa dikirim lagi, supaya tidak ter-spam tidak sengaja',
+                    'Fix akar masalah halaman Settings → Notifikasi (atur judul & isi pesan email per jenis notifikasi) yang ternyata tidak berpengaruh sama sekali ke email appraisal — sekarang template yang diatur HRD di sana benar-benar dipakai saat email terkirim',
+                    'Fitur baru: setiap jenis notifikasi appraisal di halaman Settings → Notifikasi sekarang bisa diberi lampiran file (PDF/gambar/dokumen, maks 5MB) yang otomatis ikut terlampir di setiap email jenis itu',
+                    'Halaman baru "Panduan Penggunaan" — kumpulan tutorial cara pakai fitur-fitur di atas dalam bahasa sehari-hari untuk HRD, bisa diakses lewat menu Settings → Panduan Penggunaan',
+                ],
+            ],
+            [
                 'version' => 'v3.3.13',
                 'date'    => '5 Agustus 2026',
                 'label'   => 'Appraisal: Skor Tunggal, Tab Kriteria, TTD Dinamis, Notifikasi Email, Shift Outlet',
@@ -541,6 +555,20 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '12 Agustus 2026',
+                'title'   => 'Appraisal: Fix Data Tercampur, Error Perpanjang Due Date, Reminder & Template Email (v3.3.14)',
+                'summary' => 'Tindak lanjut feedback appraisal putaran kedua. Kasus "Henry" (data terlihat dobel, 22 evaluator padahal cuma 5-6 yang diundang) sudah ditelusuri sampai akarnya: halaman Monitoring, Laporan, dan Detail Karyawan ternyata tidak pernah membatasi tampilan ke satu periode — appraisal periode berjalan otomatis tergabung dengan seluruh riwayat lama (termasuk data migrasi dari sistem MEO lama) jadi satu angka. Sekarang ketiga halaman itu otomatis fokus ke periode yang sedang aktif, riwayat lama tetap bisa dilihat lewat pilihan "Semua Periode" kalau memang dibutuhkan. Error 500 saat perpanjang due date juga sudah ditemukan akarnya (tabrakan data kalau tombol diklik dua kali cepat) dan diperbaiki, sekaligus menambahkan jeda 24 jam untuk tombol reminder supaya tidak bisa ter-spam tidak sengaja. Terakhir, halaman Settings → Notifikasi yang selama ini terlihat bisa mengatur pesan email ternyata tidak pernah benar-benar berpengaruh — sekarang sudah tersambung dengan benar, lengkap dengan fitur baru lampiran file per jenis notifikasi.',
+                'access'  => 'Appraisal HRD → Monitoring / Laporan Appraisal (filter Periode) | Settings → Notifikasi (template pesan & lampiran email) | Settings → Panduan Penggunaan (tutorial cara pakai)',
+                'howto'   => [
+                    'Monitoring/Laporan: pilih periode di dropdown "Periode" kalau ingin lihat data periode tertentu atau riwayat lama — default sudah otomatis periode aktif',
+                    'Reminder evaluator: tombol otomatis nonaktif dengan keterangan jam kalau baru dikirim dalam 24 jam terakhir, tidak perlu dikira-kira manual',
+                    'Atur pesan email: buka Settings → Notifikasi → bagian "Template Pesan Ringkas", ubah judul/isi pesan per jenis notifikasi appraisal — perubahan langsung berlaku ke email berikutnya',
+                    'Tambah lampiran email: di bagian template yang sama, upload file (PDF/gambar/dokumen) di kolom "Lampiran Email" — otomatis terlampir di setiap email jenis itu ke depannya',
+                    'Kalau butuh panduan cara pakai fitur-fitur di atas, buka menu Settings → Panduan Penggunaan (halaman baru, isinya tutorial langkah demi langkah)',
+                ],
+                'stats'   => '✅ Bug data tercampur antar periode, error 500 due date, & template email mati diperbaiki (akar masalah) | Fitur baru: jeda reminder 24 jam, lampiran email, halaman Panduan Penggunaan | File diubah/baru: 10',
+            ],
             [
                 'date'    => '5 Agustus 2026',
                 'title'   => 'Appraisal: Skor Tunggal, TTD Dinamis, Notifikasi Email, Shift Outlet (v3.3.13)',

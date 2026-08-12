@@ -246,6 +246,10 @@
       && ($l = $routeItem('changelog.index', 'Changelog & Docs', 'report'))) {
     $settings[] = $l;
   }
+  if (($user instanceof User && $user->hasRole(['admin', 'hrd', 'manager']))
+      && ($l = $routeItem('tutorial.index', 'Panduan Penggunaan', 'folder'))) {
+    $settings[] = $l;
+  }
   if (count($settings)) $hrdGroups[] = ['label' => 'Settings', 'items' => $settings];
 @endphp
 

@@ -11,7 +11,7 @@
         </div>
         <div class="text-xs text-gray-400 text-right">
             <div>HR Suite</div>
-            <div class="font-semibold text-gray-600">v3.3.13</div>
+            <div class="font-semibold text-gray-600">v3.3.14</div>
         </div>
     </div>
 
