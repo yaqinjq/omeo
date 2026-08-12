@@ -89,7 +89,7 @@
                                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Isi Pesan</label>
                                             <textarea name="templates[{{ $eventKey }}][body]" rows="3" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" {{ $canManageNotifications ? '' : 'readonly' }}>{{ old("templates.$eventKey.body", $template['body']) }}</textarea>
                                             <p class="mt-2 text-xs text-gray-500">Placeholder yang bisa dipakai di event ini:
-                                                @foreach($hints as $hint)<code>{{ '{'.$hint.'}' }}</code>@if(!$loop->last), @endif@endforeach
+                                                @foreach($hints as $hint)<code>{{ '{'.$hint.'}' }}</code>@if(!$loop->last), @endif @endforeach
                                             </p>
                                         </div>
                                         <div>
