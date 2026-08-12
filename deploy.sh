@@ -38,4 +38,15 @@ echo "=== Bersihkan cache ==="
 "$PHP" artisan config:clear
 
 echo ""
+echo "=== Compile ulang semua view sekaligus ==="
+# Kalau cuma view:clear tanpa ini, view baru akan di-compile on-demand oleh
+# request pertama yang masuk setelah deploy - kalau ada beberapa request
+# masuk bersamaan, mereka bisa rebutan menulis file compile yang sama dan
+# menghasilkan file corrupt/terpotong (root cause error "unexpected end of
+# file" di halaman Settings > Notifikasi, 12 Agustus 2026). Dengan
+# view:cache, semua view di-compile sekali oleh proses ini sebelum ada
+# trafik nyata, jadi tidak ada race.
+"$PHP" artisan view:cache
+
+echo ""
 echo "=== Selesai! Deploy sukses. ==="
