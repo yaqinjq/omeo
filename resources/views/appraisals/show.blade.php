@@ -487,9 +487,18 @@
         </div>
 
         @if($isReviewer && $appraisal->status !== 'approved')
+          @php
+            $reminderCooldownUntil = $appraisal->last_reminded_at
+                ? $appraisal->last_reminded_at->copy()->addHours(\App\Http\Controllers\AppraisalController::REMINDER_COOLDOWN_HOURS)
+                : null;
+            $reminderOnCooldown = $reminderCooldownUntil && $reminderCooldownUntil->isFuture();
+          @endphp
           <form method="POST" action="{{ route('appraisals.remind', $appraisal) }}" class="mt-4">
             @csrf
-            <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50" type="submit">Kirim Reminder Evaluator</button>
+            <button class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" type="submit" @disabled($reminderOnCooldown)>Kirim Reminder Evaluator</button>
+            @if($reminderOnCooldown)
+              <div class="mt-1.5 text-xs text-slate-500">Sudah di-reminder {{ $appraisal->last_reminded_at->diffForHumans() }}. Bisa dikirim ulang mulai {{ $reminderCooldownUntil->format('d M Y H:i') }}.</div>
+            @endif
           </form>
         @endif
       </div>

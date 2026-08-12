@@ -39,13 +39,49 @@ class AppraisalController extends Controller
     }
 
     /**
+     * Monitoring/Laporan/Detail Karyawan dulu tidak punya default filter
+     * periode sama sekali — appraisal baru dan appraisal lama (termasuk hasil
+     * migrasi "Historis MEO") tercampur jadi satu angka per karyawan begitu
+     * saja (mis. 22 evaluator padahal yang diundang cuma 5-6). Kalau HRD
+     * tidak pilih periode secara eksplisit, defaultkan ke periode yang
+     * sedang aktif supaya angkanya masuk akal; "Semua Periode" tetap bisa
+     * dipilih manual via ?period_id=all kalau memang mau lihat riwayat penuh.
+     */
+    private function resolveDefaultPeriodId(Request $request): ?int
+    {
+        // Belum ada query string period_id sama sekali (kunjungan pertama,
+        // belum pernah submit filter) -> default ke periode aktif.
+        // Query string period_id ADA tapi kosong ("" atau "all") -> HRD
+        // memang sengaja pilih "Semua Periode", hormati itu, jangan dipaksa.
+        if (! $request->has('period_id')) {
+            return Schema::hasTable('appraisal_periods')
+                ? AppraisalPeriod::where('is_active', true)->value('id')
+                : null;
+        }
+
+        $requested = $request->input('period_id');
+
+        if ($requested === null || $requested === '' || $requested === 'all') {
+            return null;
+        }
+
+        return (int) $requested;
+    }
+
+    /**
      * Kirim email notifikasi appraisal ke satu user, memakai infra yang sudah
      * ada (UnifiedNotificationService + PlainTextNotificationMail) — dipanggil
      * $user=null supaya hanya kanal email yang jalan, notifikasi internal
      * (hr_notifications) tetap dibuat terpisah lewat kode yang sudah ada
      * supaya tidak dobel/berubah perilakunya.
+     *
+     * $variables diisi ke template yang HRD atur sendiri di Settings ->
+     * Notifikasi (judul/isi pesan per event) - BUKAN teks final yang di-
+     * hardcode di sini, supaya perubahan template beneran berpengaruh ke
+     * email yang terkirim. Kalau HRD belum pernah mengubah template, fallback
+     * ke default bawaan di NotificationSettingsService::defaultTemplates().
      */
-    private function sendAppraisalEmail(string $eventKey, ?int $userId, string $title, string $message): void
+    private function sendAppraisalEmail(string $eventKey, ?int $userId, array $variables): void
     {
         if (! $userId) {
             return;
@@ -57,12 +93,14 @@ class AppraisalController extends Controller
             return;
         }
 
+        $variables['name'] ??= $user->name;
+
         $this->unifiedNotificationService->dispatch(
             eventKey: $eventKey,
             user: null,
             email: $email,
             whatsappNumber: '',
-            payload: ['title' => $title, 'message' => $message]
+            payload: ['variables' => $variables]
         );
     }
 
@@ -88,7 +126,7 @@ class AppraisalController extends Controller
             403
         );
 
-        $periodId = $request->input('period_id');
+        $periodId = $this->resolveDefaultPeriodId($request);
         $status   = $request->input('status');
         $search   = trim((string) $request->input('search', ''));
 
@@ -518,7 +556,7 @@ class AppraisalController extends Controller
         }
 
         $employee = Employee::with('department')->findOrFail($employeeId);
-        $periodId = $request->input('period_id');
+        $periodId = $this->resolveDefaultPeriodId($request);
         $dateFrom = $request->input('date_from');
         $dateTo   = $request->input('date_to');
 
@@ -1023,6 +1061,7 @@ class AppraisalController extends Controller
                 'moduleWarning' => 'Tabel appraisal belum tersedia di environment ini. Halaman dibuka dengan mode aman.',
                 'departments' => collect(), 'search' => null, 'departmentId' => null,
                 'aggStatus' => null, 'overdueOnly' => false, 'triggerSource' => null,
+                'periods' => collect(), 'periodId' => null,
             ]);
         }
 
@@ -1031,9 +1070,12 @@ class AppraisalController extends Controller
         $aggStatus     = $request->input('agg_status');
         $overdueOnly   = $request->boolean('overdue_only');
         $triggerSource = $request->input('trigger_source');
+        $periodId      = $this->resolveDefaultPeriodId($request);
+        $periods       = Schema::hasTable('appraisal_periods') ? AppraisalPeriod::orderByDesc('created_at')->get() : collect();
 
         $allAppraisals = Appraisal::query()
             ->with(['employee:id,full_name,employee_number,jabatan,department_id', 'employee.department:id,name', 'period:id,name', 'appraiser:id,name'])
+            ->when($periodId, fn ($q) => $q->where('appraisal_period_id', $periodId))
             ->when($search, fn ($q) => $q->whereHas('employee', fn ($eq) =>
                 $eq->where('full_name', 'like', "%{$search}%")
                    ->orWhere('jabatan', 'like', "%{$search}%")
@@ -1077,7 +1119,12 @@ class AppraisalController extends Controller
                     'nearest_due_date' => $nearestDueDate,
                     'is_overdue'       => $isOverdue,
                     'trigger_sources'  => $items->pluck('trigger_source')->filter()->unique()->values(),
-                    'report_url'       => route('appraisals.report-employee', $empId),
+                    // period_id selalu disertakan eksplisit (bukan array_filter) supaya
+                    // halaman Detail konsisten dengan yang sedang dilihat di Monitoring -
+                    // termasuk saat "Semua Periode" dipilih (null di sini, bukan dihilangkan
+                    // dari URL, karena kalau dihilangkan reportEmployee() akan balik default
+                    // ke periode aktif, bukan ikut menampilkan semua periode juga).
+                    'report_url'       => route('appraisals.report-employee', ['employeeId' => $empId, 'period_id' => $periodId ?? 'all']),
                 ];
             })
             ->when($aggStatus, fn ($c) => $c->where('agg_status', $aggStatus))
@@ -1101,7 +1148,8 @@ class AppraisalController extends Controller
             : collect();
 
         return view('appraisals.index', compact(
-            'paginator', 'search', 'departmentId', 'aggStatus', 'overdueOnly', 'triggerSource', 'departments'
+            'paginator', 'search', 'departmentId', 'aggStatus', 'overdueOnly', 'triggerSource', 'departments',
+            'periods', 'periodId'
         ));
     }
 
@@ -1569,6 +1617,8 @@ class AppraisalController extends Controller
         return back()->with('success', 'Appraisal disetujui.');
     }
 
+    public const REMINDER_COOLDOWN_HOURS = 24;
+
     public function remind(Request $request, Appraisal $appraisal)
     {
         $user = $request->user();
@@ -1578,6 +1628,18 @@ class AppraisalController extends Controller
 
         if ($appraisal->status === 'approved') {
             return back()->with('error', 'Appraisal yang sudah approved tidak perlu di-remind lagi.');
+        }
+
+        // Cooldown 24 jam supaya tombol reminder tidak bisa dipencet berkali-kali
+        // tanpa sengaja (dulu bisa spam, dan kalau dua klik jatuh di menit yang
+        // sama malah bikin error 500 gara-gara unique_key notifikasi bentrok).
+        if (
+            Schema::hasColumn('appraisals', 'last_reminded_at')
+            && $appraisal->last_reminded_at
+            && $appraisal->last_reminded_at->diffInHours(now()) < self::REMINDER_COOLDOWN_HOURS
+        ) {
+            $nextAvailable = $appraisal->last_reminded_at->addHours(self::REMINDER_COOLDOWN_HOURS);
+            return back()->with('error', 'Reminder untuk evaluator ini sudah dikirim ' . $appraisal->last_reminded_at->diffForHumans() . '. Bisa dikirim ulang mulai ' . $nextAvailable->format('d M Y H:i') . ' (jeda 24 jam supaya tidak ter-spam).');
         }
 
         $this->notifyAppraiser($appraisal, true, $user->id);
@@ -1760,7 +1822,11 @@ class AppraisalController extends Controller
                 'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.report-employee', $appraisal->employee_id)],
             ]);
         }
-        $this->sendAppraisalEmail('appraisal_edit_request', $appraisal->invited_by_user_id, 'Permintaan edit penilaian appraisal', $editRequestBody);
+        $this->sendAppraisalEmail('appraisal_edit_request', $appraisal->invited_by_user_id, [
+            'evaluator_name' => $user->name ?? 'Evaluator',
+            'employee_name'  => $appraisal->employee?->full_name ?? 'karyawan',
+            'reason'         => $data['reason'],
+        ]);
 
         return back()->with('success', 'Permintaan edit sudah dikirim ke HRD, tunggu persetujuan.');
     }
@@ -1804,7 +1870,10 @@ class AppraisalController extends Controller
                 'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
             ]);
         }
-        $this->sendAppraisalEmail('appraisal_edit_approved', $appraisal->appraiser_id, 'Permintaan edit penilaian disetujui', $approvedBody);
+        $this->sendAppraisalEmail('appraisal_edit_approved', $appraisal->appraiser_id, [
+            'employee_name' => $appraisal->employee?->full_name ?? 'karyawan',
+            'due_date'      => $appraisal->due_date?->format('d-m-Y') ?? '-',
+        ]);
 
         return back()->with('success', 'Permintaan edit disetujui. Evaluator sekarang bisa edit penilaiannya 1x.');
     }
@@ -1842,7 +1911,10 @@ class AppraisalController extends Controller
                 'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
             ]);
         }
-        $this->sendAppraisalEmail('appraisal_edit_rejected', $appraisal->appraiser_id, 'Permintaan edit penilaian ditolak', $rejectedBody);
+        $this->sendAppraisalEmail('appraisal_edit_rejected', $appraisal->appraiser_id, [
+            'employee_name' => $appraisal->employee?->full_name ?? 'karyawan',
+            'review_note'   => $data['review_note'] ?? '-',
+        ]);
 
         return back()->with('success', 'Permintaan edit ditolak.');
     }
@@ -1902,11 +1974,15 @@ class AppraisalController extends Controller
                 'title'      => 'Due date appraisal diperpanjang',
                 'body'       => $body,
                 'is_read'    => false,
-                'unique_key' => 'appraisal-due-date-extended-' . $appraisal->id . '-' . now()->format('YmdHi'),
+                'unique_key' => 'appraisal-due-date-extended-' . $appraisal->id . '-' . now()->format('YmdHis') . '-' . uniqid(),
                 'meta'       => ['appraisal_id' => $appraisal->id, 'route' => route('appraisals.show', $appraisal->id)],
             ]);
         }
-        $this->sendAppraisalEmail('appraisal_due_date_extended', $appraisal->appraiser_id, 'Due date appraisal diperpanjang', $body);
+        $this->sendAppraisalEmail('appraisal_due_date_extended', $appraisal->appraiser_id, [
+            'employee_name' => $employeeName,
+            'old_due_date'  => $oldDueDate ?? '-',
+            'new_due_date'  => $newDueDate,
+        ]);
     }
 
     private function notifyAppraiser(Appraisal $appraisal, bool $isReminder = false, ?int $actorUserId = null): void
@@ -1926,7 +2002,7 @@ class AppraisalController extends Controller
         $payload = [
             'type' => $isReminder ? 'appraisal_reminder' : 'appraisal_invitation',
             'title' => $isReminder ? 'Reminder pengisian appraisal' : 'Invitation evaluator appraisal',
-            'unique_key' => ($isReminder ? 'appraisal-reminder-' : 'appraisal-invite-') . $appraisal->id . '-' . now()->format('YmdHi'),
+            'unique_key' => ($isReminder ? 'appraisal-reminder-' : 'appraisal-invite-') . $appraisal->id . '-' . now()->format('YmdHis') . '-' . uniqid(),
         ];
 
         if (in_array('user_id', $columns, true)) {
@@ -1958,10 +2034,10 @@ class AppraisalController extends Controller
         $this->sendAppraisalEmail(
             $isReminder ? 'appraisal_reminder' : 'appraisal_invitation',
             $appraisal->appraiser_id,
-            $payload['title'],
-            $isReminder
-                ? 'Mohon segera lengkapi appraisal untuk ' . $employeeName . ' agar review probation tidak tertunda.'
-                : 'Anda ditunjuk sebagai evaluator appraisal untuk ' . $employeeName . '.'
+            [
+                'employee_name' => $employeeName,
+                'due_date'      => $appraisal->due_date?->format('d-m-Y') ?? '-',
+            ]
         );
 
         if (Schema::hasTable('appraisal_invitation_logs')) {

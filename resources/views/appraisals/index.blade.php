@@ -58,7 +58,21 @@
           Due date terlewat
         </label>
       </div>
+      <div>
+        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Periode</label>
+        <select name="period_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          @foreach($periods as $p)
+            <option value="{{ $p->id }}" @selected((string) $periodId === (string) $p->id)>{{ $p->name }}{{ $p->is_active ? ' (Aktif)' : '' }}</option>
+          @endforeach
+          <option value="all" @selected($periodId === null)>Semua Periode (termasuk histori lama)</option>
+        </select>
+      </div>
     </div>
+    @if($periodId !== null)
+    <div class="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+      Menampilkan periode {{ $periods->firstWhere('id', $periodId)?->name ?? '-' }} saja. Riwayat appraisal lama (termasuk hasil migrasi Historis MEO) tidak ikut dihitung di sini — pilih "Semua Periode" kalau memang perlu lihat semuanya.
+    </div>
+    @endif
     <div class="mt-3 flex gap-2">
       <button class="btn-primary" type="submit">Terapkan Filter</button>
       <a href="{{ route('appraisals.index') }}" class="btn-outline">Reset</a>

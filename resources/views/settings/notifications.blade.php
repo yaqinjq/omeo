@@ -40,7 +40,7 @@
             </div>
 
             <div class="space-y-6">
-                <form action="{{ route('settings.notifications.update') }}" method="POST" class="space-y-6">
+                <form action="{{ route('settings.notifications.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800">
@@ -76,7 +76,8 @@
                         <h3 class="font-bold text-gray-800 dark:text-gray-100 border-b pb-3 mb-5">Template Pesan Ringkas</h3>
                         <div class="space-y-5">
                             @foreach($notificationLabels as $eventKey => $label)
-                                @php($template = $notificationSettings['templates'][$eventKey] ?? ['title' => '', 'body' => ''])
+                                @php($template = $notificationSettings['templates'][$eventKey] ?? ['title' => '', 'body' => '', 'attachment_path' => null, 'attachment_name' => null])
+                                @php($hints = collect(['name'])->merge($notificationVariableHints[$eventKey] ?? []))
                                 <div class="rounded-2xl border border-gray-200 p-4">
                                     <div class="font-semibold text-gray-800 dark:text-gray-100">{{ $label }}</div>
                                     <div class="mt-3 grid gap-4">
@@ -87,7 +88,30 @@
                                         <div>
                                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Isi Pesan</label>
                                             <textarea name="templates[{{ $eventKey }}][body]" rows="3" class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500" {{ $canManageNotifications ? '' : 'readonly' }}>{{ old("templates.$eventKey.body", $template['body']) }}</textarea>
-                                            <p class="mt-2 text-xs text-gray-500">Placeholder yang bisa dipakai: <code>{name}</code>, <code>{status_label}</code>, <code>{message}</code>.</p>
+                                            <p class="mt-2 text-xs text-gray-500">Placeholder yang bisa dipakai di event ini:
+                                                @foreach($hints as $hint)<code>{{ '{'.$hint.'}' }}</code>@if(!$loop->last), @endif@endforeach
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Lampiran Email (opsional)</label>
+                                            @if($template['attachment_path'])
+                                                <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 mb-2">
+                                                    <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($template['attachment_path']) }}" target="_blank" class="text-sm text-blue-600 hover:underline">{{ $template['attachment_name'] ?? 'Lihat lampiran saat ini' }}</a>
+                                                    @if($canManageNotifications)
+                                                        <label class="ml-auto flex items-center gap-1.5 text-xs text-red-600">
+                                                            <input type="checkbox" name="templates[{{ $eventKey }}][remove_attachment]" value="1" class="rounded border-gray-300">
+                                                            Hapus lampiran
+                                                        </label>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                            @if($canManageNotifications)
+                                                <input type="file" name="templates[{{ $eventKey }}][attachment]" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-blue-700">
+                                                <p class="mt-1 text-xs text-gray-400">PDF/gambar/dokumen, maks 5MB. Otomatis terlampir di setiap email event ini kalau diisi.</p>
+                                            @endif
+                                            @error("templates.$eventKey.attachment")
+                                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
                                         </div>
                                     </div>
                                 </div>

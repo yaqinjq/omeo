@@ -58,6 +58,26 @@ class NotificationSettingsService
         ];
     }
 
+    /**
+     * Placeholder {variabel} yang benar-benar terisi untuk tiap event, supaya
+     * HRD tidak menebak-nebak di halaman pengaturan template. "name" selalu
+     * ada di semua event (nama penerima), tidak perlu diulang di sini.
+     */
+    public function templateVariableHints(): array
+    {
+        return [
+            'candidate_status_shortlisted' => ['status_label'],
+            'candidate_status_accepted' => ['status_label'],
+            'employee_profile_change_reviewed' => ['message'],
+            'appraisal_invitation' => ['employee_name', 'due_date'],
+            'appraisal_reminder' => ['employee_name', 'due_date'],
+            'appraisal_edit_request' => ['evaluator_name', 'employee_name', 'reason'],
+            'appraisal_edit_approved' => ['employee_name', 'due_date'],
+            'appraisal_edit_rejected' => ['employee_name', 'review_note'],
+            'appraisal_due_date_extended' => ['employee_name', 'old_due_date', 'new_due_date'],
+        ];
+    }
+
     private function defaultEventPreferences(): array
     {
         return [
@@ -125,28 +145,28 @@ class NotificationSettingsService
                 'body' => 'Halo {name}, {message} Buka aplikasi OMEO untuk melihat detail terbaru.',
             ],
             'appraisal_invitation' => [
-                'title' => 'Invitation evaluator appraisal',
-                'body' => 'Halo {name}, {message}',
+                'title' => 'Anda ditunjuk sebagai evaluator appraisal',
+                'body' => "Halo {name},\n\nAnda ditunjuk sebagai evaluator appraisal untuk {employee_name}. Mohon isi penilaian sebelum {due_date}.\n\nBuka aplikasi OMEO untuk mulai mengisi.",
             ],
             'appraisal_reminder' => [
                 'title' => 'Reminder pengisian appraisal',
-                'body' => 'Halo {name}, {message}',
+                'body' => "Halo {name},\n\nMohon segera lengkapi appraisal untuk {employee_name} (due date {due_date}) agar review probation tidak tertunda.\n\nBuka aplikasi OMEO untuk mengisi.",
             ],
             'appraisal_edit_request' => [
                 'title' => 'Permintaan edit penilaian appraisal',
-                'body' => 'Halo {name}, {message}',
+                'body' => "Halo {name},\n\n{evaluator_name} minta izin edit ulang penilaian untuk {employee_name}.\nAlasan: {reason}\n\nBuka aplikasi OMEO untuk menyetujui/menolak.",
             ],
             'appraisal_edit_approved' => [
                 'title' => 'Permintaan edit penilaian disetujui',
-                'body' => 'Halo {name}, {message}',
+                'body' => "Halo {name},\n\nHRD menyetujui permintaan edit Anda untuk penilaian {employee_name}. Segera edit sebelum due date ({due_date}).",
             ],
             'appraisal_edit_rejected' => [
                 'title' => 'Permintaan edit penilaian ditolak',
-                'body' => 'Halo {name}, {message}',
+                'body' => "Halo {name},\n\nHRD menolak permintaan edit Anda untuk penilaian {employee_name}.\nCatatan: {review_note}",
             ],
             'appraisal_due_date_extended' => [
                 'title' => 'Due date appraisal diperpanjang',
-                'body' => 'Halo {name}, {message}',
+                'body' => "Halo {name},\n\nDue date appraisal untuk {employee_name} diperpanjang dari {old_due_date} ke {new_due_date}.",
             ],
         ];
     }
@@ -176,6 +196,8 @@ class NotificationSettingsService
             $defaults[$eventKey] = [
                 'title' => trim((string) ($current['title'] ?? $template['title'])) ?: $template['title'],
                 'body' => trim((string) ($current['body'] ?? $template['body'])) ?: $template['body'],
+                'attachment_path' => trim((string) ($current['attachment_path'] ?? '')) ?: null,
+                'attachment_name' => trim((string) ($current['attachment_name'] ?? '')) ?: null,
             ];
         }
 

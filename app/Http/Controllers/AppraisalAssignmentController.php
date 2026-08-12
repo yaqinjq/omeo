@@ -28,7 +28,7 @@ class AppraisalAssignmentController extends Controller
      * supaya hanya kanal email yang jalan, notifikasi internal tetap lewat
      * kode HrNotification yang sudah ada di notifyAppraiser() di bawah.
      */
-    private function sendAppraisalEmail(string $eventKey, ?int $userId, string $title, string $message): void
+    private function sendAppraisalEmail(string $eventKey, ?int $userId, array $variables): void
     {
         if (! $userId) {
             return;
@@ -40,12 +40,14 @@ class AppraisalAssignmentController extends Controller
             return;
         }
 
+        $variables['name'] ??= $user->name;
+
         $this->unifiedNotificationService->dispatch(
             eventKey: $eventKey,
             user: null,
             email: $email,
             whatsappNumber: '',
-            payload: ['title' => $title, 'message' => $message]
+            payload: ['variables' => $variables]
         );
     }
 
@@ -339,7 +341,7 @@ class AppraisalAssignmentController extends Controller
         $payload = [
             'type'       => 'appraisal_invitation',
             'title'      => 'Invitation evaluator appraisal',
-            'unique_key' => 'appraisal-invitation-' . $appraisal->id . '-' . now()->format('YmdHi'),
+            'unique_key' => 'appraisal-invitation-' . $appraisal->id . '-' . now()->format('YmdHis') . '-' . uniqid(),
         ];
 
         if (in_array('user_id', $columns, true)) {
@@ -368,8 +370,10 @@ class AppraisalAssignmentController extends Controller
         $this->sendAppraisalEmail(
             'appraisal_invitation',
             $appraisal->appraiser_id,
-            'Invitation evaluator appraisal',
-            'Anda mendapat assignment appraisal untuk ' . ($appraisal->employee?->full_name ?? 'karyawan') . '.'
+            [
+                'employee_name' => $appraisal->employee?->full_name ?? 'karyawan',
+                'due_date'      => $appraisal->due_date?->format('d-m-Y') ?? '-',
+            ]
         );
 
         if (Schema::hasTable('appraisal_invitation_logs')) {

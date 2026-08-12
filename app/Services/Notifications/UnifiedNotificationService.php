@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class UnifiedNotificationService
 {
@@ -104,7 +105,9 @@ class UnifiedNotificationService
         }
 
         if (($channels['email'] ?? false) && $email !== '') {
-            $this->sendEmailNotification($email, $resolvedTitle, $resolvedMessage);
+            $attachmentPath = trim((string) ($templates['attachment_path'] ?? ''));
+            $attachmentName = trim((string) ($templates['attachment_name'] ?? ''));
+            $this->sendEmailNotification($email, $resolvedTitle, $resolvedMessage, $attachmentPath ?: null, $attachmentName ?: null);
         }
 
         if (($channels['whatsapp'] ?? false) && $audience === 'employee' && $whatsappNumber !== '') {
@@ -132,12 +135,20 @@ class UnifiedNotificationService
         ]);
     }
 
-    private function sendEmailNotification(string $email, string $title, string $message): void
+    private function sendEmailNotification(string $email, string $title, string $message, ?string $attachmentPath = null, ?string $attachmentName = null): void
     {
         try {
             MailConfiguration::applyFromSettings();
 
-            Mail::to($email)->send(new PlainTextNotificationMail($title, $message));
+            $mailable = new PlainTextNotificationMail($title, $message);
+
+            if ($attachmentPath && Storage::disk('public')->exists($attachmentPath)) {
+                $mailable->attach(Storage::disk('public')->path($attachmentPath), [
+                    'as' => $attachmentName ?: basename($attachmentPath),
+                ]);
+            }
+
+            Mail::to($email)->send($mailable);
         } catch (\Throwable $exception) {
             Log::warning('Failed to send email notification', [
                 'email' => $email,

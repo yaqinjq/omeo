@@ -57,6 +57,7 @@ class AppSettingController extends Controller
             'setting' => $setting,
             'notificationSettings' => $notificationSettings,
             'notificationLabels' => $this->notificationSettingsService->settingFormLabels(),
+            'notificationVariableHints' => $this->notificationSettingsService->templateVariableHints(),
             'canManageNotifications' => $this->canManageNotifications(request()),
             'activeSettingsTab' => 'notifications',
         ]);
@@ -184,6 +185,8 @@ class AppSettingController extends Controller
             'templates' => 'nullable|array',
             'templates.*.title' => 'nullable|string|max:255',
             'templates.*.body' => 'nullable|string|max:2000',
+            'templates.*.attachment' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png,doc,docx',
+            'templates.*.remove_attachment' => 'nullable|boolean',
             'notification_whatsapp_provider' => 'required|string|in:official_api',
             'notification_whatsapp_api_version' => 'nullable|string|max:20',
             'notification_whatsapp_business_account_id' => 'nullable|string|max:255',
@@ -203,12 +206,38 @@ class AppSettingController extends Controller
             ];
         }
 
+        $existingTemplates = $this->notificationSettingsService->resolve($setting)['templates'];
+
         $templates = $defaults['templates'];
         foreach ($templates as $eventKey => $template) {
             $submitted = (array) ($validated['templates'][$eventKey] ?? []);
+            $existing = $existingTemplates[$eventKey] ?? [];
+
+            $attachmentPath = $existing['attachment_path'] ?? null;
+            $attachmentName = $existing['attachment_name'] ?? null;
+
+            $removeAttachment = (bool) ($submitted['remove_attachment'] ?? false);
+            $uploadedFile = $request->file("templates.{$eventKey}.attachment");
+
+            if ($removeAttachment && $attachmentPath) {
+                Storage::disk('public')->delete($attachmentPath);
+                $attachmentPath = null;
+                $attachmentName = null;
+            }
+
+            if ($uploadedFile) {
+                if ($attachmentPath) {
+                    Storage::disk('public')->delete($attachmentPath);
+                }
+                $attachmentPath = $uploadedFile->store('notification-attachments', 'public');
+                $attachmentName = $uploadedFile->getClientOriginalName();
+            }
+
             $templates[$eventKey] = [
                 'title' => trim((string) ($submitted['title'] ?? $template['title'])) ?: $template['title'],
                 'body' => trim((string) ($submitted['body'] ?? $template['body'])) ?: $template['body'],
+                'attachment_path' => $attachmentPath,
+                'attachment_name' => $attachmentName,
             ];
         }
 

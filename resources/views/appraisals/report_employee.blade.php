@@ -101,10 +101,16 @@
                     @endif
                 </div>
                 @if(in_array((string) auth()->user()->role, ['admin','hrd'], true))
-                <form method="POST" action="{{ route('appraisals.remind', $pa) }}" style="flex-shrink:0;">
-                    @csrf
-                    <button type="submit" style="font-size:11px; background:#D97706; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:pointer;">Kirim Reminder</button>
-                </form>
+                    @php
+                        $paCooldownUntil = $pa->last_reminded_at
+                            ? $pa->last_reminded_at->copy()->addHours(\App\Http\Controllers\AppraisalController::REMINDER_COOLDOWN_HOURS)
+                            : null;
+                        $paOnCooldown = $paCooldownUntil && $paCooldownUntil->isFuture();
+                    @endphp
+                    <form method="POST" action="{{ route('appraisals.remind', $pa) }}" style="flex-shrink:0;" title="{{ $paOnCooldown ? 'Bisa dikirim ulang mulai '.$paCooldownUntil->format('d M Y H:i') : '' }}">
+                        @csrf
+                        <button type="submit" style="font-size:11px; background:{{ $paOnCooldown ? '#CBD5E1' : '#D97706' }}; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:{{ $paOnCooldown ? 'not-allowed' : 'pointer' }};" @disabled($paOnCooldown)>Kirim Reminder</button>
+                    </form>
                 @endif
             </div>
         @endforeach
