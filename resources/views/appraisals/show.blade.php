@@ -170,13 +170,19 @@
 
           <form class="mt-5 space-y-4" method="POST" action="{{ route('appraisals.submit',$appraisal) }}">
             @csrf
-            @php($currentCat = null)
+            @php
+              $currentCat = null;
+            @endphp
             @foreach($indicators as $ind)
               @if($currentCat !== $ind->category)
-                @php($currentCat = $ind->category)
+                @php
+                  $currentCat = $ind->category;
+                @endphp
                 <div class="pt-2 text-base font-semibold text-slate-900">{{ $currentCat }}</div>
               @endif
-              @php($d = $existing->get($ind->id))
+              @php
+                $d = $existing->get($ind->id);
+              @endphp
               <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="text-sm font-medium text-slate-900">{{ $ind->question }}</div>
                 @if($ind->description)
@@ -421,7 +427,9 @@
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">Proposed Appraisal</label>
                   <select name="proposed_status" class="w-full rounded-xl border px-3 py-2" @disabled(!$canEdit)>
-                    @php($ps = old('proposed_status', $appraisal->proposed_status))
+                    @php
+                      $ps = old('proposed_status', $appraisal->proposed_status);
+                    @endphp
                     <option value="">- Pilih Proposed Appraisal -</option>
                     <option value="re_contract"     @selected($ps === 're_contract')>RE CONTRACT</option>
                     <option value="discontinue"     @selected($ps === 'discontinue')>DISCONTINUE THE CONTRACT</option>
