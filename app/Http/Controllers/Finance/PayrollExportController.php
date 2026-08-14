@@ -161,61 +161,165 @@ class PayrollExportController extends Controller
 
         $periodeLabel = (self::BULAN_ID[$month] ?? $month) . ' ' . $year;
 
-        $rows = DB::table('payroll_annual_summaries')
-            ->select('outlet_name_raw', DB::raw("SUM({$col}) as total_gaji"))
-            ->where('tahun', $year)
-            ->whereNull('deleted_at')
-            ->where($col, '>', 0)
-            ->groupBy('outlet_name_raw')
-            ->orderBy('outlet_name_raw')
+        // Baris per-karyawan (sumber untuk sheet Total maupun sheet Detail —
+        // supaya angka di kedua sheet dijamin konsisten satu sama lain).
+        $detailRows = DB::table('payroll_annual_summaries as pas')
+            ->leftJoin('payroll_annual_import_sessions as ses', 'ses.id', '=', 'pas.import_session_id')
+            ->select(
+                'pas.outlet_name_raw', 'pas.no_komp', 'pas.nik', 'pas.nama', 'pas.posisi',
+                'pas.join_date', "pas.{$col} as nilai_gaji",
+                'ses.source_file_name', 'ses.id as import_session_id', 'ses.created_at as imported_at'
+            )
+            ->where('pas.tahun', $year)
+            ->whereNull('pas.deleted_at')
+            ->where("pas.{$col}", '>', 0)
+            ->orderBy('pas.outlet_name_raw')
+            ->orderBy('pas.nama')
             ->get();
 
-        if ($rows->isEmpty()) {
+        if ($detailRows->isEmpty()) {
             return back()->with('error', "Tidak ada data gaji untuk periode {$periodeLabel}.");
         }
+
+        $rows = $detailRows
+            ->groupBy('outlet_name_raw')
+            ->map(fn ($g, $outlet) => (object) [
+                'outlet_name_raw' => $outlet,
+                'total_gaji'      => $g->sum('nilai_gaji'),
+                'jumlah_karyawan' => $g->count(),
+            ])
+            ->sortBy('outlet_name_raw')
+            ->values();
 
         $spreadsheet = new Spreadsheet();
         $spreadsheet->getProperties()
             ->setTitle("Total Gaji {$periodeLabel}")
             ->setCreator('OMEO HR Suite');
 
+        // ── Sheet 1: Total per Outlet ──────────────────────────────────────
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Total Gaji');
+        $sheet->setTitle('Total per Outlet');
 
         $sheet->setCellValue('A1', "Rekapitulasi Total Gaji per Brand — {$periodeLabel}");
-        $sheet->mergeCells('A1:C1');
+        $sheet->mergeCells('A1:D1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $sheet->setCellValue('A2', 'Rumus & sumber data lengkap ada di sheet "Formula & Sumber Data".');
+        $sheet->getStyle('A2')->getFont()->setItalic(true)->setSize(9)->getColor()->setRGB('6B7280');
 
-        $sheet->fromArray(['Nama Brand', 'Bulan', 'Total Gaji'], null, 'A3');
-        $sheet->getStyle('A3:C3')->getFont()->setBold(true);
-        $sheet->getStyle('A3:C3')->getFill()
+        $sheet->fromArray(['Nama Brand', 'Bulan', 'Jumlah Karyawan', 'Total Gaji'], null, 'A4');
+        $sheet->getStyle('A4:D4')->getFont()->setBold(true);
+        $sheet->getStyle('A4:D4')->getFill()
             ->setFillType(Fill::FILL_SOLID)
             ->getStartColor()->setRGB('EDE9FE');
 
         foreach ($rows as $i => $row) {
-            $r = 4 + $i;
+            $r = 5 + $i;
             $sheet->setCellValue("A{$r}", $row->outlet_name_raw);
             $sheet->setCellValue("B{$r}", $periodeLabel);
-            $sheet->setCellValue("C{$r}", (float) $row->total_gaji);
+            $sheet->setCellValue("C{$r}", (int) $row->jumlah_karyawan);
+            $sheet->setCellValue("D{$r}", (float) $row->total_gaji);
         }
 
         $count = $rows->count();
         if ($count > 0) {
-            $lastDataRow = 3 + $count;
-            $sheet->getStyle("C4:C{$lastDataRow}")
+            $lastDataRow = 4 + $count;
+            $sheet->getStyle("D5:D{$lastDataRow}")
                   ->getNumberFormat()->setFormatCode('#,##0');
         }
 
         // Baris total
-        $totalRow = 4 + $count;
+        $totalRow = 5 + $count;
         $sheet->setCellValue("A{$totalRow}", 'TOTAL');
-        $sheet->setCellValue("C{$totalRow}", (float) $rows->sum('total_gaji'));
-        $sheet->getStyle("A{$totalRow}:C{$totalRow}")->getFont()->setBold(true);
-        $sheet->getStyle("C{$totalRow}")->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->setCellValue("C{$totalRow}", (int) $rows->sum('jumlah_karyawan'));
+        $sheet->setCellValue("D{$totalRow}", (float) $rows->sum('total_gaji'));
+        $sheet->getStyle("A{$totalRow}:D{$totalRow}")->getFont()->setBold(true);
+        $sheet->getStyle("D{$totalRow}")->getNumberFormat()->setFormatCode('#,##0');
 
         $sheet->getColumnDimension('A')->setWidth(38);
         $sheet->getColumnDimension('B')->setWidth(18);
-        $sheet->getColumnDimension('C')->setWidth(20);
+        $sheet->getColumnDimension('C')->setWidth(16);
+        $sheet->getColumnDimension('D')->setWidth(20);
+
+        // ── Sheet 2: Detail per Karyawan ───────────────────────────────────
+        $detailSheet = $spreadsheet->createSheet();
+        $detailSheet->setTitle('Detail per Karyawan');
+
+        $detailSheet->setCellValue('A1', "Detail Baris Sumber — {$periodeLabel}");
+        $detailSheet->mergeCells('A1:I1');
+        $detailSheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $detailSheet->setCellValue('A2', "Setiap baris di bawah ini adalah satu baris di tabel payroll_annual_summaries yang ikut dijumlahkan ke sheet \"Total per Outlet\". Kolom \"Nilai Gaji\" diambil dari kolom {$col} (kolom bulan {$periodeLabel}).");
+        $detailSheet->mergeCells('A2:I2');
+        $detailSheet->getStyle('A2')->getFont()->setItalic(true)->setSize(9)->getColor()->setRGB('6B7280');
+
+        $detailHeader = ['No', 'Nama Brand', 'No.Komp', 'NIK', 'Nama Karyawan', 'Posisi', 'Tgl Join', "Nilai Gaji ({$col})", 'File Sumber Import'];
+        $detailSheet->fromArray($detailHeader, null, 'A4');
+        $detailSheet->getStyle('A4:I4')->getFont()->setBold(true);
+        $detailSheet->getStyle('A4:I4')->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('EDE9FE');
+
+        foreach ($detailRows as $i => $row) {
+            $r = 5 + $i;
+            $detailSheet->setCellValue("A{$r}", $i + 1);
+            $detailSheet->setCellValue("B{$r}", $row->outlet_name_raw);
+            $detailSheet->setCellValueExplicit("C{$r}", (string) $row->no_komp, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $detailSheet->setCellValueExplicit("D{$r}", (string) $row->nik, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $detailSheet->setCellValue("E{$r}", $row->nama);
+            $detailSheet->setCellValue("F{$r}", $row->posisi);
+            $detailSheet->setCellValue("G{$r}", $row->join_date);
+            $detailSheet->setCellValue("H{$r}", (float) $row->nilai_gaji);
+            $detailSheet->setCellValue("I{$r}", $row->source_file_name);
+        }
+
+        $detailCount = $detailRows->count();
+        if ($detailCount > 0) {
+            $lastDetailRow = 4 + $detailCount;
+            $detailSheet->getStyle("H5:H{$lastDetailRow}")->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        foreach (['A' => 6, 'B' => 30, 'C' => 14, 'D' => 16, 'E' => 30, 'F' => 20, 'G' => 12, 'H' => 18, 'I' => 30] as $col2 => $width) {
+            $detailSheet->getColumnDimension($col2)->setWidth($width);
+        }
+
+        // ── Sheet 3: Formula & Sumber Data ─────────────────────────────────
+        $infoSheet = $spreadsheet->createSheet();
+        $infoSheet->setTitle('Formula & Sumber Data');
+
+        $infoSheet->setCellValue('A1', 'Formula & Sumber Data — Export Total Gaji per Brand');
+        $infoSheet->mergeCells('A1:B1');
+        $infoSheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+
+        $importSessions = $detailRows->pluck('import_session_id')->unique()->count();
+        $importFiles    = $detailRows->pluck('source_file_name')->filter()->unique()->implode(', ') ?: '(tidak diketahui)';
+
+        $info = [
+            ['Tabel sumber data', 'payroll_annual_summaries'],
+            ['Kolom nilai gaji yang dipakai', "{$col} (kolom khusus bulan {$periodeLabel})"],
+            ['Formula "Total Gaji" per Brand', "SUM({$col}) FROM payroll_annual_summaries WHERE tahun = {$year} AND {$col} > 0 AND deleted_at IS NULL, GROUP BY outlet_name_raw"],
+            ['Filter baris yang dihitung', "Hanya baris dengan {$col} > 0 (karyawan yang tidak bertugas/gaji Rp0 bulan ini tidak ikut dihitung) dan belum dihapus (soft-delete)"],
+            ['Jumlah sesi import yang jadi sumber tahun ini', (string) $importSessions],
+            ['Nama file sumber import', $importFiles],
+            ['Cara data ini masuk ke sistem', 'Diupload manual oleh HRD/Finance lewat menu Summary Gaji Tahunan → Upload, dari file "Summary Tokio-O!" (rekap tahunan per karyawan, 12 kolom bulan). Ini BUKAN hasil hitung otomatis dari data presensi/payroll harian OMEO.'],
+            ['Catatan penting', 'Tabel payroll_annual_summaries adalah data hasil upload terpisah dan TIDAK otomatis tersambung ke data karyawan OMEO (kolom employee_id kosong untuk sebagian besar baris). Kalau nilai di sini berbeda dari perhitungan payroll/BPJS di menu lain (yang bersumber dari finance_bpjs_records, hasil import CSV payroll bulanan), artinya dua sumber data ini memang independen satu sama lain dan bisa saja tidak singkron.'],
+        ];
+
+        $r = 3;
+        foreach ($info as [$label, $value]) {
+            $infoSheet->setCellValue("A{$r}", $label);
+            $infoSheet->setCellValue("B{$r}", $value);
+            $infoSheet->getStyle("A{$r}")->getFont()->setBold(true);
+            $infoSheet->getStyle("A{$r}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+            $infoSheet->getStyle("B{$r}")->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
+            $r++;
+        }
+
+        $infoSheet->getColumnDimension('A')->setWidth(32);
+        $infoSheet->getColumnDimension('B')->setWidth(90);
+        foreach (range(3, $r - 1) as $rowNum) {
+            $infoSheet->getRowDimension($rowNum)->setRowHeight(-1);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
 
         $filename = "TotalGaji_{$year}{$month}.xlsx";
 
