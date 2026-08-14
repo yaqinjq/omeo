@@ -19,6 +19,18 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.15',
+                'date'    => '14 Agustus 2026',
+                'label'   => 'Fix Error 500 Halaman Appraisal & Notifikasi, Export Total Gaji Kini Tampilkan Rincian & Rumus',
+                'color'   => '#DC2626',
+                'items'   => [
+                    'Fix error 500 di halaman Penilaian Appraisal (form evaluator) — akar masalahnya bug pada compiler Blade: penulisan kode PHP satu-baris (@php(...)) yang tercampur dengan bentuk blok di file yang sama membuat separuh halaman gagal ter-render. Sudah dirapikan supaya konsisten dan tidak terulang',
+                    'Fix error 500 di halaman Settings → Notifikasi — akar masalahnya dua kode perintah Blade yang tertulis nempel tanpa spasi (@endif@endforeach), membuat satu bagian perulangan tidak pernah ditutup dengan benar',
+                    'Fix akar masalah deploy: proses build cache tampilan sekarang dijalankan sekali secara terkendali sebelum situs menerima trafik nyata, supaya tidak ada lagi resiko file cache "rebutan tulis" oleh beberapa pengunjung pertama setelah update (yang bisa memicu error 500 sesaat setelah deploy)',
+                    'Export Total Gaji per Brand (Finance → Summary Gaji Tahunan → Export Excel) sekarang punya 3 sheet: Total per Outlet (seperti sebelumnya, ditambah jumlah karyawan), Detail per Karyawan (rincian tiap baris sumber: No.Komp, nama, posisi, nilai gaji, file asal import), dan Formula & Sumber Data (rumus SUM/GROUP BY dan sumber tabel secara tertulis) — supaya kalau ada selisih angka dengan perhitungan pimpinan, bisa langsung ditelusuri sampai baris & rumusnya',
+                ],
+            ],
+            [
                 'version' => 'v3.3.14',
                 'date'    => '12 Agustus 2026',
                 'label'   => 'Appraisal: Fix Data Tercampur Antar Periode, Error Perpanjang Due Date, Reminder & Template Email',
@@ -555,6 +567,18 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '14 Agustus 2026',
+                'title'   => 'Fix Error 500 Appraisal & Notifikasi, Export Total Gaji Kini Tampilkan Rincian & Rumus (v3.3.15)',
+                'summary' => 'Dua halaman yang sempat error 500 (Penilaian Appraisal dan Settings → Notifikasi) sudah ditemukan akar masalahnya dan diperbaiki — keduanya bug penulisan kode tampilan (Blade) yang jarang terjadi, sudah dirapikan supaya tidak terulang di file lain. Sekalian diperbaiki juga proses deploy-nya supaya tidak ada resiko error sesaat setelah update ke depannya. Terkait laporan pimpinan soal nominal Export Total Gaji per Brand yang berbeda dari perhitungan yang sudah dikoreksi: fitur export-nya sekarang dilengkapi rincian penuh — daftar tiap karyawan yang dijumlahkan, kolom sumbernya, dan rumus perhitungan ditulis jelas di sheet terpisah. Ditemukan indikasi kuat bahwa akar selisihnya adalah sumber data: tombol ini masih membaca dari file upload tahunan terpisah ("Summary Tokio-O!") yang tidak tersambung ke data karyawan OMEO, berbeda dari perhitungan payroll/BPJS di menu lain yang sudah pakai data yang terkoreksi. Silakan cek sheet "Formula & Sumber Data" di file export untuk detail lengkapnya, lalu kita diskusikan sumber mana yang seharusnya jadi acuan.',
+                'access'  => 'Finance → Summary Gaji Tahunan → Export Excel → Export Total Gaji',
+                'howto'   => [
+                    'Buka Finance → Summary Gaji Tahunan, klik "Export Excel" → pilih periode bulan → klik "Export Total Gaji"',
+                    'File yang terunduh sekarang punya 3 sheet: "Total per Outlet" (angka ringkasan), "Detail per Karyawan" (rincian tiap baris), dan "Formula & Sumber Data" (penjelasan rumus & sumber data)',
+                    'Cek sheet terakhir untuk lihat kenapa angkanya bisa berbeda dari perhitungan yang sudah dikoreksi pimpinan',
+                ],
+                'stats'   => '✅ 2 bug error 500 diperbaiki (akar masalah) | Fitur baru: rincian & rumus di Export Total Gaji | File diubah/baru: 3',
+            ],
             [
                 'date'    => '12 Agustus 2026',
                 'title'   => 'Appraisal: Fix Data Tercampur, Error Perpanjang Due Date, Reminder & Template Email (v3.3.14)',
