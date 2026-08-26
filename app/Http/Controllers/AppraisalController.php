@@ -630,13 +630,14 @@ class AppraisalController extends Controller
         $evaluatorNumber = $appraisals->mapWithKeys(fn ($a, $idx) => [$a->id => $idx + 1])->toArray();
 
         $narratives = $appraisals->map(fn ($a) => [
-            'no'              => $evaluatorNumber[$a->id],
-            'name'            => $a->appraiser?->name ?? 'Evaluator',
-            'date'            => $a->date_appraised?->format('Y-m-d') ?? '-',
-            'proposed_status' => $this->formatProposedStatus($a->proposed_status),
-            'strengths'       => $a->feedback_strengths ?? '-',
-            'improvements'    => $a->feedback_improvements ?? '-',
-            'notes'           => $a->feedback_notes ?? '-',
+            'no'                => $evaluatorNumber[$a->id],
+            'name'              => $a->appraiser?->name ?? 'Evaluator',
+            'date'              => $a->date_appraised?->format('Y-m-d') ?? '-',
+            'proposed_status'   => $this->formatProposedStatus($a->proposed_status),
+            'strengths'         => $a->feedback_strengths ?? '-',
+            'improvements'      => $a->feedback_improvements ?? '-',
+            'notes'             => $a->feedback_notes ?? '-',
+            'included_in_score' => $a->included_in_score,
         ])->values()->toArray();
 
         $consensusRaw = $appraisals->whereNotNull('proposed_status')

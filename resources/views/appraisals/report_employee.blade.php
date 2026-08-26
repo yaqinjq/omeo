@@ -371,14 +371,17 @@
                 </thead>
                 <tbody>
                     @foreach($narratives as $n)
-                    <tr style="{{ $loop->even ? 'background:#F8FAFC;' : '' }}">
+                    <tr style="{{ $loop->even ? 'background:#F8FAFC;' : '' }} {{ !$n['included_in_score'] ? 'opacity:.45;' : '' }}">
                         <td style="padding:10px 14px; border-bottom:1px solid #F1F5F9; vertical-align:top;">
                             <div style="font-weight:700; color:#1e3a8a;">Evaluator {{ $n['no'] }}</div>
                             <div style="font-size:11px; color:#475569; margin-top:2px;">{{ $n['name'] }}</div>
-                            <div style="margin-top:4px;">
+                            <div style="margin-top:4px; display:flex; gap:4px; flex-wrap:wrap;">
                                 <span style="font-size:10px; padding:2px 8px; border-radius:99px; background:#EFF6FF; color:#1D4ED8; font-weight:600;">
                                     {{ $n['proposed_status'] ?: '-' }}
                                 </span>
+                                @if(!$n['included_in_score'])
+                                    <span style="font-size:10px; padding:2px 8px; border-radius:99px; background:#FEE2E2; color:#991B1B; font-weight:600;">Dikecualikan</span>
+                                @endif
                             </div>
                             <div style="font-size:10px; color:#94A3B8; margin-top:3px;">{{ $n['date'] }}</div>
                         </td>

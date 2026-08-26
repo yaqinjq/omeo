@@ -302,7 +302,19 @@ class AppraisalAssignmentController extends Controller
                         $payload['criteria_template_id'] = AppraisalCriteriaTemplate::resolveFor($employee?->lokasi_kerja)?->id;
                     }
 
-                    $appraisal = Appraisal::create($payload);
+                    // Selain pengecekan exists() di atas, tangkap juga
+                    // unique constraint violation di level database —
+                    // exists()-lalu-create() tidak atomik, jadi kalau HRD
+                    // klik generate dua kali dengan cepat (dua request
+                    // hampir bersamaan), keduanya bisa lolos exists() sebelum
+                    // salah satu commit. Constraint di database yang jadi
+                    // penjaga terakhir supaya tidak tercipta baris duplikat.
+                    try {
+                        $appraisal = Appraisal::create($payload);
+                    } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                        $skipped++;
+                        continue;
+                    }
                     $this->notifyAppraiser($appraisal, $actorId);
                     $created++;
                 }
