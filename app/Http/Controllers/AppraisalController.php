@@ -390,6 +390,16 @@ class AppraisalController extends Controller
             return null;
         }
 
+        // Evaluator yang di-exclude HRD (included_in_score=false) sudah
+        // dianggap tidak valid di halaman web (dinim + tidak ikut dihitung) —
+        // laporan cetak/PDF adalah dokumen final, jadi evaluator itu tidak
+        // boleh ikut tercetak sama sekali, bukan cuma tidak dihitung.
+        $appraisals = $appraisals->where('included_in_score', true)->values();
+
+        if ($appraisals->isEmpty()) {
+            return null;
+        }
+
         $indicatorIds = $appraisals
             ->flatMap(fn ($a) => $a->details->pluck('appraisal_indicator_id'))
             ->unique()->sort()->values();
@@ -921,6 +931,12 @@ class AppraisalController extends Controller
             ->orderBy('date_appraised')
             ->orderBy('id')
             ->get();
+
+        abort_if($appraisals->isEmpty(), 404);
+
+        // Evaluator yang di-exclude HRD (included_in_score=false) tidak boleh
+        // ikut tercetak di laporan Excel, sama seperti laporan PDF.
+        $appraisals = $appraisals->where('included_in_score', true)->values();
 
         abort_if($appraisals->isEmpty(), 404);
 
