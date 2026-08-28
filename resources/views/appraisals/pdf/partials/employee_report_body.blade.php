@@ -160,9 +160,15 @@
 <tr>
     <td class="lbl">Tanda Tangan Karyawan</td>
     <td colspan="3">
-        <div style="height:20px;"></div>
-        <div style="font-size:8px; color:#6b7280;">Belum ditandatangani</div>
-        <div style="font-size:8px; color:#6b7280; margin-top:2px;">Nama signer:</div>
+        @php $employeeSlot = $sigBatch?->slots->firstWhere('slot_type', 'employee'); @endphp
+        @if($employeeSlot && $employeeSlot->is_signed)
+            <img src="{{ $employeeSlot->signature_data }}" style="height:36px; max-width:160px;" alt="Tanda Tangan">
+            <div style="font-size:8px; color:#166534; margin-top:2px;">Sudah ditandatangani &mdash; {{ $employeeSlot->signed_at?->format('d M Y H:i') }}</div>
+        @else
+            <div style="height:20px;"></div>
+            <div style="font-size:8px; color:#6b7280;">Belum ditandatangani</div>
+        @endif
+        <div style="font-size:8px; color:#6b7280; margin-top:2px;">Nama signer: {{ $employeeSlot?->signerUser?->name ?? $employee->full_name }}</div>
     </td>
 </tr>
 <tr>
@@ -193,7 +199,7 @@
 </tr>
 <tr>
     <td class="lbl">Effective Date</td>
-    <td></td>
+    <td>{{ $latestAppraisal->contract_extension_effective_date?->format('d-m-Y') ?? '-' }}</td>
     <td class="lbl">Masa Kontrak Diperpanjang</td>
     <td style="font-size:8px; color:#374151;">
         @php $dur = $latestAppraisal->proposed_contract_duration ?? null; @endphp
@@ -211,24 +217,25 @@
 </table>
 
 <div class="sec-title" style="margin-top:14px;">Persetujuan Pimpinan</div>
+@php $approvalSlots = $sigBatch?->slots->where('slot_type', '!=', 'employee')->values() ?? collect(); @endphp
 <table class="appr-tbl">
 <tr>
+    @forelse($approvalSlots as $slot)
     <td>
-        <div class="appr-lbl">HRD / Super Administrator</div>
-        <div class="appr-space"></div>
+        <div class="appr-lbl">{{ $slot->label }}</div>
+        <div style="font-size:8px; color:#374151; margin-bottom:2px;">{{ $slot->signerUser?->name ?? $slot->external_name ?? 'Belum ditentukan' }}</div>
+        @if($slot->is_signed)
+            <img src="{{ $slot->signature_data }}" style="height:30px; max-width:100%;" alt="Tanda Tangan">
+            <div style="font-size:7px; color:#166534;">{{ $slot->signed_at?->format('d M Y H:i') }}</div>
+        @else
+            <div class="appr-space"></div>
+        @endif
     </td>
-    <td>
-        <div class="appr-lbl">Supervisor / PIC</div>
-        <div class="appr-space"></div>
-    </td>
-    <td>
-        <div class="appr-lbl">Manager / ASPV / ASM</div>
-        <div class="appr-space"></div>
-    </td>
-    <td>
-        <div class="appr-lbl">Managing Director / Manager</div>
-        <div class="appr-space"></div>
-    </td>
+    @empty
+    <td><div class="appr-lbl">HRD / Super Administrator</div><div class="appr-space"></div></td>
+    <td><div class="appr-lbl">Supervisor / PIC</div><div class="appr-space"></div></td>
+    <td><div class="appr-lbl">Manager / ASPV / ASM</div><div class="appr-space"></div></td>
+    @endforelse
 </tr>
 </table>
 

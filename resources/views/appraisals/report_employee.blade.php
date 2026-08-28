@@ -396,6 +396,64 @@
         @endif
     </div>
 
+    {{-- ── SECTION 2B: KEPUTUSAN KONTRAK ── --}}
+    @php
+        $canManageContractDecision = in_array(auth()->user()->role, ['admin','hrd']);
+        $durationLabels = ['6_bulan' => '6 Bulan', '1_tahun' => '1 Tahun', '2_tahun' => '2 Tahun'];
+    @endphp
+    <div style="background:white; border-radius:14px; border:1.5px solid #E2E8F0; margin-bottom:24px; overflow:hidden;">
+        <div style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; border-left:4px solid #7C3AED;">
+            <span style="font-size:13px; font-weight:700; color:#5B21B6;">&#128203; Masa Kontrak Diperpanjang</span>
+        </div>
+        <div style="padding:18px;">
+            @if(!$latestAppraisal)
+                <div style="color:#94A3B8; font-size:13px;">Belum ada appraisal untuk disimpan keputusannya.</div>
+            @elseif(!$canManageContractDecision)
+                <div style="font-size:13px; color:#374151;">
+                    {{ $durationLabels[$latestAppraisal->proposed_contract_duration] ?? 'Belum ditentukan' }}
+                    @if($latestAppraisal->contract_extension_effective_date)
+                        &mdash; efektif {{ $latestAppraisal->contract_extension_effective_date->format('d-m-Y') }}
+                    @endif
+                </div>
+            @else
+            <div x-data="{
+                    duration: '{{ $latestAppraisal->proposed_contract_duration ?? '' }}',
+                    effectiveDate: '{{ $latestAppraisal->contract_extension_effective_date?->format('Y-m-d') ?? '' }}',
+                    setDuration(d) {
+                        this.duration = d;
+                        const months = { '6_bulan': 6, '1_tahun': 12, '2_tahun': 24 }[d];
+                        const base = new Date();
+                        base.setMonth(base.getMonth() + months);
+                        this.effectiveDate = base.toISOString().slice(0, 10);
+                    }
+                 }">
+                <form method="POST" action="{{ route('appraisals.report-employee.contract-decision', $employee->id) }}">
+                    @csrf
+                    <input type="hidden" name="period_id" value="{{ $periodId }}">
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;">
+                        @foreach($durationLabels as $val => $label)
+                        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#374151; cursor:pointer;">
+                            <input type="radio" name="proposed_contract_duration" value="{{ $val }}"
+                                   x-model="duration" @click="setDuration('{{ $val }}')"
+                                   style="width:15px; height:15px; accent-color:#7C3AED;">
+                            {{ $label }}
+                        </label>
+                        @endforeach
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <label style="font-size:12px; color:#64748B;">Tanggal Efektif (otomatis terisi saat pilih durasi, bisa diubah manual)</label>
+                        <input type="date" name="contract_extension_effective_date" x-model="effectiveDate"
+                               style="border:1.5px solid #E2E8F0; border-radius:8px; padding:6px 10px; font-size:13px; outline:none;">
+                    </div>
+                    <button type="submit" style="margin-top:12px; background:#5B21B6; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                        Simpan Keputusan
+                    </button>
+                </form>
+            </div>
+            @endif
+        </div>
+    </div>
+
     {{-- ── SECTION 3: TANDA TANGAN DIGITAL ── --}}
     @php
         $currentUserId   = auth()->id();

@@ -315,6 +315,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('appraisals/report/employee/{employeeId}/sign', [AppraisalController::class, 'saveSignature'])->name('appraisals.report-employee.sign')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/signature-slots', [AppraisalController::class, 'addSignatureSlot'])->name('appraisals.report-employee.add-signature-slot')->whereNumber('employeeId');
         Route::post('appraisals/report/employee/{employeeId}/extend-due-date-bulk', [AppraisalController::class, 'extendDueDateBulk'])->name('appraisals.report-employee.extend-due-date-bulk')->whereNumber('employeeId');
+        Route::post('appraisals/report/employee/{employeeId}/contract-decision', [AppraisalController::class, 'saveContractDecision'])->name('appraisals.report-employee.contract-decision')->whereNumber('employeeId');
         Route::get('appraisals/export-report', [AppraisalController::class, 'exportReport'])->name('appraisals.export-report');
         Route::get('appraisals/export-bulk-pdf', [AppraisalController::class, 'exportBulkPdf'])->name('appraisals.export-bulk-pdf');
         Route::match(['get','post'], 'appraisals/export-employee-pdf/{employeeId}', [AppraisalController::class, 'exportEmployeePdf'])->name('appraisals.export-employee-pdf')->whereNumber('employeeId');

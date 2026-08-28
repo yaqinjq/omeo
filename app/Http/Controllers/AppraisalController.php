@@ -480,11 +480,24 @@ class AppraisalController extends Controller
 
         $appName = AppSetting::first()?->app_name ?? config('app.name', 'MEO APPS');
 
+        // Batch tanda tangan digital (kalau sudah pernah dibuka lewat halaman
+        // web) - export TIDAK membuat batch baru sendiri (read-only), supaya
+        // export tidak punya efek samping menulis data.
+        $sigBatch = null;
+        if (Schema::hasTable('appraisal_batch_signatures')) {
+            $sigBatch = AppraisalBatchSignature::where('employee_id', $employeeId)
+                ->when($periodId, fn ($q) => $q->where('appraisal_period_id', $periodId))
+                ->when(! $periodId, fn ($q) => $q->whereNull('appraisal_period_id'))
+                ->latest()
+                ->first();
+            $sigBatch?->load(['slots.signerUser']);
+        }
+
         return compact(
             'employee', 'appraisals', 'periodName', 'dateRange',
             'matrix', 'evalAvgs', 'matrixOverallAvg', 'overallAvg', 'overallGrade',
             'evaluatorCount', 'approvedCount', 'evaluatorNames', 'evaluatorNumber', 'showNames',
-            'narratives', 'consensusStatus', 'latestAppraisal', 'appName'
+            'narratives', 'consensusStatus', 'latestAppraisal', 'appName', 'sigBatch'
         );
     }
 
@@ -1755,6 +1768,46 @@ class AppraisalController extends Controller
         }
 
         return back()->with('success', "Due date {$appraisals->count()} evaluator berhasil diperpanjang ke {$data['new_due_date']}.");
+    }
+
+    /**
+     * HRD isi keputusan final "Masa Kontrak Diperpanjang" + tanggal efektif
+     * untuk satu karyawan (per periode appraisal). Tanggal efektif dihitung
+     * otomatis di sisi browser (hari ini + durasi yang dipilih) tapi tetap
+     * bisa diubah manual oleh HRD sebelum disimpan - field yang dikirim ke
+     * sini adalah tanggal FINAL setelah (kalau perlu) disesuaikan HRD.
+     * Disimpan di baris appraisal TERBARU untuk employee+periode ini, sama
+     * seperti kolom proposed_contract_duration yang sudah dibaca PDF.
+     */
+    public function saveContractDecision(Request $request, int $employeeId): RedirectResponse
+    {
+        $user = $request->user();
+        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'period_id'                          => ['nullable', 'integer'],
+            'proposed_contract_duration'          => ['nullable', 'string', 'in:6_bulan,1_tahun,2_tahun'],
+            'contract_extension_effective_date'   => ['nullable', 'date'],
+        ]);
+
+        $latestAppraisal = Appraisal::where('employee_id', $employeeId)
+            ->whereIn('status', ['submitted', 'approved'])
+            ->when($data['period_id'] ?? null, fn ($q) => $q->where('appraisal_period_id', $data['period_id']))
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $latestAppraisal) {
+            return back()->with('error', 'Tidak ada appraisal untuk disimpan keputusannya.');
+        }
+
+        $latestAppraisal->update([
+            'proposed_contract_duration'        => $data['proposed_contract_duration'] ?? null,
+            'contract_extension_effective_date' => $data['contract_extension_effective_date'] ?? null,
+        ]);
+
+        return back()->with('success', 'Keputusan perpanjangan kontrak berhasil disimpan.');
     }
 
     /**
