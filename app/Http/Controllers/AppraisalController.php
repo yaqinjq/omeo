@@ -1788,7 +1788,7 @@ class AppraisalController extends Controller
 
         $data = $request->validate([
             'period_id'                          => ['nullable', 'integer'],
-            'proposed_contract_duration'          => ['nullable', 'string', 'in:6_bulan,1_tahun,2_tahun'],
+            'proposed_contract_duration'          => ['nullable', 'string', 'in:tidak_diperpanjang,3_bulan,6_bulan,1_tahun,2_tahun,custom'],
             'contract_extension_effective_date'   => ['nullable', 'date'],
         ]);
 

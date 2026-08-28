@@ -64,7 +64,7 @@
 </tr>
 <tr>
     <td class="lbl">Status Signature Batch Terbaru</td>
-    <td colspan="3" class="val">{{ $approvedCount }} / {{ $evaluatorCount }} slot</td>
+    <td colspan="3" class="val">{{ $sigBatch?->signedCount() ?? 0 }} / {{ $sigBatch?->slots->count() ?? 0 }} slot</td>
 </tr>
 </table>
 

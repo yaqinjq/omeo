@@ -399,7 +399,14 @@
     {{-- ── SECTION 2B: KEPUTUSAN KONTRAK ── --}}
     @php
         $canManageContractDecision = in_array(auth()->user()->role, ['admin','hrd']);
-        $durationLabels = ['6_bulan' => '6 Bulan', '1_tahun' => '1 Tahun', '2_tahun' => '2 Tahun'];
+        $durationLabels = [
+            'tidak_diperpanjang' => 'Tidak Diperpanjang',
+            '3_bulan'            => '3 Bulan',
+            '6_bulan'            => '6 Bulan',
+            '1_tahun'            => '1 Tahun',
+            '2_tahun'            => '2 Tahun',
+            'custom'             => 'Custom',
+        ];
     @endphp
     <div style="background:white; border-radius:14px; border:1.5px solid #E2E8F0; margin-bottom:24px; overflow:hidden;">
         <div style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; border-left:4px solid #7C3AED;">
@@ -421,7 +428,15 @@
                     effectiveDate: '{{ $latestAppraisal->contract_extension_effective_date?->format('Y-m-d') ?? '' }}',
                     setDuration(d) {
                         this.duration = d;
-                        const months = { '6_bulan': 6, '1_tahun': 12, '2_tahun': 24 }[d];
+                        const months = { '3_bulan': 3, '6_bulan': 6, '1_tahun': 12, '2_tahun': 24 }[d];
+                        if (d === 'tidak_diperpanjang') {
+                            this.effectiveDate = '';
+                            return;
+                        }
+                        if (d === 'custom' || !months) {
+                            // Custom: HRD isi tanggalnya sendiri, tidak dihitung otomatis.
+                            return;
+                        }
                         const base = new Date();
                         base.setMonth(base.getMonth() + months);
                         this.effectiveDate = base.toISOString().slice(0, 10);
@@ -441,8 +456,9 @@
                         @endforeach
                     </div>
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <label style="font-size:12px; color:#64748B;">Tanggal Efektif (otomatis terisi saat pilih durasi, bisa diubah manual)</label>
+                        <label style="font-size:12px; color:#64748B;" x-text="duration === 'custom' ? 'Tanggal Efektif (isi manual)' : 'Tanggal Efektif (otomatis terisi saat pilih durasi, bisa diubah manual)'"></label>
                         <input type="date" name="contract_extension_effective_date" x-model="effectiveDate"
+                               :disabled="duration === 'tidak_diperpanjang'"
                                style="border:1.5px solid #E2E8F0; border-radius:8px; padding:6px 10px; font-size:13px; outline:none;">
                     </div>
                     <button type="submit" style="margin-top:12px; background:#5B21B6; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
