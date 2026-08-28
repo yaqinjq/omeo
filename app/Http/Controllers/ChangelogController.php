@@ -19,6 +19,20 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.16',
+                'date'    => '28 Agustus 2026',
+                'label'   => 'Fix Evaluator Dobel & Tanda Tangan Hilang di PDF, Fitur Perpanjang Kontrak Otomatis',
+                'color'   => '#DC2626',
+                'items'   => [
+                    'Fix akar masalah evaluator appraisal muncul dobel/triple (mis. 1 orang tercatat sampai 3x dengan nilai berbeda) — penyebabnya generate batch appraisal tidak dikunci di level database, jadi kalau HRD klik generate dua-tiga kali cepat, beberapa request bisa lolos bersamaan dan membuat baris ganda untuk evaluator yang sama. Sudah ditambahkan command audit (appraisals:fix-duplicate-evaluators) yang otomatis membereskan kasus yang aman (evaluator sama, cuma 1 yang benar-benar mengisi) dan melaporkan kasus yang butuh keputusan manual (evaluator sama tapi mengisi beberapa kali dengan nilai berbeda) tanpa menyentuhnya',
+                    'Sebagai konsekuensi fix di atas: tombol reminder "Belum Mengisi" tidak lagi salah menampilkan evaluator yang sebenarnya sudah submit lewat baris duplikatnya',
+                    'Fix fitur "Exclude" di Laporan Appraisal — sekarang komentar/narasi evaluator yang dikecualikan ikut disembunyikan juga (sebelumnya cuma nilainya yang dikecualikan, komentarnya tetap tampil)',
+                    'Fix akar masalah Export PDF, Export Excel, dan Print Out Laporan Appraisal — evaluator yang sudah di-exclude HRD ternyata masih ikut tercetak (nilai, komentar, dan ikut menghitung rata-rata akhir). Sekarang exclude berlaku konsisten di semua jenis export, bukan cuma tampilan di layar',
+                    'Fix akar masalah tanda tangan digital tidak muncul di file PDF — bagian "Persetujuan Pimpinan" dan "Tanda Tangan Karyawan" di PDF selama ini memang tidak pernah membaca nama penanda tangan yang dipilih HRD di halaman web, sekarang sudah tersambung dengan benar (nama muncul walau belum ditandatangani, tanda tangan & tanggal muncul kalau sudah)',
+                    'Fitur baru: bagian "Masa Kontrak Diperpanjang" di Laporan Appraisal — HRD pilih 6 Bulan/1 Tahun/2 Tahun, tanggal efektif otomatis terisi (hari ini + durasi), tetap bisa diubah manual sebelum disimpan, dan otomatis ikut tercetak di PDF',
+                ],
+            ],
+            [
                 'version' => 'v3.3.15',
                 'date'    => '14 Agustus 2026',
                 'label'   => 'Fix Error 500 Halaman Appraisal & Notifikasi, Export Total Gaji Kini Tampilkan Rincian & Rumus',
@@ -567,6 +581,18 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '28 Agustus 2026',
+                'title'   => 'Fix Evaluator Dobel & Tanda Tangan Hilang di PDF, Fitur Perpanjang Kontrak Otomatis (v3.3.16)',
+                'summary' => 'Menindaklanjuti laporan HRD soal appraisal Henry Moelyono: evaluator yang sama sempat tercatat sampai 3x dengan nilai berbeda-beda di satu laporan. Sudah ditemukan akar masalahnya — proses generate appraisal tidak terkunci di database, jadi klik tombol generate berkali-kali dengan cepat bisa membuat baris ganda untuk evaluator yang sama. Kasus yang aman (evaluator sama tapi cuma 1 yang benar-benar mengisi) sudah otomatis dibersihkan; kasus yang evaluatornya mengisi berkali-kali dengan nilai berbeda sengaja tidak disentuh otomatis, menunggu keputusan HRD lewat tombol Exclude yang sudah ada. Exclude ini sekarang juga berlaku konsisten di Export PDF/Excel/Print Out (sebelumnya yang sudah di-exclude masih ikut tercetak). Ditemukan juga akar masalah terpisah: nama penanda tangan (PIC, Manager, Direktur) yang sudah dipilih HRD di layar ternyata tidak pernah muncul di file PDF hasil cetak — sekarang sudah tersambung dengan benar. Terakhir, ditambahkan fitur baru "Masa Kontrak Diperpanjang" yang diminta: pilih 6 Bulan/1 Tahun/2 Tahun, tanggal efektifnya otomatis dihitung tapi tetap bisa diubah manual oleh HRD.',
+                'access'  => 'Appraisal HRD → Laporan Appraisal → Detail Karyawan',
+                'howto'   => [
+                    'Evaluator dobel: sudah dibersihkan otomatis untuk kasus yang aman. Kalau masih ada evaluator yang sama muncul lebih dari sekali dengan nilai berbeda, gunakan tombol "Exclude" di kolom evaluator yang tidak dipakai — otomatis ikut tersembunyi dari nilai, komentar, dan semua jenis export',
+                    'Tanda Tangan: pilih kategori & nama penanda tangan seperti biasa di Section 3 — sekarang nama itu langsung ikut muncul di Export PDF/Print Out meski belum benar-benar ditandatangani',
+                    'Perpanjang Kontrak: scroll ke bagian "Masa Kontrak Diperpanjang" (sebelum bagian Tanda Tangan), pilih durasi, tanggal otomatis terisi dan bisa diedit, klik Simpan Keputusan',
+                ],
+                'stats'   => '✅ Akar masalah evaluator dobel, exclude tidak konsisten di export, & tanda tangan hilang di PDF diperbaiki | Fitur baru: Masa Kontrak Diperpanjang otomatis | File diubah/baru: 8',
+            ],
             [
                 'date'    => '14 Agustus 2026',
                 'title'   => 'Fix Error 500 Appraisal & Notifikasi, Export Total Gaji Kini Tampilkan Rincian & Rumus (v3.3.15)',
