@@ -331,6 +331,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('appraisals/{appraisal}/remind', [AppraisalController::class, 'remind'])->whereNumber('appraisal')->name('appraisals.remind');
         Route::post('appraisals/{appraisal}/extend-due-date', [AppraisalController::class, 'extendDueDate'])->whereNumber('appraisal')->name('appraisals.extend-due-date');
         Route::post('appraisals/{appraisal}/toggle-include-in-score', [AppraisalController::class, 'toggleIncludeInScore'])->whereNumber('appraisal')->name('appraisals.toggle-include-in-score');
+        Route::post('appraisals/{appraisal}/remove-evaluator', [AppraisalController::class, 'removeEvaluator'])->whereNumber('appraisal')->name('appraisals.remove-evaluator');
         Route::post('appraisals/{appraisal}/request-edit', [AppraisalController::class, 'requestEdit'])->whereNumber('appraisal')->name('appraisals.request-edit');
         Route::post('appraisal-edit-requests/{editRequest}/approve', [AppraisalController::class, 'approveEditRequest'])->whereNumber('editRequest')->name('appraisal-edit-requests.approve');
         Route::post('appraisal-edit-requests/{editRequest}/reject', [AppraisalController::class, 'rejectEditRequest'])->whereNumber('editRequest')->name('appraisal-edit-requests.reject');

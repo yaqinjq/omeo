@@ -1843,6 +1843,39 @@ class AppraisalController extends Controller
     }
 
     /**
+     * HRD hapus undangan evaluator yang salah tambah (mis. salah pilih orang
+     * karena nama sama dengan orang lain) SEBELUM evaluator itu mengisi
+     * penilaian. Hanya diizinkan untuk status draft — begitu sudah submitted/
+     * approved, datanya adalah penilaian asli dan harus dijaga (pakai fitur
+     * Exclude, bukan hapus permanen).
+     */
+    public function removeEvaluator(Request $request, Appraisal $appraisal): RedirectResponse
+    {
+        $user = $request->user();
+        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+            abort(403);
+        }
+
+        if ($appraisal->status !== 'draft') {
+            return back()->with('error', 'Evaluator ini sudah mengisi penilaian, tidak bisa dihapus. Gunakan fitur Exclude untuk mengecualikannya dari perhitungan.');
+        }
+
+        $evaluatorName = $appraisal->appraiser?->name ?? 'Evaluator';
+
+        DB::transaction(function () use ($appraisal) {
+            DB::table('appraisal_details')->where('appraisal_id', $appraisal->id)->delete();
+            DB::table('appraisal_component_scores')->where('appraisal_id', $appraisal->id)->delete();
+            DB::table('appraisal_invitation_logs')->where('appraisal_id', $appraisal->id)->delete();
+            if (Schema::hasTable('appraisal_edit_requests')) {
+                DB::table('appraisal_edit_requests')->where('appraisal_id', $appraisal->id)->delete();
+            }
+            $appraisal->delete();
+        });
+
+        return back()->with('success', "Undangan evaluator {$evaluatorName} berhasil dihapus.");
+    }
+
+    /**
      * Evaluator mengajukan izin edit ulang penilaian yang sudah di-approve HRD.
      * Maksimal 2 request yang disetujui per appraisal, dibatasi due date.
      */

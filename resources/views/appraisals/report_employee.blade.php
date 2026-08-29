@@ -107,10 +107,17 @@
                             : null;
                         $paOnCooldown = $paCooldownUntil && $paCooldownUntil->isFuture();
                     @endphp
-                    <form method="POST" action="{{ route('appraisals.remind', $pa) }}" style="flex-shrink:0;" title="{{ $paOnCooldown ? 'Bisa dikirim ulang mulai '.$paCooldownUntil->format('d M Y H:i') : '' }}">
-                        @csrf
-                        <button type="submit" style="font-size:11px; background:{{ $paOnCooldown ? '#CBD5E1' : '#D97706' }}; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:{{ $paOnCooldown ? 'not-allowed' : 'pointer' }};" @disabled($paOnCooldown)>Kirim Reminder</button>
-                    </form>
+                    <div style="display:flex; gap:6px; flex-shrink:0;">
+                        <form method="POST" action="{{ route('appraisals.remind', $pa) }}" title="{{ $paOnCooldown ? 'Bisa dikirim ulang mulai '.$paCooldownUntil->format('d M Y H:i') : '' }}">
+                            @csrf
+                            <button type="submit" style="font-size:11px; background:{{ $paOnCooldown ? '#CBD5E1' : '#D97706' }}; color:white; border:none; padding:5px 12px; border-radius:6px; cursor:{{ $paOnCooldown ? 'not-allowed' : 'pointer' }};" @disabled($paOnCooldown)>Kirim Reminder</button>
+                        </form>
+                        <form method="POST" action="{{ route('appraisals.remove-evaluator', $pa) }}"
+                              onsubmit="return confirm('Hapus undangan evaluator {{ addslashes($pa->appraiser?->name ?? 'ini') }} untuk karyawan ini? Belum ada penilaian yang diisi, jadi tidak ada data yang hilang.');">
+                            @csrf
+                            <button type="submit" style="font-size:11px; background:white; color:#DC2626; border:1px solid #FCA5A5; padding:5px 12px; border-radius:6px; cursor:pointer;">Hapus</button>
+                        </form>
+                    </div>
                 @endif
             </div>
         @endforeach
