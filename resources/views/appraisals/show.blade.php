@@ -188,11 +188,20 @@
                 @if($ind->description)
                   <div class="mt-1 text-xs text-slate-500">{{ $ind->description }}</div>
                 @endif
-                <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6 md:items-start">
-                  <div class="md:col-span-2">
-                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Score 1–5</label>
-                    @if($canEdit)
-                      <div x-data="{ score: {{ (int) old('scores.'.$ind->id, $d?->score ?? 0) }}, hover: 0, rubric: @json($ind->scale_labels ?? []) }">
+                @php
+                  $genericScoreDef = [
+                    5 => 'Melampaui ekspektasi',
+                    4 => 'Di atas ekspektasi',
+                    3 => 'Sesuai ekspektasi',
+                    2 => 'Di bawah ekspektasi',
+                    1 => 'Jauh di bawah ekspektasi',
+                  ];
+                @endphp
+                @if($canEdit)
+                  <div x-data="{ score: {{ (int) old('scores.'.$ind->id, $d?->score ?? 0) }}, hover: 0, rubric: @json($ind->scale_labels ?? []) }">
+                    <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6 md:items-start">
+                      <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Score 1–5</label>
                         <div class="flex items-center gap-1">
                           @for($star = 1; $star <= 5; $star++)
                             <button type="button"
@@ -205,27 +214,50 @@
                           <input type="hidden" name="scores[{{ $ind->id }}]" :value="score || ''">
                           <span class="ml-2 text-sm text-slate-500" x-text="score > 0 ? score + '/5' : '-'"></span>
                         </div>
-                        <p class="mt-1.5 text-xs italic text-indigo-600" x-show="rubric[hover || score]" x-text="rubric[hover || score]" x-cloak></p>
                       </div>
-                    @else
-                      <div>
-                        <div class="flex items-center gap-1">
-                          @for($star = 1; $star <= 5; $star++)
-                            <span class="{{ ($d?->score ?? 0) >= $star ? 'text-amber-400' : 'text-slate-300' }} text-2xl leading-none">&#9733;</span>
-                          @endfor
-                          <span class="ml-2 text-sm font-semibold text-slate-700">{{ $d?->score ?? '-' }}</span>
+                      <div class="md:col-span-4">
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
+                        <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit) @required($canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
+                      </div>
+                    </div>
+
+                    {{-- Kanban panduan skor per bintang — selalu terlihat, bintang yang aktif/di-hover disorot --}}
+                    <div class="mt-3 grid grid-cols-5 gap-1.5">
+                      @for($star = 1; $star <= 5; $star++)
+                        <div :class="(hover || score) === {{ $star }} ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-white'"
+                             class="rounded-xl border p-2 text-center transition-colors">
+                          <div class="text-amber-400 text-xs leading-none">{{ str_repeat('★', $star) }}</div>
+                          <div class="mt-1 text-[10px] leading-tight text-slate-600">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
                         </div>
-                        @if($d?->score && !empty($ind->scale_labels[$d->score]))
-                          <p class="mt-1.5 text-xs italic text-slate-500">{{ $ind->scale_labels[$d->score] }}</p>
-                        @endif
+                      @endfor
+                    </div>
+                  </div>
+                @else
+                  <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6 md:items-start">
+                    <div class="md:col-span-2">
+                      <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Score 1–5</label>
+                      <div class="flex items-center gap-1">
+                        @for($star = 1; $star <= 5; $star++)
+                          <span class="{{ ($d?->score ?? 0) >= $star ? 'text-amber-400' : 'text-slate-300' }} text-2xl leading-none">&#9733;</span>
+                        @endfor
+                        <span class="ml-2 text-sm font-semibold text-slate-700">{{ $d?->score ?? '-' }}</span>
                       </div>
-                    @endif
+                    </div>
+                    <div class="md:col-span-4">
+                      <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
+                      <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit) @required($canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
+                    </div>
                   </div>
-                  <div class="md:col-span-4">
-                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
-                    <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit) @required($canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
+
+                  <div class="mt-3 grid grid-cols-5 gap-1.5">
+                    @for($star = 1; $star <= 5; $star++)
+                      <div class="rounded-xl border p-2 text-center {{ ($d?->score ?? 0) === $star ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-white' }}">
+                        <div class="text-amber-400 text-xs leading-none">{{ str_repeat('★', $star) }}</div>
+                        <div class="mt-1 text-[10px] leading-tight text-slate-600">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                      </div>
+                    @endfor
                   </div>
-                </div>
+                @endif
               </div>
             @endforeach
 
