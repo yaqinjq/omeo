@@ -202,16 +202,22 @@
     <td>{{ $latestAppraisal->contract_extension_effective_date?->format('d-m-Y') ?? '-' }}</td>
     <td class="lbl">Masa Kontrak Diperpanjang</td>
     <td style="font-size:8px; color:#374151;">
-        @php $dur = $latestAppraisal->proposed_contract_duration ?? null; @endphp
-        <div class="{{ $dur === '6_bulan' || $dur === '6 Bulan' ? 'proposed-sel' : 'proposed-off' }}">
-            {{ ($dur === '6_bulan' || $dur === '6 Bulan') ? '[X]' : '[ ]' }} 6 Bulan
+        @php
+            $dur = $latestAppraisal->proposed_contract_duration ?? null;
+            $durationOptions = [
+                'tidak_diperpanjang' => 'Tidak Diperpanjang',
+                '3_bulan'            => '3 Bulan',
+                '6_bulan'            => '6 Bulan',
+                '1_tahun'            => '1 Tahun',
+                '2_tahun'            => '2 Tahun',
+                'custom'             => 'Custom',
+            ];
+        @endphp
+        @foreach($durationOptions as $val => $label)
+        <div class="{{ $dur === $val ? 'proposed-sel' : 'proposed-off' }}">
+            {{ $dur === $val ? '[X]' : '[ ]' }} {{ $label }}
         </div>
-        <div class="{{ $dur === '1_tahun' || $dur === '1 Tahun' ? 'proposed-sel' : 'proposed-off' }}">
-            {{ ($dur === '1_tahun' || $dur === '1 Tahun') ? '[X]' : '[ ]' }} 1 Tahun
-        </div>
-        <div class="{{ $dur === '2_tahun' || $dur === '2 Tahun' ? 'proposed-sel' : 'proposed-off' }}">
-            {{ ($dur === '2_tahun' || $dur === '2 Tahun') ? '[X]' : '[ ]' }} 2 Tahun
-        </div>
+        @endforeach
     </td>
 </tr>
 </table>
