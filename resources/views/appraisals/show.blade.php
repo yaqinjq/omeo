@@ -200,13 +200,13 @@
                 @if($canEdit)
                   <div x-data="{ score: {{ (int) old('scores.'.$ind->id, $d?->score ?? 0) }} }">
                     <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500" style="margin-top:12px;">Score 1–5 — klik kartu sesuai alasannya</label>
-                    <div style="display:flex; gap:6px; margin-top:6px;">
+                    <div style="display:flex; gap:8px; margin-top:8px; align-items:stretch;">
                       @for($star = 1; $star <= 5; $star++)
                         <button type="button" @click="score = {{ $star }}"
                           :style="score === {{ $star }} ? 'border-color:#fbbf24;background:#fffbeb;' : 'border-color:#e2e8f0;background:#ffffff;'"
-                          style="flex:1; min-width:0; border:1.5px solid #e2e8f0; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; transition:background-color .15s,border-color .15s;">
-                          <div :style="score === {{ $star }} ? 'color:#fbbf24;' : 'color:#cbd5e1;'" style="font-size:15px; line-height:1;">{{ str_repeat('★', $star) }}</div>
-                          <div style="margin-top:6px; font-size:10px; line-height:1.3; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                          style="flex:1; min-width:0; min-height:130px; display:flex; flex-direction:column; justify-content:flex-start; border:2px solid #e2e8f0; border-radius:14px; padding:14px 10px; text-align:center; cursor:pointer; transition:background-color .15s,border-color .15s;">
+                          <div :style="score === {{ $star }} ? 'color:#fbbf24;' : 'color:#cbd5e1;'" style="font-size:26px; line-height:1; letter-spacing:1px;">{{ str_repeat('★', $star) }}</div>
+                          <div style="margin-top:10px; font-size:12.5px; line-height:1.4; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
                         </button>
                       @endfor
                     </div>
@@ -221,11 +221,11 @@
                 @else
                   <div>
                     <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500" style="margin-top:12px;">Score 1–5</label>
-                    <div style="display:flex; gap:6px; margin-top:6px;">
+                    <div style="display:flex; gap:8px; margin-top:8px; align-items:stretch;">
                       @for($star = 1; $star <= 5; $star++)
-                        <div style="flex:1; min-width:0; border:1.5px solid {{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#e2e8f0' }}; background:{{ ($d?->score ?? 0) === $star ? '#fffbeb' : '#ffffff' }}; border-radius:12px; padding:10px 6px; text-align:center;">
-                          <div style="color:{{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#cbd5e1' }}; font-size:15px; line-height:1;">{{ str_repeat('★', $star) }}</div>
-                          <div style="margin-top:6px; font-size:10px; line-height:1.3; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                        <div style="flex:1; min-width:0; min-height:130px; display:flex; flex-direction:column; justify-content:flex-start; border:2px solid {{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#e2e8f0' }}; background:{{ ($d?->score ?? 0) === $star ? '#fffbeb' : '#ffffff' }}; border-radius:14px; padding:14px 10px; text-align:center;">
+                          <div style="color:{{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#cbd5e1' }}; font-size:26px; line-height:1; letter-spacing:1px;">{{ str_repeat('★', $star) }}</div>
+                          <div style="margin-top:10px; font-size:12.5px; line-height:1.4; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
                         </div>
                       @endfor
                     </div>
