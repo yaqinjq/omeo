@@ -65,6 +65,12 @@
               <td class="px-3 py-2 text-center text-slate-600">{{ $ind->weight }}</td>
               <td class="px-3 py-2 text-right">
                 <a href="{{ route('appraisal-indicators.edit', $ind) }}" class="text-xs font-medium text-indigo-600 hover:underline">Edit</a>
+                <form method="POST" action="{{ route('appraisal-indicators.destroy', $ind) }}" class="inline"
+                      onsubmit="return confirm('Hapus kriteria \'{{ addslashes(\Illuminate\Support\Str::limit($ind->question, 60)) }}\'? Kalau kriteria ini sudah pernah dipakai di penilaian appraisal, penghapusan akan ditolak otomatis.');">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="ml-3 text-xs font-medium text-red-600 hover:underline">Hapus</button>
+                </form>
               </td>
             </tr>
             @endforeach

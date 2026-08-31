@@ -1291,6 +1291,19 @@ class AppraisalController extends Controller
                     $q->orWhereIn('id', $existing->keys());
                 }
             });
+        } else {
+            // Template gagal ter-resolve sama sekali (criteria_template_id
+            // kosong DAN tidak ada template default untuk lokasi_kerja
+            // karyawan ini) — jangan biarkan query tanpa filter, karena itu
+            // akan menampilkan SEMUA indikator se-database termasuk kategori
+            // "Historis MEO" (khusus data migrasi lama, bukan untuk dinilai
+            // evaluator baru). Batasi ke indikator yang memang sudah pernah
+            // dijawab di appraisal ini saja (kalau ada).
+            $indicatorQuery->when(
+                $existing->isNotEmpty(),
+                fn ($q) => $q->whereIn('id', $existing->keys()),
+                fn ($q) => $q->whereRaw('1 = 0')
+            );
         }
         $indicators = $indicatorQuery->get();
 

@@ -158,7 +158,7 @@
         <div class="card p-6">
           <h2 class="text-lg font-semibold text-slate-900">{{ $isEvaluator ? 'Form Pengisian Evaluasi' : 'Hasil Penilaian Evaluator / Report HRD' }}</h2>
           @if($isEvaluator && $canEdit)
-            <details class="mt-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
+            <details open class="mt-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900">
               <summary class="cursor-pointer font-semibold">📋 Baca dulu: panduan skor penilaian</summary>
               <p class="mt-2 leading-6">Skor 3 adalah standar (sudah memenuhi ekspektasi). Skor 4 untuk kinerja konsisten di atas standar. Skor 5 hanya untuk performa luar biasa yang konsisten sepanjang periode — bukan satu pencapaian sesaat. Skor 1-2 wajib disertai bukti/contoh konkret. Nilai berdasarkan fakta dan perilaku selama periode evaluasi, bukan kesan pribadi atau kejadian terbaru saja.</p>
               <a href="{{ route('appraisals.guide') }}" target="_blank" class="mt-2 inline-block text-xs font-semibold underline">Lihat panduan lengkap &amp; klasifikasi nilai &rarr;</a>
@@ -463,6 +463,16 @@
     </div>
 
     <div class="space-y-6">
+      @if($isEvaluator)
+      <div class="card p-6">
+        <h2 class="text-lg font-semibold text-slate-900">📋 Panduan Skor Penilaian</h2>
+        <p class="mt-1 text-sm text-slate-500">Baca dulu sebelum menilai — acuan ini berlaku untuk semua kriteria di form sebelah kiri.</p>
+        <div class="mt-4">
+          @include('appraisals.partials.guide_content')
+        </div>
+      </div>
+      @endif
+
       <div class="card p-6">
         <h2 class="text-lg font-semibold text-slate-900">Ringkasan per Kategori</h2>
         <div class="mt-4 space-y-3 text-sm">
