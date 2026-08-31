@@ -221,13 +221,13 @@
                       </div>
                     </div>
 
-                    {{-- Kanban panduan skor per bintang — selalu terlihat, bintang yang aktif/di-hover disorot --}}
-                    <div class="mt-3 grid grid-cols-5 gap-1.5">
+                    {{-- Kanban panduan skor per bintang — selalu terlihat, urut 1 (kiri) s/d 5 (kanan), yang aktif/di-hover disorot --}}
+                    <div style="margin-top:12px; display:flex; gap:6px;">
                       @for($star = 1; $star <= 5; $star++)
-                        <div :class="(hover || score) === {{ $star }} ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-white'"
-                             class="rounded-xl border p-2 text-center transition-colors">
-                          <div class="text-amber-400 text-xs leading-none">{{ str_repeat('★', $star) }}</div>
-                          <div class="mt-1 text-[10px] leading-tight text-slate-600">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                        <div :style="(hover || score) === {{ $star }} ? 'border-color:#fbbf24;background:#fffbeb;' : 'border-color:#e2e8f0;background:#ffffff;'"
+                             style="flex:1; min-width:0; border:1px solid #e2e8f0; border-radius:12px; padding:8px; text-align:center; transition:background-color .15s,border-color .15s;">
+                          <div style="color:#fbbf24; font-size:11px; line-height:1;">{{ str_repeat('★', $star) }}</div>
+                          <div style="margin-top:4px; font-size:10px; line-height:1.25; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
                         </div>
                       @endfor
                     </div>
@@ -249,11 +249,11 @@
                     </div>
                   </div>
 
-                  <div class="mt-3 grid grid-cols-5 gap-1.5">
+                  <div style="margin-top:12px; display:flex; gap:6px;">
                     @for($star = 1; $star <= 5; $star++)
-                      <div class="rounded-xl border p-2 text-center {{ ($d?->score ?? 0) === $star ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-white' }}">
-                        <div class="text-amber-400 text-xs leading-none">{{ str_repeat('★', $star) }}</div>
-                        <div class="mt-1 text-[10px] leading-tight text-slate-600">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                      <div style="flex:1; min-width:0; border:1px solid {{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#e2e8f0' }}; background:{{ ($d?->score ?? 0) === $star ? '#fffbeb' : '#ffffff' }}; border-radius:12px; padding:8px; text-align:center;">
+                        <div style="color:#fbbf24; font-size:11px; line-height:1;">{{ str_repeat('★', $star) }}</div>
+                        <div style="margin-top:4px; font-size:10px; line-height:1.25; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
                       </div>
                     @endfor
                   </div>
@@ -500,7 +500,7 @@
         <h2 class="text-lg font-semibold text-slate-900">📋 Panduan Skor Penilaian</h2>
         <p class="mt-1 text-sm text-slate-500">Baca dulu sebelum menilai — acuan ini berlaku untuk semua kriteria di form sebelah kiri.</p>
         <div class="mt-4">
-          @include('appraisals.partials.guide_content')
+          @include('appraisals.partials.guide_content', ['showScoreTable' => false])
         </div>
       </div>
       @endif

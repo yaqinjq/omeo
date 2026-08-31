@@ -1,5 +1,6 @@
 @php
     $bands = $bands ?? \App\Support\AppraisalGrading::BANDS;
+    $showScoreTable = $showScoreTable ?? true;
 @endphp
 
 <div class="space-y-6">
@@ -60,6 +61,7 @@
     </div>
   </div>
 
+  @if($showScoreTable)
   <div>
     <h2 class="text-base font-bold text-slate-900">Panduan Skor Penilaian (1-5)</h2>
     <p class="mt-1 text-sm text-slate-500">Digunakan sebagai acuan umum saat memilih skor per kriteria. Sebagian kriteria juga punya keterangan spesifiknya sendiri — akan muncul otomatis saat Anda mengarahkan kursor ke bintang pada form penilaian.</p>
@@ -96,4 +98,5 @@
       </table>
     </div>
   </div>
+  @endif
 </div>

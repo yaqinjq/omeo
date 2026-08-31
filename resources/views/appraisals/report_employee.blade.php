@@ -358,6 +358,52 @@
         @endif
     </div>
 
+    {{-- ── SECTION 1B: KOMENTAR PER KRITERIA ── --}}
+    @php
+        $criteriaComments = collect($matrix)->flatMap(function ($mRow) use ($appraisals, $evaluatorNumber) {
+            return collect($mRow['comments'] ?? [])
+                ->filter(fn ($c) => filled($c))
+                ->map(function ($comment, $appraisalId) use ($mRow, $appraisals, $evaluatorNumber) {
+                    $a = $appraisals->firstWhere('id', (int) $appraisalId);
+                    return [
+                        'criteria'  => $mRow['label'],
+                        'evaluator' => 'Evaluator ' . ($evaluatorNumber[$appraisalId] ?? '?') . ' — ' . ($a?->appraiser?->name ?? 'Evaluator'),
+                        'score'     => $mRow['scores'][$appraisalId] ?? null,
+                        'comment'   => $comment,
+                    ];
+                })->values();
+        })->values();
+    @endphp
+    @if($criteriaComments->isNotEmpty())
+    <div style="background:white; border-radius:14px; border:1.5px solid #E2E8F0; margin-bottom:24px; overflow:hidden;">
+        <div style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; border-left:4px solid #7C3AED;">
+            <span style="font-size:13px; font-weight:700; color:#5B21B6;">&#128221; Komentar Evaluator per Kriteria</span>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; min-width:600px;">
+                <thead>
+                    <tr style="background:#1e3a8a; color:white;">
+                        <th style="padding:10px 14px; text-align:left; min-width:180px;">Kriteria</th>
+                        <th style="padding:10px 12px; text-align:left; min-width:160px;">Evaluator</th>
+                        <th style="padding:10px 12px; text-align:center; width:60px;">Skor</th>
+                        <th style="padding:10px 12px; text-align:left;">Komentar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($criteriaComments as $row)
+                    <tr style="{{ $loop->even ? 'background:#F8FAFC;' : '' }}">
+                        <td style="padding:9px 14px; border-bottom:1px solid #F1F5F9; vertical-align:top; color:#1e3a8a; font-weight:600;">{{ $row['criteria'] }}</td>
+                        <td style="padding:9px 12px; border-bottom:1px solid #F1F5F9; vertical-align:top; color:#475569;">{{ $row['evaluator'] }}</td>
+                        <td style="padding:9px 12px; border-bottom:1px solid #F1F5F9; vertical-align:top; text-align:center; font-weight:700; color:#374151;">{{ $row['score'] ?? '-' }}</td>
+                        <td style="padding:9px 12px; border-bottom:1px solid #F1F5F9; vertical-align:top; color:#374151;">{{ $row['comment'] }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     {{-- ── SECTION 2: NARASI & FEEDBACK ── --}}
     <div style="background:white; border-radius:14px; border:1.5px solid #E2E8F0; margin-bottom:24px; overflow:hidden;">
         <div style="background:#F8FAFC; padding:12px 18px; border-bottom:1px solid #E2E8F0; border-left:4px solid #2563EB;">

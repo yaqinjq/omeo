@@ -125,6 +125,46 @@
 @endforeach
 @endif
 
+{{-- ══ KOMENTAR PER KRITERIA ══ --}}
+@php
+    $criteriaComments = collect($matrix)->flatMap(function ($mRow) use ($appraisals, $evaluatorNumber, $showNames) {
+        return collect($mRow['comments'] ?? [])
+            ->filter(fn ($c) => filled($c))
+            ->map(function ($comment, $appraisalId) use ($mRow, $showNames, $evaluatorNumber) {
+                return [
+                    'criteria'  => $mRow['label'],
+                    'evaluator' => $showNames[$appraisalId] ?? ('Evaluator ' . ($evaluatorNumber[$appraisalId] ?? '?')),
+                    'score'     => $mRow['scores'][$appraisalId] ?? null,
+                    'comment'   => $comment,
+                ];
+            })->values();
+    })->values();
+@endphp
+@if($criteriaComments->isNotEmpty())
+<div class="page-break"></div>
+<div class="sec-title">Komentar Evaluator per Kriteria</div>
+<table class="narr-tbl">
+<thead>
+<tr>
+    <th style="width:130px;">Kriteria</th>
+    <th style="width:90px;">Evaluator</th>
+    <th style="width:35px;">Skor</th>
+    <th>Komentar</th>
+</tr>
+</thead>
+<tbody>
+@foreach($criteriaComments as $row)
+<tr>
+    <td style="font-weight:bold;">{{ $row['criteria'] }}</td>
+    <td>{{ $row['evaluator'] }}</td>
+    <td style="text-align:center;">{{ $row['score'] ?? '-' }}</td>
+    <td>{{ $row['comment'] }}</td>
+</tr>
+@endforeach
+</tbody>
+</table>
+@endif
+
 {{-- ══ RINGKASAN NARASI ══ --}}
 <div class="page-break"></div>
 <div class="sec-title">Ringkasan Narasi dan Feedback Sesuai Filter</div>

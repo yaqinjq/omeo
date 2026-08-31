@@ -409,11 +409,15 @@ class AppraisalController extends Controller
             $scores = $appraisals->mapWithKeys(fn ($a) => [
                 $a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->score,
             ]);
+            $comments = $appraisals->mapWithKeys(fn ($a) => [
+                $a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->comment,
+            ]);
             $validScores = $scores->filter(fn ($s) => $s !== null);
             return [
-                'label'  => $ind->question,
-                'scores' => $scores->toArray(),
-                'avg'    => $validScores->isNotEmpty() ? round($validScores->avg(), 2) : null,
+                'label'    => $ind->question,
+                'scores'   => $scores->toArray(),
+                'comments' => $comments->toArray(),
+                'avg'      => $validScores->isNotEmpty() ? round($validScores->avg(), 2) : null,
             ];
         })->values()->toArray();
 
@@ -616,11 +620,15 @@ class AppraisalController extends Controller
             $scores = $appraisals->mapWithKeys(fn ($a) => [
                 $a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->score,
             ]);
+            $comments = $appraisals->mapWithKeys(fn ($a) => [
+                $a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->comment,
+            ]);
             $validScores = $scores->filter(fn ($s, $appraisalId) => $s !== null && $includedIds->contains($appraisalId));
             return [
-                'label'  => $ind->question,
-                'scores' => $scores->toArray(),
-                'avg'    => $validScores->isNotEmpty() ? round($validScores->avg(), 2) : null,
+                'label'    => $ind->question,
+                'scores'   => $scores->toArray(),
+                'comments' => $comments->toArray(),
+                'avg'      => $validScores->isNotEmpty() ? round($validScores->avg(), 2) : null,
             ];
         })->values()->toArray();
 
@@ -968,8 +976,9 @@ class AppraisalController extends Controller
 
         $matrix = $indicators->map(function ($ind) use ($appraisals) {
             $scores      = $appraisals->mapWithKeys(fn ($a) => [$a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->score]);
+            $comments    = $appraisals->mapWithKeys(fn ($a) => [$a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->comment]);
             $validScores = $scores->filter(fn ($s) => $s !== null);
-            return ['label' => $ind->question, 'scores' => $scores->toArray(), 'avg' => $validScores->isNotEmpty() ? round($validScores->avg(), 2) : null];
+            return ['label' => $ind->question, 'scores' => $scores->toArray(), 'comments' => $comments->toArray(), 'avg' => $validScores->isNotEmpty() ? round($validScores->avg(), 2) : null];
         })->values()->toArray();
 
         $evalAvgs = $appraisals->mapWithKeys(function ($a) use ($matrix) {
