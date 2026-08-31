@@ -198,64 +198,43 @@
                   ];
                 @endphp
                 @if($canEdit)
-                  <div x-data="{ score: {{ (int) old('scores.'.$ind->id, $d?->score ?? 0) }}, hover: 0, rubric: @json($ind->scale_labels ?? []) }">
-                    <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6 md:items-start">
-                      <div class="md:col-span-2">
-                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Score 1–5</label>
-                        <div class="flex items-center gap-1">
-                          @for($star = 1; $star <= 5; $star++)
-                            <button type="button"
-                              @mouseover="hover = {{ $star }}"
-                              @mouseleave="hover = 0"
-                              @click="score = {{ $star }}"
-                              :class="(hover || score) >= {{ $star }} ? 'text-amber-400' : 'text-slate-300'"
-                              class="text-2xl leading-none transition-colors focus:outline-none">&#9733;</button>
-                          @endfor
-                          <input type="hidden" name="scores[{{ $ind->id }}]" :value="score || ''">
-                          <span class="ml-2 text-sm text-slate-500" x-text="score > 0 ? score + '/5' : '-'"></span>
-                        </div>
-                      </div>
-                      <div class="md:col-span-4">
-                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
-                        <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit) @required($canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
-                      </div>
-                    </div>
-
-                    {{-- Kanban panduan skor per bintang — selalu terlihat, urut 1 (kiri) s/d 5 (kanan), yang aktif/di-hover disorot --}}
-                    <div style="margin-top:12px; display:flex; gap:6px;">
+                  <div x-data="{ score: {{ (int) old('scores.'.$ind->id, $d?->score ?? 0) }} }">
+                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500" style="margin-top:12px;">Score 1–5 — klik kartu sesuai alasannya</label>
+                    <div style="display:flex; gap:6px; margin-top:6px;">
                       @for($star = 1; $star <= 5; $star++)
-                        <div :style="(hover || score) === {{ $star }} ? 'border-color:#fbbf24;background:#fffbeb;' : 'border-color:#e2e8f0;background:#ffffff;'"
-                             style="flex:1; min-width:0; border:1px solid #e2e8f0; border-radius:12px; padding:8px; text-align:center; transition:background-color .15s,border-color .15s;">
-                          <div style="color:#fbbf24; font-size:11px; line-height:1;">{{ str_repeat('★', $star) }}</div>
-                          <div style="margin-top:4px; font-size:10px; line-height:1.25; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
-                        </div>
+                        <button type="button" @click="score = {{ $star }}"
+                          :style="score === {{ $star }} ? 'border-color:#fbbf24;background:#fffbeb;' : 'border-color:#e2e8f0;background:#ffffff;'"
+                          style="flex:1; min-width:0; border:1.5px solid #e2e8f0; border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; transition:background-color .15s,border-color .15s;">
+                          <div :style="score === {{ $star }} ? 'color:#fbbf24;' : 'color:#cbd5e1;'" style="font-size:15px; line-height:1;">{{ str_repeat('★', $star) }}</div>
+                          <div style="margin-top:6px; font-size:10px; line-height:1.3; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                        </button>
                       @endfor
+                    </div>
+                    <input type="hidden" name="scores[{{ $ind->id }}]" :value="score || ''">
+                    <div style="margin-top:6px; font-size:12px; color:#64748b;" x-text="score > 0 ? 'Skor dipilih: ' + score + '/5' : 'Belum dipilih'"></div>
+
+                    <div style="margin-top:12px;">
+                      <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
+                      <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" required>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
                     </div>
                   </div>
                 @else
-                  <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-6 md:items-start">
-                    <div class="md:col-span-2">
-                      <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Score 1–5</label>
-                      <div class="flex items-center gap-1">
-                        @for($star = 1; $star <= 5; $star++)
-                          <span class="{{ ($d?->score ?? 0) >= $star ? 'text-amber-400' : 'text-slate-300' }} text-2xl leading-none">&#9733;</span>
-                        @endfor
-                        <span class="ml-2 text-sm font-semibold text-slate-700">{{ $d?->score ?? '-' }}</span>
-                      </div>
+                  <div>
+                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500" style="margin-top:12px;">Score 1–5</label>
+                    <div style="display:flex; gap:6px; margin-top:6px;">
+                      @for($star = 1; $star <= 5; $star++)
+                        <div style="flex:1; min-width:0; border:1.5px solid {{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#e2e8f0' }}; background:{{ ($d?->score ?? 0) === $star ? '#fffbeb' : '#ffffff' }}; border-radius:12px; padding:10px 6px; text-align:center;">
+                          <div style="color:{{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#cbd5e1' }}; font-size:15px; line-height:1;">{{ str_repeat('★', $star) }}</div>
+                          <div style="margin-top:6px; font-size:10px; line-height:1.3; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
+                        </div>
+                      @endfor
                     </div>
-                    <div class="md:col-span-4">
-                      <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator <span class="text-red-500">*</span></label>
-                      <textarea name="comments[{{ $ind->id }}]" rows="3" minlength="3" class="w-full rounded-2xl border px-3 py-2" @disabled(!$canEdit) @required($canEdit)>{{ old('comments.'.$ind->id, $d?->comment) }}</textarea>
-                    </div>
-                  </div>
+                    <div style="margin-top:6px; font-size:12px; color:#64748b;">Skor: {{ $d?->score ?? '-' }}/5</div>
 
-                  <div style="margin-top:12px; display:flex; gap:6px;">
-                    @for($star = 1; $star <= 5; $star++)
-                      <div style="flex:1; min-width:0; border:1px solid {{ ($d?->score ?? 0) === $star ? '#fbbf24' : '#e2e8f0' }}; background:{{ ($d?->score ?? 0) === $star ? '#fffbeb' : '#ffffff' }}; border-radius:12px; padding:8px; text-align:center;">
-                        <div style="color:#fbbf24; font-size:11px; line-height:1;">{{ str_repeat('★', $star) }}</div>
-                        <div style="margin-top:4px; font-size:10px; line-height:1.25; color:#475569;">{{ $ind->scale_labels[$star] ?? $genericScoreDef[$star] }}</div>
-                      </div>
-                    @endfor
+                    <div style="margin-top:12px;">
+                      <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Komentar evaluator</label>
+                      <textarea rows="3" class="w-full rounded-2xl border px-3 py-2" disabled>{{ $d?->comment }}</textarea>
+                    </div>
                   </div>
                 @endif
               </div>
