@@ -17,8 +17,15 @@ class FixDuplicateAppraisalEvaluatorsCommand extends Command
     {
         $force = (bool) $this->option('force');
 
+        // appraiser_id IS NULL sengaja dikecualikan — GROUP BY tidak bisa
+        // membedakan "banyak baris NULL" dari "beberapa evaluator berbeda yang
+        // sama-sama gagal ter-match ke user" (mis. hasil migrasi historis MEO
+        // yang username-nya tidak cocok akun manapun). Constraint unique di DB
+        // juga tidak menganggap NULL sebagai duplikat satu sama lain, jadi
+        // baris-baris ini memang bukan masalah yang perlu dibersihkan di sini.
         $dupeGroups = DB::table('appraisals')
             ->select('appraisal_period_id', 'employee_id', 'appraiser_id', DB::raw('COUNT(*) as jumlah'))
+            ->whereNotNull('appraiser_id')
             ->groupBy('appraisal_period_id', 'employee_id', 'appraiser_id')
             ->having('jumlah', '>', 1)
             ->get();
