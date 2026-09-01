@@ -100,7 +100,7 @@
                         <span style="color:#B45309;">&middot; terakhir di-remind {{ $pa->last_reminded_at->format('d-m-Y H:i') }}</span>
                     @endif
                 </div>
-                @if(in_array((string) auth()->user()->role, ['admin','hrd'], true))
+                @if(in_array((string) auth()->user()->role, ['admin','hrd','manager'], true))
                     @php
                         $paCooldownUntil = $pa->last_reminded_at
                             ? $pa->last_reminded_at->copy()->addHours(\App\Http\Controllers\AppraisalController::REMINDER_COOLDOWN_HOURS)

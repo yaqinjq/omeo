@@ -1674,7 +1674,7 @@ class AppraisalController extends Controller
     public function remind(Request $request, Appraisal $appraisal)
     {
         $user = $request->user();
-        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+        if (!in_array((string) $user->role, ['admin', 'hrd', 'manager'], true)) {
             abort(403);
         }
 
@@ -1874,7 +1874,7 @@ class AppraisalController extends Controller
     public function removeEvaluator(Request $request, Appraisal $appraisal): RedirectResponse
     {
         $user = $request->user();
-        if (!in_array((string) $user->role, ['admin', 'hrd'], true)) {
+        if (!in_array((string) $user->role, ['admin', 'hrd', 'manager'], true)) {
             abort(403);
         }
 
