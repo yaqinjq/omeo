@@ -57,7 +57,7 @@ class FixDuplicateAppraisalEvaluatorsCommand extends Command
 
             $header = "[{$employeeName}] evaluator={$evaluatorName} periode={$periodLabel} — {$rows->count()} baris ({$filled->count()} submitted/approved)";
 
-            if ($filled->count() > 1) {
+            if ($filled->count() > 1 && ! $this->isExactDuplicateContent($filled)) {
                 // Butuh keputusan manusia — beberapa submission asli dengan isi berbeda.
                 $reviewCount++;
                 $this->warn("BUTUH REVIEW  {$header}");
@@ -68,9 +68,12 @@ class FixDuplicateAppraisalEvaluatorsCommand extends Command
                 continue;
             }
 
-            // Aman: paling banyak 1 baris submitted/approved. Survivor = baris
-            // itu kalau ada, kalau semua masih draft pakai yang paling lama (id terkecil).
-            $survivor = $filled->first() ?? $rows->first();
+            // Aman: paling banyak 1 baris submitted/approved (biasa), ATAU
+            // beberapa baris submitted/approved tapi ISINYA BYTE-IDENTICAL
+            // (final_score, narasi, dan tiap skor kriteria persis sama —
+            // pola khas bug JOIN fan-out saat migrasi historis MEO, bukan
+            // evaluasi asli yang berbeda). Survivor = baris paling lama.
+            $survivor = $filled->sortBy('id')->first() ?? $rows->sortBy('id')->first();
             $losers   = $rows->reject(fn ($a) => $a->id === $survivor->id);
 
             $safeCount++;
@@ -102,5 +105,32 @@ class FixDuplicateAppraisalEvaluatorsCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * True kalau SEMUA baris submitted/approved di grup ini punya isi
+     * byte-identical: final_score, ketiga kolom narasi, DAN setiap skor per
+     * kriteria (bukan cuma rata-ratanya). Dipakai untuk membedakan bug JOIN
+     * fan-out migrasi (aman digabung ke 1 baris) dari evaluasi asli berbeda
+     * yang butuh keputusan manusia (mis. kasus Anugrah Budiamin di Henry).
+     */
+    private function isExactDuplicateContent($filledRows): bool
+    {
+        $signatures = $filledRows->map(function ($a) {
+            $scores = DB::table('appraisal_details')
+                ->where('appraisal_id', $a->id)
+                ->orderBy('appraisal_indicator_id')
+                ->pluck('score', 'appraisal_indicator_id');
+
+            return json_encode([
+                'final_score' => $a->final_score,
+                'strengths'   => $a->feedback_strengths,
+                'improvements'=> $a->feedback_improvements,
+                'notes'       => $a->feedback_notes,
+                'scores'      => $scores,
+            ]);
+        })->unique();
+
+        return $signatures->count() === 1;
     }
 }
