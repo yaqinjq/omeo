@@ -403,7 +403,7 @@ class AppraisalController extends Controller
         $indicatorIds = $appraisals
             ->flatMap(fn ($a) => $a->details->pluck('appraisal_indicator_id'))
             ->unique()->sort()->values();
-        $indicators = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('id')->get();
+        $indicators = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('category')->orderBy('sort_order')->orderBy('id')->get();
 
         $matrix = $indicators->map(function ($ind) use ($appraisals) {
             $scores = $appraisals->mapWithKeys(fn ($a) => [
@@ -612,7 +612,7 @@ class AppraisalController extends Controller
         $indicatorIds = $appraisals
             ->flatMap(fn ($a) => $a->details->pluck('appraisal_indicator_id'))
             ->unique()->sort()->values();
-        $indicators = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('id')->get();
+        $indicators = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('category')->orderBy('sort_order')->orderBy('id')->get();
 
         $includedIds = $appraisals->where('included_in_score', true)->pluck('id');
 
@@ -972,7 +972,7 @@ class AppraisalController extends Controller
         })->toArray();
 
         $indicatorIds = $appraisals->flatMap(fn ($a) => $a->details->pluck('appraisal_indicator_id'))->unique()->sort()->values();
-        $indicators   = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('id')->get();
+        $indicators   = AppraisalIndicator::whereIn('id', $indicatorIds)->orderBy('category')->orderBy('sort_order')->orderBy('id')->get();
 
         $matrix = $indicators->map(function ($ind) use ($appraisals) {
             $scores      = $appraisals->mapWithKeys(fn ($a) => [$a->id => $a->details->firstWhere('appraisal_indicator_id', $ind->id)?->score]);
@@ -1292,7 +1292,7 @@ class AppraisalController extends Controller
         if (! $templateId && Schema::hasTable('appraisal_criteria_templates')) {
             $templateId = AppraisalCriteriaTemplate::resolveFor($appraisal->employee?->lokasi_kerja)?->id;
         }
-        $indicatorQuery = AppraisalIndicator::orderBy('category')->orderBy('id');
+        $indicatorQuery = AppraisalIndicator::orderBy('category')->orderBy('sort_order')->orderBy('id');
         if ($templateId) {
             $indicatorQuery->where(function ($q) use ($templateId, $existing) {
                 $q->where('template_id', $templateId);

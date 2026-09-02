@@ -306,6 +306,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::resource('appraisal-periods', AppraisalPeriodController::class);
         Route::resource('appraisal-indicators', AppraisalIndicatorController::class);
+        Route::post('appraisal-indicators/{appraisal_indicator}/move', [AppraisalIndicatorController::class, 'moveOrder'])->name('appraisal-indicators.move');
         Route::resource('appraisal-criteria-templates', AppraisalCriteriaTemplateController::class)->except(['show']);
         Route::post('appraisal-criteria-templates/{appraisal_criteria_template}/duplicate', [AppraisalCriteriaTemplateController::class, 'duplicate'])->name('appraisal-criteria-templates.duplicate');
         Route::get('appraisals', [AppraisalController::class, 'index'])->name('appraisals.index');

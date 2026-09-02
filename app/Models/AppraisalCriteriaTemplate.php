@@ -12,7 +12,7 @@ class AppraisalCriteriaTemplate extends Model
 
     public function indicators()
     {
-        return $this->hasMany(AppraisalIndicator::class, 'template_id')->orderBy('category')->orderBy('id');
+        return $this->hasMany(AppraisalIndicator::class, 'template_id')->orderBy('category')->orderBy('sort_order')->orderBy('id');
     }
 
     public const LOKASI_KERJA_OPTIONS = [

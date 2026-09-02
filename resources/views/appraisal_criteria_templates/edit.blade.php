@@ -51,6 +51,7 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th class="px-3 py-2 w-20">Urutan</th>
               <th class="px-3 py-2">Kategori</th>
               <th class="px-3 py-2">Pertanyaan</th>
               <th class="px-3 py-2 text-center">Bobot</th>
@@ -58,8 +59,27 @@
             </tr>
           </thead>
           <tbody>
-            @foreach($template->indicators as $ind)
+            @php $indicatorList = $template->indicators->values(); @endphp
+            @foreach($indicatorList as $i => $ind)
+            @php
+              $prevSame = $i > 0 && $indicatorList[$i - 1]->category === $ind->category;
+              $nextSame = $i < $indicatorList->count() - 1 && $indicatorList[$i + 1]->category === $ind->category;
+            @endphp
             <tr class="border-t border-slate-100">
+              <td class="px-3 py-2">
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <form method="POST" action="{{ route('appraisal-indicators.move', $ind) }}">
+                    @csrf
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" title="Naikkan" style="color:{{ $prevSame ? '#64748b' : '#cbd5e1' }}; background:none; border:none; cursor:{{ $prevSame ? 'pointer' : 'not-allowed' }}; font-size:12px; padding:2px;" @disabled(!$prevSame)>&#9650;</button>
+                  </form>
+                  <form method="POST" action="{{ route('appraisal-indicators.move', $ind) }}">
+                    @csrf
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" title="Turunkan" style="color:{{ $nextSame ? '#64748b' : '#cbd5e1' }}; background:none; border:none; cursor:{{ $nextSame ? 'pointer' : 'not-allowed' }}; font-size:12px; padding:2px;" @disabled(!$nextSame)>&#9660;</button>
+                  </form>
+                </div>
+              </td>
               <td class="px-3 py-2 text-slate-600">{{ $ind->category }}</td>
               <td class="px-3 py-2 text-slate-800">{{ \Illuminate\Support\Str::limit($ind->question, 80) }}</td>
               <td class="px-3 py-2 text-center text-slate-600">{{ $ind->weight }}</td>

@@ -35,7 +35,7 @@ class AppraisalIndicatorController extends Controller
                     ? $q->whereNull('lokasi_kerja')
                     : $q->whereIn('lokasi_kerja', $lokasiKerjaList);
             })
-            ->orderBy('category')->orderBy('id')->paginate(20)->withQueryString();
+            ->orderBy('category')->orderBy('sort_order')->orderBy('id')->paginate(20)->withQueryString();
 
         $tabCounts = collect(self::TABS)->mapWithKeys(function ($cfg, $key) {
             $count = AppraisalIndicator::whereHas('template', function ($q) use ($cfg) {
@@ -106,6 +106,46 @@ class AppraisalIndicatorController extends Controller
     public function show(AppraisalIndicator $appraisal_indicator)
     {
         return view('appraisal_indicators.show', ['indicator' => $appraisal_indicator]);
+    }
+
+    /**
+     * Geser urutan kriteria naik/turun — hanya menukar posisi dengan sibling
+     * TERDEKAT di kategori & template yang sama (urutan tampil dikelompokkan
+     * per kategori dulu, jadi tidak masuk akal menukar lintas kategori).
+     * Menomori ulang seluruh sibling di kategori itu tiap kali digeser
+     * (bukan cuma menukar 2 angka) supaya tetap konsisten walau sort_order
+     * lama masih sama semua (default 0) atau ada celah angka.
+     */
+    public function moveOrder(Request $request, AppraisalIndicator $appraisal_indicator)
+    {
+        $direction = $request->input('direction');
+        abort_unless(in_array($direction, ['up', 'down'], true), 400);
+
+        $siblings = AppraisalIndicator::where('template_id', $appraisal_indicator->template_id)
+            ->where('category', $appraisal_indicator->category)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->values();
+
+        $index    = $siblings->search(fn ($i) => $i->id === $appraisal_indicator->id);
+        $swapWith = $direction === 'up' ? $index - 1 : $index + 1;
+
+        if ($index === false || $swapWith < 0 || $swapWith >= $siblings->count()) {
+            return back();
+        }
+
+        $reordered = $siblings->all();
+        [$reordered[$index], $reordered[$swapWith]] = [$reordered[$swapWith], $reordered[$index]];
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($reordered) {
+            foreach ($reordered as $i => $indicator) {
+                $indicator->update(['sort_order' => $i]);
+            }
+        });
+
+        return redirect()->route('appraisal-criteria-templates.edit', $appraisal_indicator->template_id)
+            ->with('success', 'Urutan kriteria diperbarui.');
     }
 
     private function validated(Request $request): array
