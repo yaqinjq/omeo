@@ -174,6 +174,34 @@ class PositionController extends Controller
     }
 
     /**
+     * Set parent_position_id lewat drag-and-drop di org-chart (JSON, dipanggil
+     * via fetch — bukan submit form biasa). Validasi & guard sirkular sama
+     * persis dengan update(), supaya drag-and-drop tidak bisa menghasilkan
+     * data yang lebih longgar daripada form dropdown biasa.
+     */
+    public function setParent(Request $request, Position $position): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'parent_position_id' => 'nullable|exists:positions,id',
+        ]);
+
+        $parentId = $data['parent_position_id'] ?? null;
+
+        if ($parentId !== null) {
+            if ((int) $parentId === $position->id) {
+                return response()->json(['message' => 'Posisi tidak bisa melapor ke dirinya sendiri.'], 422);
+            }
+            if ($this->wouldCreateCycle($position, (int) $parentId)) {
+                return response()->json(['message' => 'Perubahan ini akan membentuk rantai pelaporan melingkar.'], 422);
+            }
+        }
+
+        $position->update(['parent_position_id' => $parentId]);
+
+        return response()->json(['message' => 'Struktur berhasil diperbarui.']);
+    }
+
+    /**
      * True kalau menjadikan $candidateParentId sebagai parent dari $position
      * akan membentuk rantai melingkar (posisi jadi leluhur dari dirinya
      * sendiri). Dicek app-level (bukan DB constraint) supaya pesan errornya
@@ -329,7 +357,7 @@ class PositionController extends Controller
 
     public function positionEmployees(Position $position, Request $request): \Illuminate\Http\JsonResponse
     {
-        $employees = Employee::where('position_id', $position->id)
+        $rawEmployees = Employee::where('position_id', $position->id)
             ->with([
                 'outlet:id,name',
                 'user:id,employee_id',
@@ -337,22 +365,32 @@ class PositionController extends Controller
             ])
             ->select(['id', 'full_name', 'nik', 'employee_number', 'nokom', 'outlet_id', 'status_employment', 'join_date'])
             ->orderBy('full_name')
-            ->get()
-            ->map(fn ($e) => [
-                'id'              => $e->id,
-                'full_name'       => $e->full_name,
-                'nik'             => $e->nik ?? '-',
-                'employee_number' => $e->employee_number ?? $e->nokom ?? '-',
-                'outlet'          => $e->outlet->name ?? '-',
-                'status'          => $e->status_employment ?? '-',
-                'join_date'       => $e->join_date
-                    ? \Carbon\Carbon::parse($e->join_date)->format('d M Y')
-                    : '-',
-                'profile_url'     => route('employees.show', $e->id),
-                'photo_url'       => $e->user?->applicantProfile?->photo_path
-                                     ? asset('storage/' . $e->user->applicantProfile->photo_path)
-                                     : null,
-            ]);
+            ->get();
+
+        // Leader (Team Leader) = wakil manual HRD kalau diset, else yang
+        // paling lama gabung — sama persis dengan logika resolveRepresentatives()
+        // supaya kartu di org-chart dan daftar di panel ini selalu konsisten.
+        $leaderId = $position->representative_employee_id
+            && $rawEmployees->contains('id', $position->representative_employee_id)
+                ? $position->representative_employee_id
+                : $rawEmployees->sortBy('join_date')->first()?->id;
+
+        $employees = $rawEmployees->map(fn ($e) => [
+            'id'              => $e->id,
+            'full_name'       => $e->full_name,
+            'nik'             => $e->nik ?? '-',
+            'employee_number' => $e->employee_number ?? $e->nokom ?? '-',
+            'outlet'          => $e->outlet->name ?? '-',
+            'status'          => $e->status_employment ?? '-',
+            'join_date'       => $e->join_date
+                ? \Carbon\Carbon::parse($e->join_date)->format('d M Y')
+                : '-',
+            'profile_url'     => route('employees.show', $e->id),
+            'photo_url'       => $e->user?->applicantProfile?->photo_path
+                                 ? asset('storage/' . $e->user->applicantProfile->photo_path)
+                                 : null,
+            'is_leader'       => $rawEmployees->count() > 1 && $e->id === $leaderId,
+        ])->sortByDesc('is_leader')->values();
 
         return response()->json([
             'position'  => [

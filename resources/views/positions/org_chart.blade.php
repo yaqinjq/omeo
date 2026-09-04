@@ -21,30 +21,43 @@
                     🌳 Struktur Organisasi
                 </h1>
             </div>
-            <p style="color:#64748B; font-size:13px; margin:4px 0 0 0;">
+            <p style="color:#64748B; font-size:13px; margin:4px 0 0 0;" x-show="!editMode">
                 Klik posisi manapun untuk melihat daftar karyawan
+            </p>
+            <p style="color:#059669; font-size:13px; margin:4px 0 0 0; font-weight:600;" x-show="editMode" x-cloak>
+                Mode Atur Struktur aktif — drag kotak posisi lalu drop ke posisi lain untuk mengatur "melapor ke"
             </p>
         </div>
 
-        {{-- Summary cards --}}
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            @foreach([
-                ['label'=>'Departemen', 'value'=>$stats['total_dept'],      'color'=>'#7C3AED', 'bg'=>'#F3E8FF'],
-                ['label'=>'Posisi',     'value'=>$stats['total_positions'],  'color'=>'#1D4ED8', 'bg'=>'#DBEAFE'],
-                ['label'=>'Terpetakan','value'=>$stats['total_mapped'],     'color'=>'#059669', 'bg'=>'#DCFCE7'],
-                ['label'=>'Belum',      'value'=>$stats['total_unmapped'],   'color'=>'#DC2626', 'bg'=>'#FEE2E2'],
-            ] as $card)
-            <div style="background:{{ $card['bg'] }}; border-radius:12px;
-                        padding:10px 16px; text-align:center; min-width:90px;">
-                <div style="font-size:22px; font-weight:800; color:{{ $card['color'] }};">
-                    {{ number_format($card['value']) }}
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button type="button" @click="editMode = !editMode"
+                    :style="editMode
+                        ? 'background:#059669;color:white;border:1px solid #059669;'
+                        : 'background:#F3E8FF;color:#7C3AED;border:1px solid #DDD6FE;'"
+                    style="padding:8px 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer;">
+                <span x-text="editMode ? '✓ Selesai Atur Struktur' : '🔧 Atur Struktur (Drag & Drop)'"></span>
+            </button>
+
+            {{-- Summary cards --}}
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                @foreach([
+                    ['label'=>'Departemen', 'value'=>$stats['total_dept'],      'color'=>'#7C3AED', 'bg'=>'#F3E8FF'],
+                    ['label'=>'Posisi',     'value'=>$stats['total_positions'],  'color'=>'#1D4ED8', 'bg'=>'#DBEAFE'],
+                    ['label'=>'Terpetakan','value'=>$stats['total_mapped'],     'color'=>'#059669', 'bg'=>'#DCFCE7'],
+                    ['label'=>'Belum',      'value'=>$stats['total_unmapped'],   'color'=>'#DC2626', 'bg'=>'#FEE2E2'],
+                ] as $card)
+                <div style="background:{{ $card['bg'] }}; border-radius:12px;
+                            padding:10px 16px; text-align:center; min-width:90px;">
+                    <div style="font-size:22px; font-weight:800; color:{{ $card['color'] }};">
+                        {{ number_format($card['value']) }}
+                    </div>
+                    <div style="font-size:11px; color:{{ $card['color'] }};
+                                 font-weight:600; opacity:0.8;">
+                        {{ $card['label'] }}
+                    </div>
                 </div>
-                <div style="font-size:11px; color:{{ $card['color'] }};
-                             font-weight:600; opacity:0.8;">
-                    {{ $card['label'] }}
-                </div>
+                @endforeach
             </div>
-            @endforeach
         </div>
     </div>
 
@@ -80,6 +93,13 @@
                 Belum ada posisi
             </div>
             @else
+            <div class="oc-unparent-zone" x-show="editMode" x-cloak
+                 @dragover.prevent="dragOverId = -1"
+                 @dragleave="dragOverId = null"
+                 @drop.prevent="drop(null)"
+                 :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
+                ⬆ Drop di sini untuk jadikan posisi paling atas (tidak melapor ke siapapun)
+            </div>
             <div class="oc-dept-tree oc-scroll">
                 @foreach($tree['roots'] as $root)
                 @include('positions._org_chart_node', [
@@ -120,6 +140,13 @@
             </span>
         </div>
         <div style="background:#FFFBEB;">
+            <div class="oc-unparent-zone" x-show="editMode" x-cloak
+                 @dragover.prevent="dragOverId = -1"
+                 @dragleave="dragOverId = null"
+                 @drop.prevent="drop(null)"
+                 :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
+                ⬆ Drop di sini untuk jadikan posisi paling atas (tidak melapor ke siapapun)
+            </div>
             <div class="oc-dept-tree oc-scroll">
                 @foreach($unassignedTree['roots'] as $root)
                 @include('positions._org_chart_node', [
@@ -332,9 +359,16 @@
 
                     {{-- Info karyawan --}}
                     <div style="flex:1; min-width:0;">
-                        <div style="font-weight:600; color:#1e293b; font-size:13px;
-                                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-                             x-text="emp.full_name">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-weight:600; color:#1e293b; font-size:13px;
+                                        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                                 x-text="emp.full_name">
+                            </span>
+                            <span x-show="emp.is_leader"
+                                  style="background:#FEF3C7; color:#B45309; font-size:9px; font-weight:700;
+                                         padding:1px 7px; border-radius:99px; flex-shrink:0; white-space:nowrap;">
+                                👑 Leader
+                            </span>
                         </div>
                         <div style="font-size:11px; color:#94A3B8; margin-top:2px;
                                     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
@@ -384,6 +418,7 @@
 </div>
 
 <style>
+[x-cloak] { display: none !important; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .oc-scroll { scrollbar-width: thin; scrollbar-color: #C4B5FD #F3E8FF; }
 .oc-scroll::-webkit-scrollbar { width: 8px; }
@@ -444,6 +479,21 @@
     content: ''; position: absolute; top: -20px; left: 50%; width: 0; height: 20px;
     border-left: 2px dashed #C4B5FD; transform: translateX(-1px);
 }
+.oc-box-dragover {
+    border-color: #059669 !important; background: #ECFDF5 !important;
+    box-shadow: 0 0 0 3px rgba(5,150,105,0.15) !important;
+}
+.oc-box-editable { cursor: grab; border-style: dashed; }
+.oc-box-editable:active { cursor: grabbing; }
+.oc-leader-tag {
+    font-size: 9px; font-weight: 700; color: #B45309; background: #FEF3C7;
+    border-radius: 99px; padding: 1px 7px; display: inline-block; margin-top: 3px;
+}
+.oc-unparent-zone {
+    margin: 12px 20px 0; padding: 12px; border: 2px dashed #A7F3D0;
+    border-radius: 12px; text-align: center; font-size: 11.5px; font-weight: 600;
+    color: #10B981; background: #F0FDF4; transition: all .15s;
+}
 </style>
 
 <script>
@@ -459,6 +509,10 @@ function orgChart() {
         currentDept:    '',
         currentDescription: '',
         lastPos:        null,
+
+        editMode:   false,
+        draggedId:  null,
+        dragOverId: null,
 
         openPanel(pos) {
             this.panelOpen      = true;
@@ -500,6 +554,46 @@ function orgChart() {
                 e.nik.includes(q) ||
                 e.employee_number.toLowerCase().includes(q)
             );
+        },
+
+        dragStart(id) {
+            this.draggedId = id;
+        },
+
+        dragOver(id) {
+            if (id !== this.draggedId) this.dragOverId = id;
+        },
+
+        dragLeave(id) {
+            if (this.dragOverId === id) this.dragOverId = null;
+        },
+
+        drop(targetId) {
+            const sourceId  = this.draggedId;
+            this.dragOverId = null;
+            this.draggedId  = null;
+
+            if (!sourceId || sourceId === targetId) return;
+
+            const label = targetId
+                ? 'Jadikan posisi ini melapor ke posisi yang dipilih?'
+                : 'Jadikan posisi ini paling atas (tidak melapor ke siapapun)?';
+            if (!confirm(label)) return;
+
+            fetch(`/positions/${sourceId}/set-parent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ parent_position_id: targetId }),
+            })
+                .then(r => r.json().then(data => ({ ok: r.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) { alert(data.message || 'Gagal menyimpan struktur.'); return; }
+                    window.location.reload();
+                })
+                .catch(() => alert('Gagal menyimpan struktur, coba lagi.'));
         },
     };
 }

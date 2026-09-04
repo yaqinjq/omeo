@@ -13,7 +13,13 @@
 @endphp
 <div class="oc-node">
     <button type="button" class="oc-box"
-        @click="openPanel({
+        :class="{ 'oc-box-dragover': dragOverId === {{ $position->id }}, 'oc-box-editable': editMode }"
+        :draggable="editMode ? 'true' : 'false'"
+        @dragstart="dragStart({{ $position->id }})"
+        @dragover.prevent="dragOver({{ $position->id }})"
+        @dragleave="dragLeave({{ $position->id }})"
+        @drop.prevent="drop({{ $position->id }})"
+        @click="editMode || openPanel({
             id: {{ $position->id }},
             name: '{{ addslashes($position->name) }}',
             level: {{ $position->level ?? 0 }},
@@ -30,9 +36,12 @@
             @endif
         </div>
         <div class="oc-ribbon">{{ $rep['full_name'] ?? 'Belum ada karyawan' }}</div>
+        @if($extra > 0)
+        <div class="oc-leader-tag">👑 Team Leader</div>
+        @endif
         <div class="oc-posname">{{ $position->name }}</div>
         @if($extra > 0)
-        <span class="oc-badge-more">+{{ $extra }} lainnya</span>
+        <span class="oc-badge-more">+{{ $extra }} anggota lain</span>
         @endif
     </button>
 

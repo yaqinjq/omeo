@@ -172,6 +172,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', [PositionController::class, 'store'])->name('store');
             Route::get('/org-chart', [PositionController::class, 'orgChart'])->name('org-chart');
             Route::get('/{position}/employees', [PositionController::class, 'positionEmployees'])->name('employees');
+            Route::post('/{position}/set-parent', [PositionController::class, 'setParent'])->name('set-parent');
             Route::put('/{position}', [PositionController::class, 'update'])->name('update');
             Route::delete('/{position}', [PositionController::class, 'destroy'])->name('destroy');
             Route::get('/template', [PositionController::class, 'downloadTemplate'])->name('template');
