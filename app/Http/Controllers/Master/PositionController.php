@@ -257,7 +257,7 @@ class PositionController extends Controller
 
         $employeeData = Employee::whereIn('position_id', $positionIds)
             ->orWhereIn('id', $manualRepIds)
-            ->with('user.applicantProfile:id,user_id,photo_path')
+            ->with('user.applicantProfile:id,user_id,personal_json')
             ->select(['id', 'full_name', 'position_id', 'join_date'])
             ->orderBy('join_date')
             ->get()
@@ -299,7 +299,7 @@ class PositionController extends Controller
             ->with([
                 'outlet:id,name',
                 'user:id,employee_id',
-                'user.applicantProfile:id,user_id,photo_path',
+                'user.applicantProfile:id,user_id,personal_json',
             ])
             ->select(['id', 'full_name', 'nik', 'employee_number', 'nokom', 'outlet_id', 'status_employment', 'join_date'])
             ->orderBy('full_name')
