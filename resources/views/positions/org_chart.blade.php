@@ -85,7 +85,8 @@
                     name: '{{ addslashes($pos->name) }}',
                     level: {{ $pos->level ?? 0 }},
                     count: {{ $pos->employees_count }},
-                    dept: '{{ addslashes($dept->name) }}'
+                    dept: '{{ addslashes($dept->name) }}',
+                    description: @js($pos->description ?? '')
                 })"
                 style="background:white; border-radius:10px;
                        border:1.5px solid #E2E8F0; padding:10px 14px;
@@ -162,7 +163,8 @@
                     name: '{{ addslashes($pos->name) }}',
                     level: {{ $pos->level ?? 0 }},
                     count: {{ $pos->employees_count }},
-                    dept: 'Belum Terdepartemen'
+                    dept: 'Belum Terdepartemen',
+                    description: @js($pos->description ?? '')
                 })"
                 style="background:white; border-radius:12px;
                        border:1.5px solid #FED7AA; padding:16px;
@@ -257,6 +259,26 @@
             </div>
         </div>
 
+        {{-- Job Description --}}
+        <div style="padding:14px 16px; background:#FAF5FF;
+                    border-bottom:1px solid #E9D5FF; flex-shrink:0;
+                    max-height:160px; overflow-y:auto;">
+            <div style="font-size:11px; font-weight:700; color:#7C3AED;
+                        text-transform:uppercase; letter-spacing:0.05em;
+                        margin-bottom:6px;">
+                📋 Deskripsi Tugas
+            </div>
+            <div style="font-size:12.5px; line-height:1.5; color:#4C1D95;
+                        white-space:pre-line;"
+                 x-show="currentDescription"
+                 x-text="currentDescription">
+            </div>
+            <div style="font-size:12px; color:#A78BFA; font-style:italic;"
+                 x-show="!currentDescription">
+                Belum ada deskripsi tugas untuk posisi ini.
+            </div>
+        </div>
+
         {{-- Search --}}
         <div style="padding:12px 16px; background:#F8FAFC;
                     border-bottom:1px solid #E2E8F0; flex-shrink:0;">
@@ -302,6 +324,22 @@
                 <span style="font-size:13px; color:#64748B;">
                     Memuat data karyawan…
                 </span>
+            </div>
+
+            {{-- Error state: fetch gagal (bukan sekadar posisi kosong) --}}
+            <div x-show="!panelLoading && panelError"
+                 style="text-align:center; padding:32px 20px; color:#991B1B;
+                        background:#FEF2F2; border:1px solid #FECACA;
+                        border-radius:12px; margin:4px;">
+                <div style="font-size:32px; margin-bottom:10px;">⚠️</div>
+                <div style="font-size:13px; font-weight:700;">Gagal memuat data karyawan</div>
+                <div style="font-size:12px; margin-top:4px; color:#B91C1C;" x-text="panelError"></div>
+                <button type="button" @click="retryPanel()"
+                        style="margin-top:14px; background:#DC2626; color:white; border:none;
+                               padding:7px 18px; border-radius:8px; font-size:12px;
+                               font-weight:600; cursor:pointer;">
+                    Coba lagi
+                </button>
             </div>
 
             {{-- List karyawan --}}
@@ -380,7 +418,7 @@
             </template>
 
             {{-- Empty: tidak ada hasil search --}}
-            <div x-show="!panelLoading &&
+            <div x-show="!panelLoading && !panelError &&
                           filteredEmployees().length === 0 &&
                           panelEmployees.length > 0"
                  style="text-align:center; padding:40px 20px; color:#94A3B8;">
@@ -389,8 +427,8 @@
                 <div style="font-size:12px; margin-top:4px;">Coba kata kunci lain</div>
             </div>
 
-            {{-- Empty: posisi belum punya karyawan --}}
-            <div x-show="!panelLoading && panelEmployees.length === 0"
+            {{-- Empty: posisi belum punya karyawan (bukan error) --}}
+            <div x-show="!panelLoading && !panelError && panelEmployees.length === 0"
                  style="text-align:center; padding:40px 20px; color:#94A3B8;">
                 <div style="font-size:36px; margin-bottom:12px;">👥</div>
                 <div style="font-size:13px; font-weight:600;">Belum ada karyawan di posisi ini</div>
@@ -410,28 +448,45 @@ function orgChart() {
     return {
         panelOpen:      false,
         panelLoading:   false,
+        panelError:     '',
         panelSearch:    '',
         panelEmployees: [],
         currentName:    '',
         currentLevel:   '',
         currentDept:    '',
+        currentDescription: '',
+        lastPos:        null,
 
         openPanel(pos) {
             this.panelOpen      = true;
             this.panelLoading   = true;
+            this.panelError     = '';
             this.panelEmployees = [];
             this.panelSearch    = '';
             this.currentName    = pos.name;
             this.currentLevel   = pos.level;
             this.currentDept    = pos.dept;
+            this.currentDescription = pos.description || '';
+            this.lastPos        = pos;
 
             fetch(`/positions/${pos.id}/employees`)
-                .then(r => r.json())
+                .then(r => {
+                    if (! r.ok) throw new Error('Server merespons status ' + r.status);
+                    return r.json();
+                })
                 .then(data => {
                     this.panelEmployees = data.employees;
                     this.panelLoading   = false;
                 })
-                .catch(() => { this.panelLoading = false; });
+                .catch(err => {
+                    this.panelLoading = false;
+                    this.panelError   = err.message || 'Gagal memuat data karyawan.';
+                    console.error('org-chart: fetch /positions/' + pos.id + '/employees gagal', err);
+                });
+        },
+
+        retryPanel() {
+            if (this.lastPos) this.openPanel(this.lastPos);
         },
 
         filteredEmployees() {

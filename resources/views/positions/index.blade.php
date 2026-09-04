@@ -368,11 +368,11 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Tugas &amp; Tanggung Jawab (Job Description)</label>
                     <textarea name="description" x-model="posModal.description"
-                              rows="2" maxlength="1000"
+                              rows="6" maxlength="1000"
                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-400"
-                              placeholder="Opsional"></textarea>
+                              placeholder="Tuliskan tugas utama & tanggung jawab posisi ini, agar karyawan yang menjabat tahu dengan jelas pekerjaannya (opsional)"></textarea>
                 </div>
 
                 <div class="flex gap-2 justify-end pt-1">
