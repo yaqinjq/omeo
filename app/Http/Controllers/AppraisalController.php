@@ -154,6 +154,12 @@ class AppraisalController extends Controller
             ->map(function ($items, $empId) {
                 $emp    = $items->first()->employee;
                 $latest = $items->sortByDesc('id')->first();
+                // "Hasil" harus dari submission TERBARU YANG SUDAH DIISI, bukan
+                // sekadar baris dengan id tertinggi — kalau ada evaluator baru
+                // yang barusan di-assign (masih draft, final_result masih null),
+                // memakai $latest apa adanya membuat kolom Hasil kosong padahal
+                // evaluator lain sudah banyak yang submit.
+                $latestScored = $items->whereNotNull('final_result')->where('final_result', '!=', '')->sortByDesc('id')->first();
 
                 return (object) [
                     'employee_id'     => $empId,
@@ -163,7 +169,7 @@ class AppraisalController extends Controller
                     'period_name'     => $latest->period?->name ?? '-',
                     'evaluator_count' => $items->count(),
                     'avg_score'       => $items->whereNotNull('final_score')->avg('final_score'),
-                    'latest_result'   => $latest->final_result,
+                    'latest_result'   => $latestScored?->final_result,
                     'approved_count'  => $items->where('status', 'approved')->count(),
                     'submitted_count' => $items->where('status', 'submitted')->count(),
                     'draft_count'     => $items->where('status', 'draft')->count(),
@@ -247,6 +253,7 @@ class AppraisalController extends Controller
             ->map(function ($items) {
                 $emp    = $items->first()->employee;
                 $latest = $items->sortByDesc('id')->first();
+                $latestScored = $items->whereNotNull('final_result')->where('final_result', '!=', '')->sortByDesc('id')->first();
                 return (object) [
                     'employee_number' => $emp?->employee_number ?? '-',
                     'employee_name'   => $emp?->full_name ?? '-',
@@ -254,7 +261,7 @@ class AppraisalController extends Controller
                     'period_name'     => $latest->period?->name ?? '-',
                     'evaluator_count' => $items->count(),
                     'avg_score'       => $items->whereNotNull('final_score')->avg('final_score'),
-                    'latest_result'   => $latest->final_result ?? '-',
+                    'latest_result'   => $latestScored?->final_result ?? '-',
                     'approved_count'  => $items->where('status', 'approved')->count(),
                     'submitted_count' => $items->where('status', 'submitted')->count(),
                     'draft_count'     => $items->where('status', 'draft')->count(),
