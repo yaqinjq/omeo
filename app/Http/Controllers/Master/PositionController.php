@@ -24,7 +24,7 @@ class PositionController extends Controller
             ->orderBy('name')
             ->get();
 
-        $positions = Position::with('department')
+        $positions = Position::with(['department', 'employees:id,full_name,position_id'])
             ->withCount('employees')
             ->orderBy('department_id')
             ->orderBy('name')
@@ -105,6 +105,8 @@ class PositionController extends Controller
             'salary_max'     => 'nullable|numeric|min:0',
             'is_active'      => 'nullable|boolean',
             'description'    => 'nullable|string|max:1000',
+            'parent_position_id'         => 'nullable|exists:positions,id',
+            'representative_employee_id' => 'nullable|exists:employees,id',
         ]);
 
         Position::create([
@@ -116,6 +118,8 @@ class PositionController extends Controller
             'salary_max'     => $data['salary_max'] ?? null,
             'is_active'      => isset($data['is_active']) ? (bool) $data['is_active'] : true,
             'description'    => $data['description'] ?? null,
+            'parent_position_id'         => $data['parent_position_id'] ?? null,
+            'representative_employee_id' => $data['representative_employee_id'] ?? null,
         ]);
 
         return back()->with('success', 'Posisi berhasil ditambahkan.');
@@ -132,7 +136,26 @@ class PositionController extends Controller
             'salary_max'     => 'nullable|numeric|min:0',
             'is_active'      => 'nullable|boolean',
             'description'    => 'nullable|string|max:1000',
+            'parent_position_id'         => 'nullable|exists:positions,id',
+            'representative_employee_id' => 'nullable|exists:employees,id',
         ]);
+
+        if (! empty($data['parent_position_id']) && (int) $data['parent_position_id'] === $position->id) {
+            return back()->withInput()->with('error', 'Posisi tidak bisa melapor ke dirinya sendiri.');
+        }
+
+        if (! empty($data['parent_position_id']) && $this->wouldCreateCycle($position, (int) $data['parent_position_id'])) {
+            return back()->withInput()->with('error', 'Posisi ini tidak bisa dipilih karena akan membentuk rantai pelaporan melingkar.');
+        }
+
+        if (! empty($data['representative_employee_id'])) {
+            $repBelongsHere = Employee::where('id', $data['representative_employee_id'])
+                ->where('position_id', $position->id)
+                ->exists();
+            if (! $repBelongsHere) {
+                return back()->withInput()->with('error', 'Karyawan yang dipilih sebagai wakil bukan pemegang posisi ini.');
+            }
+        }
 
         $position->update([
             'name'           => trim($data['name']),
@@ -143,9 +166,33 @@ class PositionController extends Controller
             'salary_max'     => $data['salary_max'] ?? null,
             'is_active'      => isset($data['is_active']) ? (bool) $data['is_active'] : true,
             'description'    => $data['description'] ?? null,
+            'parent_position_id'         => $data['parent_position_id'] ?? null,
+            'representative_employee_id' => $data['representative_employee_id'] ?? null,
         ]);
 
         return back()->with('success', 'Posisi berhasil diupdate.');
+    }
+
+    /**
+     * True kalau menjadikan $candidateParentId sebagai parent dari $position
+     * akan membentuk rantai melingkar (posisi jadi leluhur dari dirinya
+     * sendiri). Dicek app-level (bukan DB constraint) supaya pesan errornya
+     * bisa jelas ditampilkan ke HRD, bukan cuma gagal diam-diam.
+     */
+    private function wouldCreateCycle(Position $position, int $candidateParentId): bool
+    {
+        $currentId = $candidateParentId;
+        $hops      = 0;
+
+        while ($currentId !== null && $hops < 20) {
+            if ($currentId === $position->id) {
+                return true;
+            }
+            $currentId = Position::where('id', $currentId)->value('parent_position_id');
+            $hops++;
+        }
+
+        return false;
     }
 
     public function destroy(Position $position): RedirectResponse
@@ -176,6 +223,9 @@ class PositionController extends Controller
             ->orderBy('level')
             ->get();
 
+        $allPositions  = $departments->flatMap->positions->concat($unassigned);
+        $representatives = $this->resolveRepresentatives($allPositions);
+
         $stats = [
             'total_dept'      => $departments->count(),
             'total_positions' => Position::count(),
@@ -183,7 +233,64 @@ class PositionController extends Controller
             'total_unmapped'  => Employee::whereNull('position_id')->count(),
         ];
 
-        return view('positions.org_chart', compact('departments', 'unassigned', 'stats'));
+        return view('positions.org_chart', compact('departments', 'unassigned', 'stats', 'representatives'));
+    }
+
+    /**
+     * Wakil (foto+nama) yang ditampilkan per kotak posisi di org-chart —
+     * dipakai HRD saat memilih 'representative_employee_id' manual, atau
+     * otomatis karyawan dengan join_date paling lama di posisi itu kalau
+     * belum diatur. Dibatch (2 query total, bukan per-posisi) untuk hindari
+     * N+1 walau jumlah posisi bertambah banyak.
+     *
+     * @param  \Illuminate\Support\Collection<int, Position>  $positions
+     * @return array<int, array{employee_id:int, full_name:string, photo_url:?string, is_manual:bool}>
+     */
+    private function resolveRepresentatives(\Illuminate\Support\Collection $positions): array
+    {
+        $positionIds = $positions->pluck('id')->all();
+        if (empty($positionIds)) {
+            return [];
+        }
+
+        $manualRepIds = $positions->pluck('representative_employee_id')->filter()->all();
+
+        $employeeData = Employee::whereIn('position_id', $positionIds)
+            ->orWhereIn('id', $manualRepIds)
+            ->with('user.applicantProfile:id,user_id,photo_path')
+            ->select(['id', 'full_name', 'position_id', 'join_date'])
+            ->orderBy('join_date')
+            ->get()
+            ->keyBy('id');
+
+        $autoRepsByPosition = $employeeData
+            ->whereIn('position_id', $positionIds)
+            ->groupBy('position_id')
+            ->map->first();
+
+        $toRepArray = fn (Employee $e, bool $isManual) => [
+            'employee_id' => $e->id,
+            'full_name'   => $e->full_name,
+            'photo_url'   => $e->user?->applicantProfile?->photo_path
+                ? asset('storage/' . $e->user->applicantProfile->photo_path)
+                : null,
+            'is_manual'   => $isManual,
+        ];
+
+        $representatives = [];
+        foreach ($positions as $position) {
+            if ($position->representative_employee_id && $employeeData->has($position->representative_employee_id)) {
+                $representatives[$position->id] = $toRepArray($employeeData->get($position->representative_employee_id), true);
+                continue;
+            }
+
+            $auto = $autoRepsByPosition->get($position->id);
+            if ($auto) {
+                $representatives[$position->id] = $toRepArray($auto, false);
+            }
+        }
+
+        return $representatives;
     }
 
     public function positionEmployees(Position $position, Request $request): \Illuminate\Http\JsonResponse

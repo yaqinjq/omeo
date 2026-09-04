@@ -367,6 +367,31 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Melapor ke Posisi</label>
+                        <select name="parent_position_id" x-model="posModal.parent_position_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-400">
+                            <option value="">— Puncak / Belum Diatur —</option>
+                            @foreach($positions as $p)
+                            <option value="{{ $p->id }}" x-show="posModal.id !== {{ $p->id }}">{{ $p->name }}{{ $p->department ? ' · ' . $p->department->name : '' }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Untuk garis penghubung di org-chart</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Wakil Foto Org-Chart</label>
+                        <select name="representative_employee_id" x-model="posModal.representative_employee_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-400">
+                            <option value="">— Otomatis (paling senior) —</option>
+                            <template x-for="e in posModal.employees" :key="e.id">
+                                <option :value="e.id" x-text="e.full_name"></option>
+                            </template>
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Opsional, khusus posisi dengan banyak karyawan</p>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Tugas &amp; Tanggung Jawab (Job Description)</label>
                     <textarea name="description" x-model="posModal.description"
@@ -468,6 +493,7 @@ function positionsPage() {
             id: null, name: '', department_id: '', level: 1,
             approval_level: '', salary_min: '', salary_max: '',
             description: '', is_active: true,
+            parent_position_id: '', representative_employee_id: '', employees: [],
             open(pos) {
                 this.id             = pos ? pos.id            : null;
                 this.name           = pos ? pos.name          : '';
@@ -478,6 +504,9 @@ function positionsPage() {
                 this.salary_max     = pos ? (pos.salary_max || '') : '';
                 this.description    = pos ? (pos.description || '') : '';
                 this.is_active      = pos ? !!pos.is_active : true;
+                this.parent_position_id         = pos && pos.parent_position_id ? String(pos.parent_position_id) : '';
+                this.representative_employee_id = pos && pos.representative_employee_id ? String(pos.representative_employee_id) : '';
+                this.employees      = pos ? (pos.employees || []) : [];
                 this.show           = true;
             },
             close() { this.show = false; },

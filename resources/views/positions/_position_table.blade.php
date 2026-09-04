@@ -71,6 +71,9 @@
                                     'salary_max'     => $pos->salary_max,
                                     'description'    => $pos->description,
                                     'is_active'      => (bool) $pos->is_active,
+                                    'parent_position_id'         => $pos->parent_position_id,
+                                    'representative_employee_id' => $pos->representative_employee_id,
+                                    'employees'      => $pos->employees->map(fn ($e) => ['id' => $e->id, 'full_name' => $e->full_name])->values(),
                                 ]) }})"
                                 class="px-2 py-1 text-xs rounded"
                                 style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">
