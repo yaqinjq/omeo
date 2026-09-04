@@ -48,10 +48,8 @@
         </div>
     </div>
 
-    {{-- DEPARTMENTS — 2-col grid --}}
-    <div style="display:grid; gap:16px;
-                grid-template-columns:repeat(auto-fill,minmax(min(100%,500px),1fr));
-                margin-bottom:20px;">
+    {{-- DEPARTMENTS — tree infografis, 1 kartu lebar per departemen --}}
+    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
     @forelse($departments as $dept)
     <div style="border-radius:14px; border:1.5px solid #E2E8F0;
                 overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
@@ -74,62 +72,30 @@
             </span>
         </div>
 
-        {{-- Position cards: compact flex wrap --}}
-        <div style="padding:10px; background:#FAFAFA;
-                    display:flex; flex-wrap:wrap; gap:8px;">
-            @forelse($dept->positions as $pos)
-            <button
-                type="button"
-                @click="openPanel({
-                    id: {{ $pos->id }},
-                    name: '{{ addslashes($pos->name) }}',
-                    level: {{ $pos->level ?? 0 }},
-                    count: {{ $pos->employees_count }},
-                    dept: '{{ addslashes($dept->name) }}',
-                    description: @js($pos->description ?? '')
-                })"
-                style="background:white; border-radius:10px;
-                       border:1.5px solid #E2E8F0; padding:10px 14px;
-                       cursor:pointer; text-align:left; outline:none;
-                       min-width:140px; flex:1; transition:all 0.15s;"
-                onmouseover="this.style.borderColor='#7C3AED';
-                             this.style.boxShadow='0 3px 10px rgba(124,58,237,0.12)'"
-                onmouseout="this.style.borderColor='#E2E8F0';
-                            this.style.boxShadow='none'">
-
-                <div style="display:flex; justify-content:space-between;
-                            align-items:flex-start; margin-bottom:6px;">
-                    <div style="font-weight:700; color:#1e293b; font-size:12px;
-                                line-height:1.3; flex:1; padding-right:8px;">
-                        {{ $pos->name }}
-                    </div>
-                    <span style="background:#F3E8FF; color:#7C3AED; padding:1px 6px;
-                                 border-radius:99px; font-size:9px; font-weight:700;
-                                 flex-shrink:0;">
-                        L{{ $pos->level ?? '-' }}
-                    </span>
-                </div>
-
-                <div style="display:flex; align-items:baseline; gap:3px;">
-                    <span style="font-size:20px; font-weight:800;
-                                 color:#7C3AED; line-height:1;">
-                        {{ $pos->employees_count }}
-                    </span>
-                    <span style="font-size:10px; color:#94A3B8;">karyawan</span>
-                </div>
-            </button>
-            @empty
-            <div style="color:#CBD5E1; font-size:11px;
-                        padding:8px; font-style:italic;">
+        {{-- Tree posisi --}}
+        <div style="background:#FAFAFA;">
+            @php $tree = $deptTrees[$dept->id]; @endphp
+            @if($tree['roots']->isEmpty())
+            <div style="color:#CBD5E1; font-size:11px; padding:20px; font-style:italic; text-align:center;">
                 Belum ada posisi
             </div>
-            @endforelse
+            @else
+            <div class="oc-dept-tree oc-scroll">
+                @foreach($tree['roots'] as $root)
+                @include('positions._org_chart_node', [
+                    'position'         => $root,
+                    'childrenByParent' => $tree['childrenByParent'],
+                    'representatives'  => $representatives,
+                    'deptName'         => $dept->name,
+                ])
+                @endforeach
+            </div>
+            @endif
         </div>
     </div>
     @empty
     <div style="border-radius:16px; padding:48px; text-align:center;
-                background:#F8FAFC; border:1.5px dashed #CBD5E1; color:#94A3B8;
-                grid-column:1/-1;">
+                background:#F8FAFC; border:1.5px dashed #CBD5E1; color:#94A3B8;">
         <div style="font-size:2.5rem; margin-bottom:8px;">🏢</div>
         <p style="font-size:13px; margin:0;">
             Belum ada departemen.
@@ -137,7 +103,7 @@
         </p>
     </div>
     @endforelse
-    </div>{{-- end 2-col grid --}}
+    </div>{{-- end department list --}}
 
     {{-- Unassigned positions --}}
     @if($unassigned->isNotEmpty())
@@ -153,39 +119,17 @@
                 {{ $unassigned->count() }} posisi
             </span>
         </div>
-        <div style="padding:16px; background:#FFFBEB;
-                    display:grid; gap:10px;
-                    grid-template-columns:repeat(auto-fill, minmax(200px,1fr));">
-            @foreach($unassigned as $pos)
-            <button type="button"
-                @click="openPanel({
-                    id: {{ $pos->id }},
-                    name: '{{ addslashes($pos->name) }}',
-                    level: {{ $pos->level ?? 0 }},
-                    count: {{ $pos->employees_count }},
-                    dept: 'Belum Terdepartemen',
-                    description: @js($pos->description ?? '')
-                })"
-                style="background:white; border-radius:12px;
-                       border:1.5px solid #FED7AA; padding:16px;
-                       cursor:pointer; text-align:left;
-                       width:100%; outline:none; transition:border-color 0.15s;"
-                onmouseover="this.style.borderColor='#F59E0B'"
-                onmouseout="this.style.borderColor='#FED7AA'">
-                <div style="font-weight:700; color:#1e293b;
-                            font-size:13px; margin-bottom:8px;">
-                    {{ $pos->name }}
-                </div>
-                <div style="display:flex; align-items:baseline; gap:4px;">
-                    <span style="font-size:24px; font-weight:800; color:#F59E0B; line-height:1;">
-                        {{ $pos->employees_count }}
-                    </span>
-                    <span style="font-size:11px; color:#94A3B8; font-weight:400;">
-                        karyawan
-                    </span>
-                </div>
-            </button>
-            @endforeach
+        <div style="background:#FFFBEB;">
+            <div class="oc-dept-tree oc-scroll">
+                @foreach($unassignedTree['roots'] as $root)
+                @include('positions._org_chart_node', [
+                    'position'         => $root,
+                    'childrenByParent' => $unassignedTree['childrenByParent'],
+                    'representatives'  => $representatives,
+                    'deptName'         => 'Belum Terdepartemen',
+                ])
+                @endforeach
+            </div>
         </div>
     </div>
     @endif
@@ -260,7 +204,7 @@
         </div>
 
         {{-- Job Description --}}
-        <div style="padding:14px 16px; background:#FAF5FF;
+        <div class="oc-scroll" style="padding:14px 16px; background:#FAF5FF;
                     border-bottom:1px solid #E9D5FF; flex-shrink:0;
                     max-height:160px; overflow-y:auto;">
             <div style="font-size:11px; font-weight:700; color:#7C3AED;
@@ -304,7 +248,7 @@
         </div>
 
         {{-- List + loading dalam SATU div permanen (flex:1 tidak boleh kena x-show) --}}
-        <div style="flex:1; overflow-y:auto; min-height:0;
+        <div class="oc-scroll" style="flex:1; overflow-y:auto; min-height:0;
                     padding:10px 12px; position:relative;
                     overscroll-behavior:contain;
                     -webkit-overflow-scrolling:touch;">
@@ -441,6 +385,65 @@
 
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
+.oc-scroll { scrollbar-width: thin; scrollbar-color: #C4B5FD #F3E8FF; }
+.oc-scroll::-webkit-scrollbar { width: 8px; }
+.oc-scroll::-webkit-scrollbar-track { background: #F3E8FF; }
+.oc-scroll::-webkit-scrollbar-thumb { background: #C4B5FD; border-radius: 99px; }
+.oc-scroll::-webkit-scrollbar-thumb:hover { background: #A78BFA; }
+
+/* ── Org-chart tree infografis ───────────────────────────────────────── */
+.oc-dept-tree {
+    display: flex; justify-content: center; gap: 28px;
+    padding: 24px 20px; overflow-x: auto;
+}
+.oc-dept-tree::-webkit-scrollbar { height: 8px; }
+.oc-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.oc-box {
+    position: relative; background: white; border: 2px solid #E2E8F0;
+    border-radius: 16px; padding: 16px 14px 12px; width: 150px;
+    cursor: pointer; text-align: center; font-family: inherit;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.oc-box:hover {
+    border-color: #7C3AED; box-shadow: 0 6px 16px rgba(124,58,237,0.18);
+    transform: translateY(-2px);
+}
+.oc-photo {
+    width: 60px; height: 60px; border-radius: 50%; margin: 0 auto 8px;
+    overflow: hidden; background: linear-gradient(135deg,#7C3AED,#A78BFA);
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid #F3E8FF; color: white; font-weight: 800; font-size: 20px;
+}
+.oc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.oc-ribbon {
+    font-size: 12.5px; font-weight: 800; color: #1e293b; line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.oc-posname {
+    font-size: 10.5px; color: #7C3AED; font-weight: 600; margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.oc-badge-level {
+    position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+    background: #7C3AED; color: white; font-size: 9.5px; font-weight: 800;
+    padding: 2px 9px; border-radius: 99px; border: 2px solid white; white-space: nowrap;
+}
+.oc-badge-more {
+    display: inline-block; margin-top: 6px; background: #F3E8FF; color: #7C3AED;
+    font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
+}
+.oc-stem { width: 0; height: 20px; border-left: 2px dashed #C4B5FD; }
+.oc-children { display: flex; gap: 20px; position: relative; padding-top: 20px; }
+.oc-children::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    border-top: 2px dashed #C4B5FD;
+}
+.oc-branch { position: relative; }
+.oc-branch::before {
+    content: ''; position: absolute; top: -20px; left: 50%; width: 0; height: 20px;
+    border-left: 2px dashed #C4B5FD; transform: translateX(-1px);
+}
 </style>
 
 <script>

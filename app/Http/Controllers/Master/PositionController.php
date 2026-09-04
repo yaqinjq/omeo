@@ -226,6 +226,12 @@ class PositionController extends Controller
         $allPositions  = $departments->flatMap->positions->concat($unassigned);
         $representatives = $this->resolveRepresentatives($allPositions);
 
+        $deptTrees = [];
+        foreach ($departments as $dept) {
+            $deptTrees[$dept->id] = $this->buildPositionTree($dept->positions);
+        }
+        $unassignedTree = $this->buildPositionTree($unassigned);
+
         $stats = [
             'total_dept'      => $departments->count(),
             'total_positions' => Position::count(),
@@ -233,7 +239,35 @@ class PositionController extends Controller
             'total_unmapped'  => Employee::whereNull('position_id')->count(),
         ];
 
-        return view('positions.org_chart', compact('departments', 'unassigned', 'stats', 'representatives'));
+        return view('positions.org_chart', compact(
+            'departments', 'unassigned', 'stats', 'representatives', 'deptTrees', 'unassignedTree'
+        ));
+    }
+
+    /**
+     * Susun posisi jadi tree berbasis parent_position_id, DIBATASI hanya
+     * dalam kumpulan $positions yang diberikan (per departemen — sengaja
+     * tidak dipaksa jadi 1 tree lintas-departemen, sesuai keputusan scope).
+     * Kalau parent_position_id posisi menunjuk ke posisi di LUAR kumpulan
+     * ini (departemen lain), posisi itu tetap dianggap root di tree ini,
+     * supaya tidak ada posisi yang "hilang" dari tampilan.
+     *
+     * @param  \Illuminate\Support\Collection<int, Position>  $positions
+     * @return array{roots: \Illuminate\Support\Collection, childrenByParent: array<int, \Illuminate\Support\Collection>}
+     */
+    private function buildPositionTree(\Illuminate\Support\Collection $positions): array
+    {
+        $idsInScope = $positions->pluck('id')->flip();
+
+        $childrenByParent = $positions
+            ->filter(fn ($p) => $p->parent_position_id && $idsInScope->has($p->parent_position_id))
+            ->groupBy('parent_position_id');
+
+        $roots = $positions->filter(
+            fn ($p) => ! $p->parent_position_id || ! $idsInScope->has($p->parent_position_id)
+        )->values();
+
+        return ['roots' => $roots, 'childrenByParent' => $childrenByParent->all()];
     }
 
     /**
