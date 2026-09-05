@@ -23,6 +23,7 @@ class Employee extends Model
         'status_employment',
         'department_id',
         'position_id',
+        'manager_id',
         'outlet_id',
         'outlet_penugasan_id',
         'legal_entity_kontrak_id',
@@ -126,6 +127,16 @@ class Employee extends Model
     public function outletPenugasan()
     {
         return $this->belongsTo(Outlet::class, 'outlet_penugasan_id');
+    }
+
+    public function manager()
+    {
+        return $this->belongsTo(Employee::class, 'manager_id');
+    }
+
+    public function subordinates()
+    {
+        return $this->hasMany(Employee::class, 'manager_id');
     }
 
     public function bpjsAssignments()

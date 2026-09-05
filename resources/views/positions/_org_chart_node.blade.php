@@ -15,7 +15,7 @@
     <button type="button" class="oc-box"
         :class="{ 'oc-box-dragover': dragOverId === {{ $position->id }}, 'oc-box-editable': editMode }"
         :draggable="editMode ? 'true' : 'false'"
-        @dragstart="dragStart({{ $position->id }})"
+        @dragstart="dragStart({{ $position->id }}, 'position')"
         @dragover.prevent="dragOver({{ $position->id }})"
         @dragleave="dragLeave({{ $position->id }})"
         @drop.prevent="drop({{ $position->id }})"

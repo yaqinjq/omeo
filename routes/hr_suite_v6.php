@@ -215,6 +215,12 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('employees/{employee}/assignments/{assignment}',
             [\App\Http\Controllers\EmployeeAssignmentController::class, 'destroy'])
             ->name('employees.assignments.destroy');
+        Route::post('employees/{employee}/set-manager',
+            [\App\Http\Controllers\Master\PositionController::class, 'setEmployeeManager'])
+            ->name('employees.set-manager');
+        Route::post('employees/{employee}/reassign-outlet',
+            [\App\Http\Controllers\EmployeeAssignmentController::class, 'dragReassignOutlet'])
+            ->name('employees.reassign-outlet');
 
         // BPJS Assignments — harus sebelum Route::resource('employees') agar {employee} tidak ditangkap wildcard
         Route::resource('employees/{employee}/bpjs-assignments',

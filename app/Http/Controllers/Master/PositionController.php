@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Master;
 
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Outlet;
 use App\Models\Position;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -223,6 +224,50 @@ class PositionController extends Controller
         return false;
     }
 
+    /**
+     * Set manager_id lewat drag-and-drop di canvas org-chart per-orang.
+     * Sama persis polanya dengan setParent()/wouldCreateCycle() di atas,
+     * tapi jalan di rantai employees.manager_id, bukan positions.parent_position_id
+     * — dua konsep hierarki ini sengaja terpisah, lihat catatan di plan.
+     */
+    public function setEmployeeManager(Request $request, Employee $employee): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'manager_id' => 'nullable|exists:employees,id',
+        ]);
+
+        $managerId = $data['manager_id'] ?? null;
+
+        if ($managerId !== null) {
+            if ((int) $managerId === $employee->id) {
+                return response()->json(['message' => 'Karyawan tidak bisa menjadi atasan dirinya sendiri.'], 422);
+            }
+            if ($this->wouldCreateEmployeeCycle($employee, (int) $managerId)) {
+                return response()->json(['message' => 'Perubahan ini akan membentuk rantai atasan melingkar.'], 422);
+            }
+        }
+
+        $employee->update(['manager_id' => $managerId]);
+
+        return response()->json(['message' => 'Struktur berhasil diperbarui.']);
+    }
+
+    private function wouldCreateEmployeeCycle(Employee $employee, int $candidateManagerId): bool
+    {
+        $currentId = $candidateManagerId;
+        $hops      = 0;
+
+        while ($currentId !== null && $hops < 20) {
+            if ($currentId === $employee->id) {
+                return true;
+            }
+            $currentId = Employee::where('id', $currentId)->value('manager_id');
+            $hops++;
+        }
+
+        return false;
+    }
+
     public function destroy(Position $position): RedirectResponse
     {
         $count = Employee::where('position_id', $position->id)->count();
@@ -267,9 +312,58 @@ class PositionController extends Controller
             'total_unmapped'  => Employee::whereNull('position_id')->count(),
         ];
 
+        // ── View "Per Orang" — hierarki atasan/bawahan lewat manager_id ────
+        $activeEmployees = Employee::whereNotIn('status_employment', ['resigned', 'terminated'])
+            ->with(['position:id,name', 'outlet:id,name,brand_name', 'user.applicantProfile:id,user_id,personal_json'])
+            ->select(['id', 'full_name', 'department_id', 'position_id', 'manager_id', 'outlet_id', 'status_employment'])
+            ->orderBy('full_name')
+            ->get();
+
+        $employeesByDept = $activeEmployees->groupBy('department_id');
+
+        $employeeDeptTrees = [];
+        foreach ($departments as $dept) {
+            $employeeDeptTrees[$dept->id] = $this->buildEmployeeTree($employeesByDept->get($dept->id, collect()));
+        }
+        $employeeUnassignedTree = $this->buildEmployeeTree($employeesByDept->get(null, collect()));
+
+        // ── Panel Brand/Outlet — drop target reassign outlet (Fase F3) ────
+        $brandGroups = Outlet::query()
+            ->select(['id', 'name', 'brand_name'])
+            ->orderByRaw("brand_name IS NULL OR brand_name = ''")
+            ->orderBy('brand_name')
+            ->orderBy('name')
+            ->get()
+            ->groupBy(fn ($o) => $o->brand_name ?: 'Tanpa Brand');
+
         return view('positions.org_chart', compact(
-            'departments', 'unassigned', 'stats', 'representatives', 'deptTrees', 'unassignedTree'
+            'departments', 'unassigned', 'stats', 'representatives', 'deptTrees', 'unassignedTree',
+            'employeeDeptTrees', 'employeeUnassignedTree', 'brandGroups'
         ));
+    }
+
+    /**
+     * Susun karyawan jadi tree berbasis manager_id, DIBATASI per departemen
+     * yang sama seperti buildPositionTree() — konsep hierarki terpisah
+     * (atasan/bawahan per-orang, bukan posisi-melapor-ke-posisi), sengaja
+     * tidak disamakan/disinkronkan di v1.
+     *
+     * @param  \Illuminate\Support\Collection<int, Employee>  $employees
+     * @return array{roots: \Illuminate\Support\Collection, childrenByParent: array<int, \Illuminate\Support\Collection>}
+     */
+    private function buildEmployeeTree(\Illuminate\Support\Collection $employees): array
+    {
+        $idsInScope = $employees->pluck('id')->flip();
+
+        $childrenByParent = $employees
+            ->filter(fn ($e) => $e->manager_id && $idsInScope->has($e->manager_id))
+            ->groupBy('manager_id');
+
+        $roots = $employees->filter(
+            fn ($e) => ! $e->manager_id || ! $idsInScope->has($e->manager_id)
+        )->values();
+
+        return ['roots' => $roots, 'childrenByParent' => $childrenByParent->all()];
     }
 
     /**

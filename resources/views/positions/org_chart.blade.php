@@ -22,14 +22,29 @@
                 </h1>
             </div>
             <p style="color:#64748B; font-size:13px; margin:4px 0 0 0;" x-show="!editMode">
-                Klik posisi manapun untuk melihat daftar karyawan
+                <span x-show="viewMode === 'position'">Klik posisi manapun untuk melihat daftar karyawan</span>
+                <span x-show="viewMode === 'person'" x-cloak>Setiap kotak adalah 1 karyawan — foto, nama, dan jabatan</span>
             </p>
             <p style="color:#059669; font-size:13px; margin:4px 0 0 0; font-weight:600;" x-show="editMode" x-cloak>
-                Mode Atur Struktur aktif — drag kotak posisi lalu drop ke posisi lain untuk mengatur "melapor ke"
+                <span x-show="viewMode === 'position'">Mode Atur Struktur aktif — drag kotak posisi lalu drop ke posisi lain untuk mengatur "melapor ke"</span>
+                <span x-show="viewMode === 'person'">Mode Atur Struktur aktif — drag karyawan lalu drop ke atasannya untuk mengatur "atasan/bawahan"</span>
             </p>
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div style="display:flex; background:#F1F5F9; border-radius:10px; padding:3px; gap:2px;">
+                <button type="button" @click="viewMode = 'position'"
+                        :style="viewMode === 'position' ? 'background:white;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent;color:#64748B;'"
+                        style="padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; border:none; cursor:pointer;">
+                    🏢 Per Posisi
+                </button>
+                <button type="button" @click="viewMode = 'person'"
+                        :style="viewMode === 'person' ? 'background:white;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent;color:#64748B;'"
+                        style="padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; border:none; cursor:pointer;">
+                    👤 Per Orang
+                </button>
+            </div>
+
             <button type="button" @click="editMode = !editMode"
                     :style="editMode
                         ? 'background:#059669;color:white;border:1px solid #059669;'
@@ -60,6 +75,8 @@
             </div>
         </div>
     </div>
+
+    <div x-show="viewMode === 'position'">
 
     {{-- DEPARTMENTS — tree infografis, 1 kartu lebar per departemen --}}
     <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
@@ -160,6 +177,119 @@
         </div>
     </div>
     @endif
+
+    </div>{{-- end viewMode === 'position' --}}
+
+    <div x-show="viewMode === 'person'" x-cloak>
+
+    {{-- Panel Brand/Outlet — drop karyawan di sini untuk pindah outlet --}}
+    <div x-show="editMode" x-cloak style="background:white; border:1.5px solid #DDD6FE; border-radius:14px;
+                padding:14px 16px; margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:700; color:#7C3AED; text-transform:uppercase;
+                    letter-spacing:0.03em; margin-bottom:10px;">
+            🏬 Drop karyawan di sini untuk pindah Brand / Outlet
+        </div>
+        <div style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto;" class="oc-scroll">
+            @forelse($brandGroups as $brand => $outlets)
+            <div>
+                <div style="font-size:11px; font-weight:700; color:#475569; margin-bottom:6px;">{{ $brand }}</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                    @foreach($outlets as $outlet)
+                    <div class="oc-outlet-chip"
+                         :class="{ 'oc-outlet-chip-dragover': dragOverOutletId === {{ $outlet->id }} }"
+                         @dragover.prevent="dragOverOutletId = {{ $outlet->id }}"
+                         @dragleave="dragOverOutletId = null"
+                         @drop.prevent="dropOnOutlet({{ $outlet->id }})">
+                        {{ $outlet->name }}
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @empty
+            <div style="font-size:12px; color:#94A3B8; font-style:italic;">Belum ada data outlet.</div>
+            @endforelse
+        </div>
+    </div>
+
+    {{-- DEPARTMENTS — tree per-orang, hierarki atasan/bawahan lewat manager_id --}}
+    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
+    @forelse($departments as $dept)
+    @php $empTree = $employeeDeptTrees[$dept->id]; @endphp
+    @if($empTree['roots']->isNotEmpty())
+    <div style="border-radius:14px; border:1.5px solid #E2E8F0;
+                overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
+
+        <div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);
+                    color:white; padding:12px 16px;
+                    display:flex; justify-content:space-between;
+                    align-items:center;">
+            <div>
+                <div style="font-weight:700; font-size:13px;">{{ $dept->name }}</div>
+                @if($dept->code)
+                <div style="font-size:10px; opacity:0.65;">{{ $dept->code }}</div>
+                @endif
+            </div>
+            <span style="background:rgba(255,255,255,0.2); padding:2px 10px;
+                         border-radius:99px; font-size:11px; font-weight:600;
+                         white-space:nowrap;">
+                {{ $empTree['roots']->count() + collect($empTree['childrenByParent'])->flatten()->count() }} karyawan
+            </span>
+        </div>
+
+        <div style="background:#FAFAFA;">
+            <div class="oc-unparent-zone" x-show="editMode" x-cloak
+                 @dragover.prevent="dragOverId = -1"
+                 @dragleave="dragOverId = null"
+                 @drop.prevent="drop(null)"
+                 :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
+                ⬆ Drop di sini untuk jadikan karyawan ini paling atas (tidak punya atasan)
+            </div>
+            <div class="oc-dept-tree oc-scroll">
+                @foreach($empTree['roots'] as $root)
+                @include('positions._org_chart_person_node', [
+                    'employee'         => $root,
+                    'childrenByParent' => $empTree['childrenByParent'],
+                ])
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+    @empty
+    @endforelse
+    </div>{{-- end department list per-orang --}}
+
+    {{-- Karyawan belum terdepartemen --}}
+    @if($employeeUnassignedTree['roots']->isNotEmpty())
+    <div style="margin-bottom:20px; border-radius:16px;
+                border:1.5px solid #FED7AA; overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#F59E0B,#D97706);
+                    color:white; padding:14px 20px;
+                    font-weight:700; font-size:15px;
+                    display:flex; justify-content:space-between; align-items:center;">
+            <span>⚠️ Belum Terdepartemen</span>
+        </div>
+        <div style="background:#FFFBEB;">
+            <div class="oc-unparent-zone" x-show="editMode" x-cloak
+                 @dragover.prevent="dragOverId = -1"
+                 @dragleave="dragOverId = null"
+                 @drop.prevent="drop(null)"
+                 :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
+                ⬆ Drop di sini untuk jadikan karyawan ini paling atas (tidak punya atasan)
+            </div>
+            <div class="oc-dept-tree oc-scroll">
+                @foreach($employeeUnassignedTree['roots'] as $root)
+                @include('positions._org_chart_person_node', [
+                    'employee'         => $root,
+                    'childrenByParent' => $employeeUnassignedTree['childrenByParent'],
+                ])
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+    </div>{{-- end viewMode === 'person' --}}
 
     {{-- ═══ SLIDE PANEL ═══ --}}
 
@@ -494,6 +624,19 @@
     border-radius: 12px; text-align: center; font-size: 11.5px; font-weight: 600;
     color: #10B981; background: #F0FDF4; transition: all .15s;
 }
+.oc-outlet-label {
+    font-size: 10px; color: #0369A1; font-weight: 600; margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.oc-outlet-chip {
+    background: #F0F9FF; border: 1.5px dashed #7DD3FC; color: #0369A1;
+    font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 99px;
+    transition: all .15s;
+}
+.oc-outlet-chip-dragover {
+    background: #DBEAFE !important; border-color: #1D4ED8 !important; color: #1D4ED8 !important;
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.15);
+}
 </style>
 
 <script>
@@ -510,9 +653,12 @@ function orgChart() {
         currentDescription: '',
         lastPos:        null,
 
-        editMode:   false,
-        draggedId:  null,
-        dragOverId: null,
+        viewMode:    'position',
+        editMode:    false,
+        draggedId:   null,
+        draggedKind: null,
+        dragOverId:  null,
+        dragOverOutletId: null,
 
         openPanel(pos) {
             this.panelOpen      = true;
@@ -556,8 +702,9 @@ function orgChart() {
             );
         },
 
-        dragStart(id) {
-            this.draggedId = id;
+        dragStart(id, kind) {
+            this.draggedId   = id;
+            this.draggedKind = kind;
         },
 
         dragOver(id) {
@@ -570,23 +717,34 @@ function orgChart() {
 
         drop(targetId) {
             const sourceId  = this.draggedId;
+            const kind      = this.draggedKind;
             this.dragOverId = null;
             this.draggedId  = null;
+            this.draggedKind = null;
 
             if (!sourceId || sourceId === targetId) return;
 
-            const label = targetId
-                ? 'Jadikan posisi ini melapor ke posisi yang dipilih?'
-                : 'Jadikan posisi ini paling atas (tidak melapor ke siapapun)?';
+            const isPosition = kind === 'position';
+            const noun       = isPosition ? 'posisi' : 'karyawan';
+            const label      = targetId
+                ? `Jadikan ${noun} ini melapor ke ${noun} yang dipilih?`
+                : `Jadikan ${noun} ini paling atas (tidak melapor ke siapapun)?`;
             if (!confirm(label)) return;
 
-            fetch(`/positions/${sourceId}/set-parent`, {
+            const url  = isPosition
+                ? `/positions/${sourceId}/set-parent`
+                : `/employees/${sourceId}/set-manager`;
+            const body = isPosition
+                ? { parent_position_id: targetId }
+                : { manager_id: targetId };
+
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 },
-                body: JSON.stringify({ parent_position_id: targetId }),
+                body: JSON.stringify(body),
             })
                 .then(r => r.json().then(data => ({ ok: r.ok, data })))
                 .then(({ ok, data }) => {
@@ -594,6 +752,32 @@ function orgChart() {
                     window.location.reload();
                 })
                 .catch(() => alert('Gagal menyimpan struktur, coba lagi.'));
+        },
+
+        dropOnOutlet(outletId) {
+            const sourceId    = this.draggedId;
+            const kind        = this.draggedKind;
+            this.dragOverOutletId = null;
+            this.draggedId    = null;
+            this.draggedKind  = null;
+
+            if (!sourceId || kind !== 'employee') return;
+            if (!confirm('Pindahkan karyawan ini ke outlet yang dipilih?')) return;
+
+            fetch(`/employees/${sourceId}/reassign-outlet`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ outlet_id: outletId }),
+            })
+                .then(r => r.json().then(data => ({ ok: r.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) { alert(data.message || 'Gagal menyimpan outlet.'); return; }
+                    window.location.reload();
+                })
+                .catch(() => alert('Gagal menyimpan outlet, coba lagi.'));
         },
     };
 }
