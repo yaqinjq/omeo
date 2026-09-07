@@ -588,8 +588,14 @@
     cursor: pointer; align-self: center;
 }
 .oc-anggota-wrap {
-    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+    position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;
     padding: 4px; border-radius: 10px; border: 2px solid transparent;
+}
+.oc-anggota-edit-btn {
+    position: absolute; top: -4px; right: -2px; width: 16px; height: 16px;
+    border-radius: 50%; background: white; border: 1px solid #DDD6FE;
+    font-size: 8px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; padding: 0; line-height: 1; pointer-events: none;
 }
 .oc-photo-sm { width: 40px; height: 40px; font-size: 14px; margin-bottom: 4px; }
 .oc-anggota-name {

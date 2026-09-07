@@ -32,7 +32,9 @@
          @dragover.prevent="dragOver({{ $node->id }})"
          @dragleave="dragLeave({{ $node->id }})"
          @drop.prevent="drop({{ $node->id }})"
-         @click="editMode && nodeEditor.openEdit(@js($jsNode))">
+         @click="nodeEditor.openEdit(@js($jsNode))"
+         title="Klik untuk edit / hapus">
+        <button type="button" class="oc-anggota-edit-btn" tabindex="-1">✏️</button>
         <div class="oc-photo oc-photo-sm">
             @if($photoUrl)
                 <img src="{{ $photoUrl }}" alt="{{ $employee->full_name }}">
