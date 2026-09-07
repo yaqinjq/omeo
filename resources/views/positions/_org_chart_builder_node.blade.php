@@ -6,7 +6,11 @@
 --}}
 @php
     $children  = $childrenByParent[$node->id] ?? collect();
-    $isLeader  = $node->effective_is_leader;
+    // Kalau ternyata sudah punya bawahan (misal di-drag taruh di sini
+    // belakangan), WAJIB digambar sebagai kotak besar + garis — status
+    // "Anggota" manual tidak boleh membuat bawahan yang sudah tersimpan
+    // jadi tidak tergambar sama sekali.
+    $isLeader  = $node->effective_is_leader || $children->isNotEmpty();
     $employee  = $node->employee;
     $photoUrl  = $employee?->user?->applicantProfile?->photo_path
         ? asset('storage/' . $employee->user->applicantProfile->photo_path)
