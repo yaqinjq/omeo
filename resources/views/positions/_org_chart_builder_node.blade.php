@@ -46,15 +46,13 @@
 @else
 {{-- LEADER / DEPARTMENT / BRAND / OUTLET: kotak besar, bisa bercabang --}}
 <div class="oc-node">
-    <template x-if="editMode">
-        <div style="display:flex; flex-direction:column; align-items:center;">
-            <button type="button" class="oc-add-superior-btn"
-                    @click="nodeEditor.openInsertAbove(@js(['id' => $node->id, 'parent_id' => $node->parent_id]))">
-                + Tambah Atasan
-            </button>
-            <div class="oc-stem"></div>
-        </div>
-    </template>
+    <div style="display:flex; flex-direction:column; align-items:center;">
+        <button type="button" class="oc-add-superior-btn"
+                @click="nodeEditor.openInsertAbove(@js(['id' => $node->id, 'parent_id' => $node->parent_id]))">
+            + Tambah Atasan
+        </button>
+        <div class="oc-stem"></div>
+    </div>
     <div class="oc-box"
          :class="{ 'oc-box-dragover': dragOverId === {{ $node->id }} }"
          :draggable="editMode ? 'true' : 'false'"
@@ -63,7 +61,7 @@
          @dragleave="dragLeave({{ $node->id }})"
          @drop.prevent="drop({{ $node->id }})">
 
-        <button type="button" x-show="editMode" x-cloak class="oc-node-edit-btn"
+        <button type="button" class="oc-node-edit-btn"
                 @click.stop="nodeEditor.openEdit(@js($jsNode))" title="Edit node ini">
             ✏️
         </button>
@@ -104,12 +102,12 @@
 
     <div class="oc-stem"></div>
     @if($node->node_type === 'employee')
-    <button type="button" x-show="editMode" x-cloak class="oc-add-child-btn"
+    <button type="button" class="oc-add-child-btn"
             @click="nodeEditor.openCreate({{ $node->id }}, { nodeType: 'employee', leaderStatus: 'anggota', lockType: true })">
         + Tambah Anggota
     </button>
     @else
-    <button type="button" x-show="editMode" x-cloak class="oc-add-child-btn"
+    <button type="button" class="oc-add-child-btn"
             @click="nodeEditor.openCreate({{ $node->id }})">
         + Tambah Node
     </button>
