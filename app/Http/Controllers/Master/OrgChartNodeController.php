@@ -31,9 +31,10 @@ class OrgChartNodeController extends Controller
         }
 
         if ($data['node_type'] === OrgChartNode::TYPE_EMPLOYEE) {
-            if (OrgChartNode::where('employee_id', $data['employee_id'])->exists()) {
-                return response()->json(['message' => 'Karyawan ini sudah ada di tempat lain pada struktur.'], 422);
-            }
+            // Karyawan boleh muncul di lebih dari 1 node — dia bisa merangkap
+            // beberapa jabatan sekaligus (lihat employee_positions), jadi
+            // struktur org-chart-nya juga boleh menampilkan lebih dari 1
+            // kotak untuk orang yang sama.
             $this->applyEmployeeFields($data);
         }
 
@@ -68,12 +69,6 @@ class OrgChartNodeController extends Controller
         ]);
 
         if ($orgChartNode->node_type === OrgChartNode::TYPE_EMPLOYEE && ! empty($data['employee_id'])) {
-            $usedByOther = OrgChartNode::where('employee_id', $data['employee_id'])
-                ->where('id', '!=', $orgChartNode->id)
-                ->exists();
-            if ($usedByOther) {
-                return response()->json(['message' => 'Karyawan ini sudah ada di tempat lain pada struktur.'], 422);
-            }
             $this->applyEmployeeFields($data);
             $orgChartNode->employee_id = $data['employee_id'];
         }
