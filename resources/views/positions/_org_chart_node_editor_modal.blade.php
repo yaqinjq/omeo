@@ -22,8 +22,9 @@
                     padding:8px 12px; border-radius:8px; font-size:12.5px; margin-bottom:14px;"
              x-text="nodeEditor.error"></div>
 
-        {{-- Tipe node (hanya bisa dipilih saat membuat baru) --}}
-        <div style="margin-bottom:14px;" x-show="nodeEditor.mode === 'create'">
+        {{-- Tipe node (hanya bisa dipilih saat membuat baru & belum dikunci —
+             dikunci otomatis kalau dibuka lewat tombol "Tambah Anggota") --}}
+        <div style="margin-bottom:14px;" x-show="nodeEditor.mode === 'create' && !nodeEditor.lockType" x-cloak>
             <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:6px;">Tipe Node</label>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                 <button type="button" @click="nodeEditor.nodeType = 'employee'"
@@ -53,30 +54,31 @@
         <div x-show="nodeEditor.nodeType === 'employee'" x-cloak style="display:flex; flex-direction:column; gap:12px;">
             <div>
                 <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih Karyawan</label>
-                <select x-model="nodeEditor.employeeId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                    <option value="">— Pilih —</option>
-                    @foreach($allEmployeesForPicker as $emp)
-                    <option value="{{ $emp->id }}">{{ $emp->full_name }}</option>
-                    @endforeach
-                </select>
+                @include('positions._org_chart_search_picker', [
+                    'items' => 'window.OC_EMPLOYEES',
+                    'model' => 'nodeEditor.employeeId',
+                    'placeholder' => 'Cari nama karyawan...',
+                ])
             </div>
             <div>
-                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih / Buat Posisi (opsional)</label>
-                <select x-model="nodeEditor.employeePositionId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; margin-bottom:6px;">
-                    <option value="">— Tidak diubah —</option>
-                    @foreach($allPositionsForPicker as $pos)
-                    <option value="{{ $pos->id }}">{{ $pos->name }}</option>
-                    @endforeach
-                </select>
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih Posisi (opsional)</label>
+                @include('positions._org_chart_search_picker', [
+                    'items' => 'window.OC_POSITIONS',
+                    'model' => 'nodeEditor.employeePositionId',
+                    'placeholder' => 'Cari posisi...',
+                ])
+                <input type="text" x-model="nodeEditor.newPositionName" placeholder="Atau ketik nama posisi baru"
+                       style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:7px 10px; font-size:12.5px; margin-top:6px; box-sizing:border-box;">
             </div>
             <div>
-                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih / Buat Departemen (opsional)</label>
-                <select x-model="nodeEditor.employeeDepartmentId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                    <option value="">— Tidak diubah —</option>
-                    @foreach($allDepartmentsForPicker as $dept)
-                    <option value="{{ $dept->id }}">{{ $dept->name }}</option>
-                    @endforeach
-                </select>
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih Departemen (opsional)</label>
+                @include('positions._org_chart_search_picker', [
+                    'items' => 'window.OC_DEPARTMENTS',
+                    'model' => 'nodeEditor.employeeDepartmentId',
+                    'placeholder' => 'Cari departemen...',
+                ])
+                <input type="text" x-model="nodeEditor.newEmployeeDeptName" placeholder="Atau ketik nama departemen baru"
+                       style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:7px 10px; font-size:12.5px; margin-top:6px; box-sizing:border-box;">
             </div>
             <div>
                 <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:6px;">Status</label>
@@ -98,15 +100,14 @@
         {{-- ── Field: Departemen ── --}}
         <div x-show="nodeEditor.nodeType === 'department'" x-cloak>
             <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih Departemen</label>
-            <select x-model="nodeEditor.departmentId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                <option value="">— Pilih —</option>
-                @foreach($allDepartmentsForPicker as $dept)
-                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
-                @endforeach
-            </select>
-            <p style="font-size:11px; color:#94A3B8; margin-top:6px;">
-                Belum ada departemennya? <a href="{{ route('positions.index') }}" target="_blank" style="color:#7C3AED;">Buat dulu di Master Posisi →</a>
-            </p>
+            @include('positions._org_chart_search_picker', [
+                'items' => 'window.OC_DEPARTMENTS',
+                'model' => 'nodeEditor.departmentId',
+                'placeholder' => 'Cari departemen...',
+            ])
+            <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin:10px 0 4px;">Atau Buat Departemen Baru</label>
+            <input type="text" x-model="nodeEditor.newDepartmentName" placeholder="Nama departemen baru"
+                   style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
         </div>
 
         {{-- ── Field: Brand ── --}}
@@ -120,18 +121,17 @@
             </select>
             <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Atau Ketik Brand Baru</label>
             <input type="text" x-model="nodeEditor.newBrandName" placeholder="Nama brand baru"
-                   style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
+                   style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
         </div>
 
         {{-- ── Field: Outlet ── --}}
         <div x-show="nodeEditor.nodeType === 'outlet'" x-cloak>
             <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih Outlet</label>
-            <select x-model="nodeEditor.outletId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                <option value="">— Pilih —</option>
-                @foreach($allOutletsForPicker as $outlet)
-                <option value="{{ $outlet->id }}">{{ $outlet->name }}{{ $outlet->brand_name ? ' · '.$outlet->brand_name : '' }}</option>
-                @endforeach
-            </select>
+            @include('positions._org_chart_search_picker', [
+                'items' => 'window.OC_OUTLETS',
+                'model' => 'nodeEditor.outletId',
+                'placeholder' => 'Cari outlet...',
+            ])
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">

@@ -577,6 +577,11 @@
     font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px;
     cursor: pointer; margin: 4px auto 0; display: block;
 }
+.oc-add-superior-btn {
+    background: white; border: 1.5px dashed #FCA5A5; color: #DC2626;
+    font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
+    cursor: pointer; margin: 0 auto 2px; display: block;
+}
 .oc-add-root-btn {
     background: white; border: 2px dashed #C4B5FD; color: #7C3AED;
     font-size: 12.5px; font-weight: 700; padding: 14px 22px; border-radius: 16px;
@@ -594,6 +599,28 @@
 </style>
 
 <script>
+window.OC_EMPLOYEES   = @json($allEmployeesForPicker->map(fn ($e) => ['id' => $e->id, 'name' => $e->full_name])->values());
+window.OC_POSITIONS   = @json($allPositionsForPicker->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])->values());
+window.OC_DEPARTMENTS = @json($allDepartmentsForPicker->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values());
+window.OC_OUTLETS     = @json($allOutletsForPicker->map(fn ($o) => ['id' => $o->id, 'name' => $o->name . ($o->brand_name ? ' · ' . $o->brand_name : '')])->values());
+
+function searchPicker(items) {
+    return {
+        items: items,
+        search: '',
+        open: false,
+        labelFor(id) {
+            const found = this.items.find(i => String(i.id) === String(id));
+            return found ? found.name : '';
+        },
+        filtered() {
+            const q = this.search.trim().toLowerCase();
+            const list = q ? this.items.filter(i => i.name.toLowerCase().includes(q)) : this.items;
+            return list.slice(0, 50);
+        },
+    };
+}
+
 function orgChart() {
     return {
         panelOpen:      false,
@@ -712,11 +739,16 @@ function orgChart() {
         mode:  'create', // 'create' | 'edit'
         nodeId: null,
         parentId: null,
+        insertAboveNodeId: null,
+        lockType: false,
         nodeType: 'employee',
         employeeId: '',
         employeePositionId: '',
+        newPositionName: '',
         employeeDepartmentId: '',
+        newEmployeeDeptName: '',
         departmentId: '',
+        newDepartmentName: '',
         outletId: '',
         brandName: '',
         newBrandName: '',
@@ -724,21 +756,35 @@ function orgChart() {
         saving: false,
         error: '',
 
+        resetFields() {
+            this.employeeId = '';
+            this.employeePositionId = '';
+            this.newPositionName = '';
+            this.employeeDepartmentId = '';
+            this.newEmployeeDeptName = '';
+            this.departmentId = '';
+            this.newDepartmentName = '';
+            this.outletId   = '';
+            this.brandName  = '';
+            this.newBrandName = '';
+            this.error      = '';
+        },
+
         openCreate(parentId, defaults = {}) {
             this.show       = true;
             this.mode       = 'create';
             this.nodeId     = null;
             this.parentId   = parentId;
+            this.insertAboveNodeId = null;
+            this.lockType   = defaults.lockType || false;
             this.nodeType   = defaults.nodeType || 'employee';
-            this.employeeId = '';
-            this.employeePositionId = '';
-            this.employeeDepartmentId = '';
-            this.departmentId = '';
-            this.outletId   = '';
-            this.brandName  = '';
-            this.newBrandName = '';
+            this.resetFields();
             this.leaderStatus = defaults.leaderStatus || 'auto';
-            this.error      = '';
+        },
+
+        openInsertAbove(node) {
+            this.openCreate(node.parent_id, {});
+            this.insertAboveNodeId = node.id;
         },
 
         openEdit(node) {
@@ -746,17 +792,16 @@ function orgChart() {
             this.mode       = 'edit';
             this.nodeId     = node.id;
             this.parentId   = null;
+            this.insertAboveNodeId = null;
+            this.lockType   = true;
             this.nodeType   = node.node_type;
+            this.resetFields();
             this.employeeId = node.employee_id || '';
-            this.employeePositionId = '';
-            this.employeeDepartmentId = '';
             this.departmentId = node.department_id || '';
             this.outletId   = node.outlet_id || '';
             this.brandName  = node.brand_name || '';
-            this.newBrandName = '';
             this.leaderStatus = node.is_leader_override === true ? 'leader'
                 : node.is_leader_override === false ? 'anggota' : 'auto';
-            this.error      = '';
         },
 
         close() {
@@ -766,48 +811,70 @@ function orgChart() {
         csrfHeaders() {
             return {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             };
         },
 
-        async ensureBrandCreated() {
-            return this.newBrandName.trim() || this.brandName;
+        async createQuick(url, name) {
+            const r = await fetch(url, { method: 'POST', headers: this.csrfHeaders(), body: JSON.stringify({ name }) });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.message || 'Gagal membuat data baru.');
+            return data.id;
         },
 
         async save() {
             this.error  = '';
             this.saving = true;
 
-            const payload = {
-                node_type: this.nodeType,
-                parent_id: this.parentId,
-            };
+            try {
+                const payload = {
+                    node_type: this.nodeType,
+                    parent_id: this.parentId,
+                };
 
-            if (this.nodeType === 'employee') {
-                payload.employee_id = this.employeeId || null;
-                if (this.employeePositionId) payload.employee_position_id = this.employeePositionId;
-                if (this.employeeDepartmentId) payload.employee_department_id = this.employeeDepartmentId;
-                payload.is_leader_override = this.leaderStatus === 'leader' ? true
-                    : this.leaderStatus === 'anggota' ? false : null;
-            } else if (this.nodeType === 'department') {
-                payload.department_id = this.departmentId || null;
-            } else if (this.nodeType === 'outlet') {
-                payload.outlet_id = this.outletId || null;
-            } else if (this.nodeType === 'brand') {
-                payload.brand_name = (await this.ensureBrandCreated()) || null;
+                if (this.nodeType === 'employee') {
+                    payload.employee_id = this.employeeId || null;
+
+                    payload.employee_position_id = this.newPositionName.trim()
+                        ? await this.createQuick('/positions', this.newPositionName.trim())
+                        : (this.employeePositionId || null);
+
+                    payload.employee_department_id = this.newEmployeeDeptName.trim()
+                        ? await this.createQuick('/positions/departments', this.newEmployeeDeptName.trim())
+                        : (this.employeeDepartmentId || null);
+
+                    payload.is_leader_override = this.leaderStatus === 'leader' ? true
+                        : this.leaderStatus === 'anggota' ? false : null;
+                } else if (this.nodeType === 'department') {
+                    payload.department_id = this.newDepartmentName.trim()
+                        ? await this.createQuick('/positions/departments', this.newDepartmentName.trim())
+                        : (this.departmentId || null);
+                } else if (this.nodeType === 'outlet') {
+                    payload.outlet_id = this.outletId || null;
+                } else if (this.nodeType === 'brand') {
+                    payload.brand_name = this.newBrandName.trim() || this.brandName || null;
+                }
+
+                const url    = this.mode === 'create' ? '/org-chart-nodes' : `/org-chart-nodes/${this.nodeId}`;
+                const method = this.mode === 'create' ? 'POST' : 'PUT';
+
+                const r = await fetch(url, { method, headers: this.csrfHeaders(), body: JSON.stringify(payload) });
+                const data = await r.json();
+                if (!r.ok) { this.saving = false; this.error = data.message || 'Gagal menyimpan.'; return; }
+
+                if (this.mode === 'create' && this.insertAboveNodeId && data.id) {
+                    await fetch(`/org-chart-nodes/${this.insertAboveNodeId}/set-parent`, {
+                        method: 'POST', headers: this.csrfHeaders(),
+                        body: JSON.stringify({ parent_id: data.id }),
+                    });
+                }
+
+                window.location.reload();
+            } catch (e) {
+                this.saving = false;
+                this.error  = e.message || 'Gagal menyimpan, coba lagi.';
             }
-
-            const url    = this.mode === 'create' ? '/org-chart-nodes' : `/org-chart-nodes/${this.nodeId}`;
-            const method = this.mode === 'create' ? 'POST' : 'PUT';
-
-            fetch(url, { method, headers: this.csrfHeaders(), body: JSON.stringify(payload) })
-                .then(r => r.json().then(data => ({ ok: r.ok, data })))
-                .then(({ ok, data }) => {
-                    this.saving = false;
-                    if (!ok) { this.error = data.message || 'Gagal menyimpan.'; return; }
-                    window.location.reload();
-                })
-                .catch(() => { this.saving = false; this.error = 'Gagal menyimpan, coba lagi.'; });
         },
 
         remove() {
