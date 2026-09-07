@@ -60,8 +60,27 @@ class EmployeeAssignmentController extends Controller
             'outlet_id' => ['required', 'integer', 'exists:outlets,id'],
         ]);
 
-        DB::beginTransaction();
         try {
+            $this->reassignOutletFor($employee, (int) $data['outlet_id'], 'Drag-and-drop org-chart');
+
+            return response()->json(['message' => 'Outlet berhasil diperbarui.']);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Gagal menyimpan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Menulis DUA tempat sekaligus dalam 1 transaction — employees.outlet_id
+     * (dibaca hampir semua bagian app lain: filter, export, dst) DAN
+     * employee_outlet_assignments (riwayat penugasan, pola sama seperti
+     * store() di atas) — supaya tidak menambah sumber-kebenaran baru yang
+     * bisa desync dari keduanya. Dipakai oleh dragReassignOutlet() (endpoint
+     * HTTP lama) dan OrgChartNodeController (saat node karyawan dipindah
+     * jadi bawahan node outlet di canvas builder).
+     */
+    public function reassignOutletFor(Employee $employee, int $outletId, string $reason = 'Org-chart'): void
+    {
+        DB::transaction(function () use ($employee, $outletId, $reason) {
             $now = now();
 
             $employee->assignments()
@@ -69,23 +88,15 @@ class EmployeeAssignmentController extends Controller
                 ->update(['end_date' => $now]);
 
             $employee->assignments()->create([
-                'outlet_id'       => $data['outlet_id'],
+                'outlet_id'       => $outletId,
                 'effective_date'  => $now,
                 'assignment_type' => 'primary',
-                'reason'          => 'Drag-and-drop org-chart',
+                'reason'          => $reason,
                 'created_by'      => auth()->user()?->id,
             ]);
 
-            $employee->update(['outlet_id' => $data['outlet_id']]);
-
-            DB::commit();
-
-            return response()->json(['message' => 'Outlet berhasil diperbarui.']);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return response()->json(['message' => 'Gagal menyimpan: ' . $e->getMessage()], 500);
-        }
+            $employee->update(['outlet_id' => $outletId]);
+        });
     }
 
     public function destroy(Employee $employee, EmployeeOutletAssignment $assignment)

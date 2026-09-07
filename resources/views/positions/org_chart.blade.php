@@ -23,11 +23,11 @@
             </div>
             <p style="color:#64748B; font-size:13px; margin:4px 0 0 0;" x-show="!editMode">
                 <span x-show="viewMode === 'position'">Klik posisi manapun untuk melihat daftar karyawan</span>
-                <span x-show="viewMode === 'person'" x-cloak>Setiap kotak adalah 1 karyawan — foto, nama, dan jabatan</span>
+                <span x-show="viewMode === 'person'" x-cloak>Klik "+" di kotak manapun untuk menambah departemen, brand, outlet, atau karyawan</span>
             </p>
             <p style="color:#059669; font-size:13px; margin:4px 0 0 0; font-weight:600;" x-show="editMode" x-cloak>
                 <span x-show="viewMode === 'position'">Mode Atur Struktur aktif — drag kotak posisi lalu drop ke posisi lain untuk mengatur "melapor ke"</span>
-                <span x-show="viewMode === 'person'">Mode Atur Struktur aktif — drag karyawan lalu drop ke atasannya untuk mengatur "atasan/bawahan"</span>
+                <span x-show="viewMode === 'person'">Mode Atur Struktur aktif — drag kotak lalu drop ke kotak lain untuk memindah cabang</span>
             </p>
         </div>
 
@@ -41,7 +41,7 @@
                 <button type="button" @click="viewMode = 'person'"
                         :style="viewMode === 'person' ? 'background:white;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent;color:#64748B;'"
                         style="padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; border:none; cursor:pointer;">
-                    👤 Per Orang
+                    🧩 Builder Struktur
                 </button>
             </div>
 
@@ -182,114 +182,50 @@
 
     <div x-show="viewMode === 'person'" x-cloak>
 
-    {{-- Panel Brand/Outlet — drop karyawan di sini untuk pindah outlet --}}
-    <div x-show="editMode" x-cloak style="background:white; border:1.5px solid #DDD6FE; border-radius:14px;
-                padding:14px 16px; margin-bottom:16px;">
-        <div style="font-size:12px; font-weight:700; color:#7C3AED; text-transform:uppercase;
-                    letter-spacing:0.03em; margin-bottom:10px;">
-            🏬 Drop karyawan di sini untuk pindah Brand / Outlet
+    <div style="border-radius:14px; border:1.5px solid #E2E8F0; overflow:hidden;
+                box-shadow:0 2px 6px rgba(0,0,0,0.05); background:#FAFAFA; margin-bottom:20px;">
+        @if($nodeRoots->isEmpty())
+        <div style="padding:48px 20px; text-align:center;">
+            <div style="font-size:2.5rem; margin-bottom:12px;">🧩</div>
+            <p style="font-size:13px; color:#64748B; margin:0 0 14px 0;">
+                Belum ada struktur. Mulai dengan menambah node pertama —
+                Departemen, Brand, Outlet, atau Karyawan.
+            </p>
+            <button type="button" @click="nodeEditor.openCreate(null)"
+                    style="background:#7C3AED; color:white; border:none; padding:9px 20px;
+                           border-radius:10px; font-size:13px; font-weight:600; cursor:pointer;">
+                + Tambah Node Pertama
+            </button>
         </div>
-        <div style="display:flex; flex-direction:column; gap:10px; max-height:220px; overflow-y:auto;" class="oc-scroll">
-            @forelse($brandGroups as $brand => $outlets)
-            <div>
-                <div style="font-size:11px; font-weight:700; color:#475569; margin-bottom:6px;">{{ $brand }}</div>
-                <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                    @foreach($outlets as $outlet)
-                    <div class="oc-outlet-chip"
-                         :class="{ 'oc-outlet-chip-dragover': dragOverOutletId === {{ $outlet->id }} }"
-                         @dragover.prevent="dragOverOutletId = {{ $outlet->id }}"
-                         @dragleave="dragOverOutletId = null"
-                         @drop.prevent="dropOnOutlet({{ $outlet->id }})">
-                        {{ $outlet->name }}
-                    </div>
-                    @endforeach
-                </div>
+        @else
+        <div class="oc-unparent-zone" x-show="editMode" x-cloak
+             @dragover.prevent="dragOverId = -1"
+             @dragleave="dragOverId = null"
+             @drop.prevent="drop(null)"
+             :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
+            ⬆ Drop di sini untuk jadikan node ini paling atas
+        </div>
+        <div class="oc-dept-tree oc-scroll">
+            @foreach($nodeRoots as $root)
+            @include('positions._org_chart_builder_node', [
+                'node'             => $root,
+                'childrenByParent' => $nodeChildrenByParent,
+            ])
+            @endforeach
+            @if($nodeRoots->isNotEmpty())
+            <div class="oc-node" style="justify-content:center;">
+                <button type="button" @click="nodeEditor.openCreate(null)" class="oc-add-root-btn">
+                    + Tambah Cabang Baru
+                </button>
             </div>
-            @empty
-            <div style="font-size:12px; color:#94A3B8; font-style:italic;">Belum ada data outlet.</div>
-            @endforelse
+            @endif
         </div>
+        @endif
     </div>
-
-    {{-- DEPARTMENTS — tree per-orang, hierarki atasan/bawahan lewat manager_id --}}
-    <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
-    @forelse($departments as $dept)
-    @php $empTree = $employeeDeptTrees[$dept->id]; @endphp
-    @if($empTree['roots']->isNotEmpty())
-    <div style="border-radius:14px; border:1.5px solid #E2E8F0;
-                overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-
-        <div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);
-                    color:white; padding:12px 16px;
-                    display:flex; justify-content:space-between;
-                    align-items:center;">
-            <div>
-                <div style="font-weight:700; font-size:13px;">{{ $dept->name }}</div>
-                @if($dept->code)
-                <div style="font-size:10px; opacity:0.65;">{{ $dept->code }}</div>
-                @endif
-            </div>
-            <span style="background:rgba(255,255,255,0.2); padding:2px 10px;
-                         border-radius:99px; font-size:11px; font-weight:600;
-                         white-space:nowrap;">
-                {{ $empTree['roots']->count() + collect($empTree['childrenByParent'])->flatten()->count() }} karyawan
-            </span>
-        </div>
-
-        <div style="background:#FAFAFA;">
-            <div class="oc-unparent-zone" x-show="editMode" x-cloak
-                 @dragover.prevent="dragOverId = -1"
-                 @dragleave="dragOverId = null"
-                 @drop.prevent="drop(null)"
-                 :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
-                ⬆ Drop di sini untuk jadikan karyawan ini paling atas (tidak punya atasan)
-            </div>
-            <div class="oc-dept-tree oc-scroll">
-                @foreach($empTree['roots'] as $root)
-                @include('positions._org_chart_person_node', [
-                    'employee'         => $root,
-                    'childrenByParent' => $empTree['childrenByParent'],
-                ])
-                @endforeach
-            </div>
-        </div>
-    </div>
-    @endif
-    @empty
-    @endforelse
-    </div>{{-- end department list per-orang --}}
-
-    {{-- Karyawan belum terdepartemen --}}
-    @if($employeeUnassignedTree['roots']->isNotEmpty())
-    <div style="margin-bottom:20px; border-radius:16px;
-                border:1.5px solid #FED7AA; overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#F59E0B,#D97706);
-                    color:white; padding:14px 20px;
-                    font-weight:700; font-size:15px;
-                    display:flex; justify-content:space-between; align-items:center;">
-            <span>⚠️ Belum Terdepartemen</span>
-        </div>
-        <div style="background:#FFFBEB;">
-            <div class="oc-unparent-zone" x-show="editMode" x-cloak
-                 @dragover.prevent="dragOverId = -1"
-                 @dragleave="dragOverId = null"
-                 @drop.prevent="drop(null)"
-                 :style="dragOverId === -1 ? 'border-color:#059669;background:#ECFDF5;color:#059669;' : ''">
-                ⬆ Drop di sini untuk jadikan karyawan ini paling atas (tidak punya atasan)
-            </div>
-            <div class="oc-dept-tree oc-scroll">
-                @foreach($employeeUnassignedTree['roots'] as $root)
-                @include('positions._org_chart_person_node', [
-                    'employee'         => $root,
-                    'childrenByParent' => $employeeUnassignedTree['childrenByParent'],
-                ])
-                @endforeach
-            </div>
-        </div>
-    </div>
-    @endif
 
     </div>{{-- end viewMode === 'person' --}}
+
+    @include('positions._org_chart_node_editor_modal')
 
     {{-- ═══ SLIDE PANEL ═══ --}}
 
@@ -624,18 +560,36 @@
     border-radius: 12px; text-align: center; font-size: 11.5px; font-weight: 600;
     color: #10B981; background: #F0FDF4; transition: all .15s;
 }
-.oc-outlet-label {
-    font-size: 10px; color: #0369A1; font-weight: 600; margin-top: 3px;
+/* ── Builder Struktur: node polimorfik (department/brand/outlet/employee) ── */
+.oc-orgunit-icon { font-size: 30px; margin-bottom: 6px; }
+.oc-deptname {
+    font-size: 10px; color: #1e293b; font-weight: 700; margin-top: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.oc-outlet-chip {
-    background: #F0F9FF; border: 1.5px dashed #7DD3FC; color: #0369A1;
-    font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 99px;
-    transition: all .15s;
+.oc-node-edit-btn {
+    position: absolute; top: -9px; right: -9px; width: 22px; height: 22px;
+    border-radius: 50%; background: white; border: 1.5px solid #DDD6FE;
+    font-size: 11px; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; padding: 0; line-height: 1;
 }
-.oc-outlet-chip-dragover {
-    background: #DBEAFE !important; border-color: #1D4ED8 !important; color: #1D4ED8 !important;
-    box-shadow: 0 0 0 3px rgba(29,78,216,0.15);
+.oc-add-child-btn {
+    background: white; border: 1.5px dashed #C4B5FD; color: #7C3AED;
+    font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px;
+    cursor: pointer; margin: 4px auto 0; display: block;
+}
+.oc-add-root-btn {
+    background: white; border: 2px dashed #C4B5FD; color: #7C3AED;
+    font-size: 12.5px; font-weight: 700; padding: 14px 22px; border-radius: 16px;
+    cursor: pointer; align-self: center;
+}
+.oc-anggota-wrap {
+    display: flex; flex-direction: column; align-items: center; cursor: pointer;
+    padding: 4px; border-radius: 10px; border: 2px solid transparent;
+}
+.oc-photo-sm { width: 40px; height: 40px; font-size: 14px; margin-bottom: 4px; }
+.oc-anggota-name {
+    font-size: 9.5px; color: #475569; font-weight: 600; text-align: center;
+    max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 </style>
 
@@ -658,7 +612,6 @@ function orgChart() {
         draggedId:   null,
         draggedKind: null,
         dragOverId:  null,
-        dragOverOutletId: null,
 
         openPanel(pos) {
             this.panelOpen      = true;
@@ -725,18 +678,18 @@ function orgChart() {
             if (!sourceId || sourceId === targetId) return;
 
             const isPosition = kind === 'position';
-            const noun       = isPosition ? 'posisi' : 'karyawan';
+            const noun       = isPosition ? 'posisi' : 'node';
             const label      = targetId
-                ? `Jadikan ${noun} ini melapor ke ${noun} yang dipilih?`
-                : `Jadikan ${noun} ini paling atas (tidak melapor ke siapapun)?`;
+                ? `Jadikan ${noun} ini bawahan dari ${noun} yang dipilih?`
+                : `Jadikan ${noun} ini paling atas?`;
             if (!confirm(label)) return;
 
             const url  = isPosition
                 ? `/positions/${sourceId}/set-parent`
-                : `/employees/${sourceId}/set-manager`;
+                : `/org-chart-nodes/${sourceId}/set-parent`;
             const body = isPosition
                 ? { parent_position_id: targetId }
-                : { manager_id: targetId };
+                : { parent_id: targetId };
 
             fetch(url, {
                 method: 'POST',
@@ -754,30 +707,121 @@ function orgChart() {
                 .catch(() => alert('Gagal menyimpan struktur, coba lagi.'));
         },
 
-        dropOnOutlet(outletId) {
-            const sourceId    = this.draggedId;
-            const kind        = this.draggedKind;
-            this.dragOverOutletId = null;
-            this.draggedId    = null;
-            this.draggedKind  = null;
+        nodeEditor: {
+        show:  false,
+        mode:  'create', // 'create' | 'edit'
+        nodeId: null,
+        parentId: null,
+        nodeType: 'employee',
+        employeeId: '',
+        employeePositionId: '',
+        employeeDepartmentId: '',
+        departmentId: '',
+        outletId: '',
+        brandName: '',
+        newBrandName: '',
+        leaderStatus: 'auto', // 'auto' | 'leader' | 'anggota'
+        saving: false,
+        error: '',
 
-            if (!sourceId || kind !== 'employee') return;
-            if (!confirm('Pindahkan karyawan ini ke outlet yang dipilih?')) return;
+        openCreate(parentId, defaults = {}) {
+            this.show       = true;
+            this.mode       = 'create';
+            this.nodeId     = null;
+            this.parentId   = parentId;
+            this.nodeType   = defaults.nodeType || 'employee';
+            this.employeeId = '';
+            this.employeePositionId = '';
+            this.employeeDepartmentId = '';
+            this.departmentId = '';
+            this.outletId   = '';
+            this.brandName  = '';
+            this.newBrandName = '';
+            this.leaderStatus = defaults.leaderStatus || 'auto';
+            this.error      = '';
+        },
 
-            fetch(`/employees/${sourceId}/reassign-outlet`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                },
-                body: JSON.stringify({ outlet_id: outletId }),
-            })
+        openEdit(node) {
+            this.show       = true;
+            this.mode       = 'edit';
+            this.nodeId     = node.id;
+            this.parentId   = null;
+            this.nodeType   = node.node_type;
+            this.employeeId = node.employee_id || '';
+            this.employeePositionId = '';
+            this.employeeDepartmentId = '';
+            this.departmentId = node.department_id || '';
+            this.outletId   = node.outlet_id || '';
+            this.brandName  = node.brand_name || '';
+            this.newBrandName = '';
+            this.leaderStatus = node.is_leader_override === true ? 'leader'
+                : node.is_leader_override === false ? 'anggota' : 'auto';
+            this.error      = '';
+        },
+
+        close() {
+            this.show = false;
+        },
+
+        csrfHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            };
+        },
+
+        async ensureBrandCreated() {
+            return this.newBrandName.trim() || this.brandName;
+        },
+
+        async save() {
+            this.error  = '';
+            this.saving = true;
+
+            const payload = {
+                node_type: this.nodeType,
+                parent_id: this.parentId,
+            };
+
+            if (this.nodeType === 'employee') {
+                payload.employee_id = this.employeeId || null;
+                if (this.employeePositionId) payload.employee_position_id = this.employeePositionId;
+                if (this.employeeDepartmentId) payload.employee_department_id = this.employeeDepartmentId;
+                payload.is_leader_override = this.leaderStatus === 'leader' ? true
+                    : this.leaderStatus === 'anggota' ? false : null;
+            } else if (this.nodeType === 'department') {
+                payload.department_id = this.departmentId || null;
+            } else if (this.nodeType === 'outlet') {
+                payload.outlet_id = this.outletId || null;
+            } else if (this.nodeType === 'brand') {
+                payload.brand_name = (await this.ensureBrandCreated()) || null;
+            }
+
+            const url    = this.mode === 'create' ? '/org-chart-nodes' : `/org-chart-nodes/${this.nodeId}`;
+            const method = this.mode === 'create' ? 'POST' : 'PUT';
+
+            fetch(url, { method, headers: this.csrfHeaders(), body: JSON.stringify(payload) })
                 .then(r => r.json().then(data => ({ ok: r.ok, data })))
                 .then(({ ok, data }) => {
-                    if (!ok) { alert(data.message || 'Gagal menyimpan outlet.'); return; }
+                    this.saving = false;
+                    if (!ok) { this.error = data.message || 'Gagal menyimpan.'; return; }
                     window.location.reload();
                 })
-                .catch(() => alert('Gagal menyimpan outlet, coba lagi.'));
+                .catch(() => { this.saving = false; this.error = 'Gagal menyimpan, coba lagi.'; });
+        },
+
+        remove() {
+            if (!this.nodeId) return;
+            if (!confirm('Hapus node ini? Node yang masih punya bawahan tidak bisa dihapus.')) return;
+
+            fetch(`/org-chart-nodes/${this.nodeId}`, { method: 'DELETE', headers: this.csrfHeaders() })
+                .then(r => r.json().then(data => ({ ok: r.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) { alert(data.message || 'Gagal menghapus.'); return; }
+                    window.location.reload();
+                })
+                .catch(() => alert('Gagal menghapus, coba lagi.'));
+        },
         },
     };
 }

@@ -41,6 +41,7 @@ use App\Http\Controllers\Hrd\UserRoleManagementController;
 use App\Http\Controllers\Hrd\RolePermissionController;
 use App\Http\Controllers\Trainer\TrainingEventController as TrainerTrainingEventController;
 use App\Http\Controllers\Master\DepartmentController;
+use App\Http\Controllers\Master\OrgChartNodeController;
 use App\Http\Controllers\Master\PositionController;
 use App\Http\Controllers\Master\OutletController;
 use App\Http\Controllers\Master\MasterShiftController;
@@ -178,6 +179,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/template', [PositionController::class, 'downloadTemplate'])->name('template');
             Route::post('/import', [PositionController::class, 'import'])->name('import');
         });
+        Route::prefix('org-chart-nodes')->name('org-chart-nodes.')->group(function () {
+            Route::post('/', [OrgChartNodeController::class, 'store'])->name('store');
+            Route::put('/{orgChartNode}', [OrgChartNodeController::class, 'update'])->name('update');
+            Route::delete('/{orgChartNode}', [OrgChartNodeController::class, 'destroy'])->name('destroy');
+            Route::post('/{orgChartNode}/set-parent', [OrgChartNodeController::class, 'setParent'])->name('set-parent');
+        });
         Route::get('outlets/template', [OutletController::class, 'template'])->name('outlets.template');
         Route::get('outlets/export', [OutletController::class, 'export'])->name('outlets.export');
         Route::post('outlets/import', [OutletController::class, 'import'])->name('outlets.import');
@@ -215,9 +222,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('employees/{employee}/assignments/{assignment}',
             [\App\Http\Controllers\EmployeeAssignmentController::class, 'destroy'])
             ->name('employees.assignments.destroy');
-        Route::post('employees/{employee}/set-manager',
-            [\App\Http\Controllers\Master\PositionController::class, 'setEmployeeManager'])
-            ->name('employees.set-manager');
         Route::post('employees/{employee}/reassign-outlet',
             [\App\Http\Controllers\EmployeeAssignmentController::class, 'dragReassignOutlet'])
             ->name('employees.reassign-outlet');
