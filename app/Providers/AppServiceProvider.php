@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Models\AppSetting;
 use App\Models\Candidate;
 use App\Models\CandidateAssessment;
+use App\Models\Employee;
 use App\Models\FormAssignment;
 use App\Observers\CandidateAssessmentObserver;
 use App\Observers\CandidateObserver;
+use App\Observers\EmployeePositionSyncObserver;
 use App\Observers\FormAssignmentObserver;
 use App\Models\User;
 use App\Support\MailConfiguration;
@@ -43,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         Candidate::observe(CandidateObserver::class);
         CandidateAssessment::observe(CandidateAssessmentObserver::class);
         FormAssignment::observe(FormAssignmentObserver::class);
+        Employee::observe(EmployeePositionSyncObserver::class);
 
         try {
             if (Schema::hasTable('app_settings')) {

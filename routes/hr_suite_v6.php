@@ -225,6 +225,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('employees/{employee}/reassign-outlet',
             [\App\Http\Controllers\EmployeeAssignmentController::class, 'dragReassignOutlet'])
             ->name('employees.reassign-outlet');
+        Route::post('employees/{employee}/additional-positions',
+            [\App\Http\Controllers\EmployeeAdditionalPositionController::class, 'store'])
+            ->name('employees.additional-positions.store');
+        Route::delete('employees/{employee}/additional-positions/{employeePosition}',
+            [\App\Http\Controllers\EmployeeAdditionalPositionController::class, 'destroy'])
+            ->name('employees.additional-positions.destroy');
 
         // BPJS Assignments — harus sebelum Route::resource('employees') agar {employee} tidak ditangkap wildcard
         Route::resource('employees/{employee}/bpjs-assignments',

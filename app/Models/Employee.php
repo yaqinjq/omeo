@@ -114,6 +114,27 @@ class Employee extends Model
         return $this->belongsTo(Position::class);
     }
 
+    /**
+     * Baris pivot jabatan tambahan (di luar position_id yang utama) — dipakai
+     * untuk CRUD di UI "Jabatan Tambahan". position_id tetap 1 sumber
+     * kebenaran untuk SEMUA kode lama (LMS, Appraisal, org-chart, export,
+     * dst); tabel ini murni tambahan, disinkronkan otomatis lewat
+     * EmployeePositionSyncObserver setiap kali position_id berubah.
+     */
+    public function additionalPositions()
+    {
+        return $this->hasMany(EmployeePosition::class);
+    }
+
+    /**
+     * Seluruh jabatan (utama + tambahan) untuk ditampilkan — bukan untuk
+     * dipakai sebagai basis matching/eligibility di modul lain.
+     */
+    public function allPositions()
+    {
+        return $this->belongsToMany(Position::class, 'employee_positions')->withPivot('is_primary');
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class);

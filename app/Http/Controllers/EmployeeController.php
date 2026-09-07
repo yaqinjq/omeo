@@ -382,6 +382,10 @@ class EmployeeController extends Controller
                 ? $employee->assignments()->with(['outlet', 'payrollOutlet', 'legalEntity', 'creator'])->get()
                 : collect(),
             'outletOptions'   => \App\Models\Outlet::orderBy('name')->get(['id', 'name', 'outlet_type']),
+            'additionalPositions' => Schema::hasTable('employee_positions')
+                ? $employee->additionalPositions()->with('position:id,name')->where('is_primary', false)->get()
+                : collect(),
+            'positionOptions' => \App\Models\Position::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

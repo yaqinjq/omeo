@@ -853,7 +853,7 @@
 
                     {{-- ── TAB PENUGASAN ───────────────────────────────────────────────── --}}
                     <div x-show="tab === 'penugasan'" style="display:none;" class="space-y-6"
-                         x-data="{ showAssignModal: false }">
+                         x-data="{ showAssignModal: false, showAddPositionModal: false }">
 
                         <div class="flex items-center justify-between">
                             <div>
@@ -949,6 +949,98 @@
                                     @endforelse
                                 </tbody>
                             </table>
+                        </div>
+
+                        {{-- Jabatan Tambahan --}}
+                        <div class="flex items-center justify-between pt-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Jabatan Tambahan</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Di luar posisi utama ({{ $employee->position?->name ?? 'belum diset' }}) — untuk karyawan yang merangkap lebih dari 1 jabatan</p>
+                            </div>
+                            @can('manage-employees')
+                            <button @click="showAddPositionModal = true"
+                                    type="button"
+                                    style="background-color:#7C3AED;color:#FFFFFF;"
+                                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl hover:opacity-90 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Tambah Jabatan
+                            </button>
+                            @endcan
+                        </div>
+
+                        <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                            <table class="min-w-full text-sm divide-y divide-slate-200 dark:divide-slate-700">
+                                <thead class="bg-slate-50 dark:bg-slate-800 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">Jabatan</th>
+                                        @can('manage-employees')<th class="px-4 py-3 text-center">Aksi</th>@endcan
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-900">
+                                    @forelse($additionalPositions ?? [] as $addPos)
+                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                                        <td class="px-4 py-3 font-medium text-slate-800 dark:text-white">{{ $addPos->position?->name ?? '—' }}</td>
+                                        @can('manage-employees')
+                                        <td class="px-4 py-3 text-center">
+                                            <form method="POST"
+                                                  action="{{ route('employees.additional-positions.destroy', [$employee, $addPos]) }}"
+                                                  onsubmit="return confirm('Hapus jabatan tambahan ini?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="text-xs text-red-600 hover:text-red-800 font-medium">Hapus</button>
+                                            </form>
+                                        </td>
+                                        @endcan
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="2" class="px-4 py-8 text-center text-slate-400 text-sm">Belum ada jabatan tambahan.</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- Modal Tambah Jabatan --}}
+                        <div x-show="showAddPositionModal" x-cloak
+                             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                             @click.self="showAddPositionModal = false">
+                            <div class="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 shadow-xl p-6 space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-lg font-bold text-slate-900 dark:text-white">Tambah Jabatan</h4>
+                                    <button @click="showAddPositionModal = false" type="button"
+                                            class="text-slate-400 hover:text-slate-600">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <form method="POST" action="{{ route('employees.additional-positions.store', $employee) }}" class="space-y-4">
+                                    @csrf
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Posisi</label>
+                                        <select name="position_id" required
+                                                class="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <option value="">— Pilih Posisi —</option>
+                                            @foreach($positionOptions ?? [] as $posOpt)
+                                                <option value="{{ $posOpt->id }}">{{ $posOpt->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="flex justify-end gap-2 pt-2">
+                                        <button type="button" @click="showAddPositionModal = false"
+                                                class="px-4 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                                            Batal
+                                        </button>
+                                        <button type="submit"
+                                                style="background-color:#7C3AED;color:#FFFFFF;"
+                                                class="px-4 py-2 text-sm font-semibold rounded-xl hover:opacity-90 transition">
+                                            Simpan
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
 
                         {{-- Modal Set Penugasan Baru --}}
