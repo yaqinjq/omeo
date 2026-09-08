@@ -15,6 +15,10 @@
     $photoUrl  = $employee?->user?->applicantProfile?->photo_path
         ? asset('storage/' . $employee->user->applicantProfile->photo_path)
         : null;
+    // Jabatan yang ditampilkan DI KOTAK INI — pakai display_position_id kalau
+    // diset (karyawan merangkap & muncul di >1 node), fallback ke jabatan
+    // utama karyawan (perilaku lama, tidak berubah untuk node yang belum diatur).
+    $shownPositionName = $node->displayPosition->name ?? $employee?->position?->name ?? 'Belum ada jabatan';
     $jsNode = [
         'id' => $node->id,
         'node_type' => $node->node_type,
@@ -22,6 +26,7 @@
         'department_id' => $node->department_id,
         'outlet_id' => $node->outlet_id,
         'brand_name' => $node->brand_name,
+        'display_position_id' => $node->display_position_id,
         'is_leader_override' => $node->is_leader_override,
     ];
 @endphp
@@ -98,7 +103,7 @@
                 </div>
                 <div class="oc-ribbon">{{ $employee->full_name ?? '(karyawan terhapus)' }}</div>
                 <div class="oc-leader-tag">👑 Team Leader</div>
-                <div class="oc-posname">{{ $employee->position->name ?? 'Belum ada jabatan' }}</div>
+                <div class="oc-posname">{{ $shownPositionName }}</div>
                 @if($employee?->department)
                 <div class="oc-deptname">{{ $employee->department->name }}</div>
                 @endif

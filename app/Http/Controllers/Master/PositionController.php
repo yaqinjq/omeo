@@ -281,6 +281,7 @@ class PositionController extends Controller
         $allNodes = OrgChartNode::with([
             'department:id,name',
             'outlet:id,name,brand_name',
+            'displayPosition:id,name',
             'employee' => function ($q) {
                 $q->select(['id', 'full_name', 'position_id', 'department_id'])
                     ->with(['position:id,name', 'user.applicantProfile:id,user_id,personal_json']);

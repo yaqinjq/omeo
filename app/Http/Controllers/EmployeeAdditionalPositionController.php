@@ -8,6 +8,28 @@ use Illuminate\Http\Request;
 
 class EmployeeAdditionalPositionController extends Controller
 {
+    /**
+     * Daftar SELURUH jabatan karyawan ini (utama + tambahan) — dipakai org-chart
+     * Builder untuk memilih "kotak ini mewakili jabatan yang mana" saat
+     * karyawan yang sama muncul di lebih dari 1 node.
+     */
+    public function positions(Employee $employee)
+    {
+        $primary = $employee->position_id
+            ? [['id' => $employee->position_id, 'name' => $employee->position?->name, 'is_primary' => true]]
+            : [];
+
+        $additional = $employee->additionalPositions()
+            ->with('position:id,name')
+            ->where('is_primary', false)
+            ->get()
+            ->map(fn ($ep) => ['id' => $ep->position_id, 'name' => $ep->position?->name, 'is_primary' => false])
+            ->values()
+            ->all();
+
+        return response()->json(['positions' => array_merge($primary, $additional)]);
+    }
+
     public function store(Request $request, Employee $employee)
     {
         $data = $request->validate([

@@ -20,6 +20,7 @@ class OrgChartNode extends Model
         'outlet_id',
         'brand_name',
         'employee_id',
+        'display_position_id',
         'is_leader_override',
         'sort_order',
         'created_by',
@@ -53,6 +54,17 @@ class OrgChartNode extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * Jabatan mana yang diwakili KOTAK INI secara spesifik — dipakai kalau
+     * karyawan ini punya lebih dari 1 jabatan dan muncul di lebih dari 1
+     * node (lihat employee_positions). Null = pakai jabatan utama karyawan
+     * (perilaku lama, tidak berubah).
+     */
+    public function displayPosition(): BelongsTo
+    {
+        return $this->belongsTo(Position::class, 'display_position_id');
     }
 
     /**

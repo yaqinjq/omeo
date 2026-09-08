@@ -60,6 +60,17 @@
                     'placeholder' => 'Cari nama karyawan...',
                 ])
             </div>
+            <div x-data="{ list: [] }"
+                 x-effect="nodeEditor.employeeId ? fetch(`/employees/${nodeEditor.employeeId}/positions`).then(r => r.json()).then(d => { list = d.positions; if (!list.find(p => p.id == nodeEditor.displayPositionId)) nodeEditor.displayPositionId = ''; }) : list = []"
+                 x-show="list.length > 1" x-cloak>
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Tampilkan Sebagai Jabatan (kotak ini)</label>
+                <select x-model="nodeEditor.displayPositionId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
+                    <template x-for="p in list" :key="p.id">
+                        <option :value="p.id" x-text="p.name + (p.is_primary ? ' (utama)' : '')"></option>
+                    </template>
+                </select>
+                <p style="font-size:11px; color:#94A3B8; margin-top:4px;">Karyawan ini merangkap lebih dari 1 jabatan — pilih jabatan mana yang diwakili kotak ini.</p>
+            </div>
             <div>
                 <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Pilih Posisi (opsional)</label>
                 @include('positions._org_chart_search_picker', [

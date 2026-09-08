@@ -749,6 +749,7 @@ function orgChart() {
         lockType: false,
         nodeType: 'employee',
         employeeId: '',
+        displayPositionId: '',
         employeePositionId: '',
         newPositionName: '',
         employeeDepartmentId: '',
@@ -764,6 +765,7 @@ function orgChart() {
 
         resetFields() {
             this.employeeId = '';
+            this.displayPositionId = '';
             this.employeePositionId = '';
             this.newPositionName = '';
             this.employeeDepartmentId = '';
@@ -803,6 +805,7 @@ function orgChart() {
             this.nodeType   = node.node_type;
             this.resetFields();
             this.employeeId = node.employee_id || '';
+            this.displayPositionId = node.display_position_id || '';
             this.departmentId = node.department_id || '';
             this.outletId   = node.outlet_id || '';
             this.brandName  = node.brand_name || '';
@@ -841,6 +844,7 @@ function orgChart() {
 
                 if (this.nodeType === 'employee') {
                     payload.employee_id = this.employeeId || null;
+                    payload.display_position_id = this.displayPositionId || null;
 
                     payload.employee_position_id = this.newPositionName.trim()
                         ? await this.createQuick('/positions', this.newPositionName.trim())

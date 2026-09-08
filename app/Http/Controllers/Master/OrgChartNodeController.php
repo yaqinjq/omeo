@@ -22,6 +22,7 @@ class OrgChartNodeController extends Controller
             'employee_id'            => 'nullable|exists:employees,id',
             'employee_position_id'   => 'nullable|exists:positions,id',
             'employee_department_id' => 'nullable|exists:departments,id',
+            'display_position_id'    => 'nullable|exists:positions,id',
             'is_leader_override'     => 'nullable|boolean',
         ]);
 
@@ -45,6 +46,7 @@ class OrgChartNodeController extends Controller
             'outlet_id'           => $data['node_type'] === OrgChartNode::TYPE_OUTLET ? $data['outlet_id'] : null,
             'brand_name'          => $data['node_type'] === OrgChartNode::TYPE_BRAND ? $data['brand_name'] : null,
             'employee_id'         => $data['node_type'] === OrgChartNode::TYPE_EMPLOYEE ? $data['employee_id'] : null,
+            'display_position_id' => $data['node_type'] === OrgChartNode::TYPE_EMPLOYEE ? ($data['display_position_id'] ?? null) : null,
             'is_leader_override'  => $data['is_leader_override'] ?? null,
             'created_by'          => auth()->id(),
         ]);
@@ -65,6 +67,7 @@ class OrgChartNodeController extends Controller
             'employee_id'            => 'nullable|exists:employees,id',
             'employee_position_id'   => 'nullable|exists:positions,id',
             'employee_department_id' => 'nullable|exists:departments,id',
+            'display_position_id'    => 'nullable|exists:positions,id',
             'is_leader_override'     => 'nullable|boolean',
         ]);
 
@@ -75,6 +78,10 @@ class OrgChartNodeController extends Controller
 
         if ($orgChartNode->node_type === OrgChartNode::TYPE_EMPLOYEE && array_key_exists('is_leader_override', $data)) {
             $orgChartNode->is_leader_override = $data['is_leader_override'];
+        }
+
+        if ($orgChartNode->node_type === OrgChartNode::TYPE_EMPLOYEE && array_key_exists('display_position_id', $data)) {
+            $orgChartNode->display_position_id = $data['display_position_id'];
         }
 
         if ($orgChartNode->node_type === OrgChartNode::TYPE_DEPARTMENT && ! empty($data['department_id'])) {

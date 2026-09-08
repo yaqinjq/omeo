@@ -225,6 +225,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('employees/{employee}/reassign-outlet',
             [\App\Http\Controllers\EmployeeAssignmentController::class, 'dragReassignOutlet'])
             ->name('employees.reassign-outlet');
+        Route::get('employees/{employee}/positions',
+            [\App\Http\Controllers\EmployeeAdditionalPositionController::class, 'positions'])
+            ->name('employees.positions');
         Route::post('employees/{employee}/additional-positions',
             [\App\Http\Controllers\EmployeeAdditionalPositionController::class, 'store'])
             ->name('employees.additional-positions.store');
