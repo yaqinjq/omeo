@@ -36,6 +36,7 @@ return [
         'attendance.reports.view' => ['label' => 'View Attendance Reports', 'group' => 'Employees'],
         'training.manage' => ['label' => 'Manage Training', 'group' => 'Training'],
         'appraisals.manage' => ['label' => 'Manage Appraisals', 'group' => 'Appraisal'],
+        'tasks.manage' => ['label' => 'Manage Tasks & Projects', 'group' => 'Employees'],
         'notifications.manage' => ['label' => 'Manage Notifications', 'group' => 'General'],
 
         'finance.view'          => ['label' => 'Lihat Finance Dashboard',    'group' => 'Finance'],
@@ -86,6 +87,7 @@ return [
             'attendance.reports.view',
             'training.manage',
             'appraisals.manage',
+            'tasks.manage',
             'notifications.manage',
             'master.company_groups.manage',
             'master.legal_entities.manage',
@@ -98,6 +100,7 @@ return [
             'candidates.view',
             'employees.view',
             'appraisals.manage',
+            'tasks.manage',
             'notifications.manage',
         ],
         'employee' => [],
@@ -124,6 +127,8 @@ return [
 
         'departments.*' => ['departments.manage'],
         'positions.*' => ['positions.manage'],
+        'tasks.*' => ['tasks.manage'],
+        'projects.*' => ['tasks.manage'],
         'outlets.*' => ['outlets.manage'],
         'hrd.attendance.*' => ['attendance.reports.view'],
         'hrd.probation-verifications.*' => ['profile_changes.review'],

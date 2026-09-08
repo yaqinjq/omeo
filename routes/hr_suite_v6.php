@@ -124,6 +124,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/hr-notifications/{id}/read', [HrNotificationController::class, 'markRead'])->name('hr-notifications.read');
     Route::post('/hr-notifications/read-all', [HrNotificationController::class, 'markAllRead'])->name('hr-notifications.readAll');
 
+    Route::get('/my-tasks', [\App\Http\Controllers\MyTaskController::class, 'index'])->name('tasks.my');
+    Route::patch('/my-tasks/{task}/status', [\App\Http\Controllers\MyTaskController::class, 'updateStatus'])->name('tasks.my.status');
+
     Route::get('/appraisals/my', [AppraisalController::class, 'my'])->name('appraisals.my');
     Route::get('/appraisals/evaluator', [AppraisalController::class, 'evaluator'])->name('appraisals.evaluator');
     Route::get('/appraisals/panduan-penilaian', [AppraisalController::class, 'guide'])->name('appraisals.guide');
@@ -159,6 +162,15 @@ Route::middleware(['auth'])->group(function () {
             // Backward-compatible endpoint lama supaya tidak memutus bookmark existing.
             Route::get('/settings/user-roles', [UserRoleManagementController::class, 'index'])->middleware('permission:settings.manage,users_roles.manage')->name('settings.user-roles.index');
             Route::put('/settings/user-roles/{user}', [UserRoleManagementController::class, 'updateRole'])->middleware('permission:settings.manage,users_roles.manage')->name('settings.user-roles.update');
+        });
+
+        Route::resource('projects', \App\Http\Controllers\ProjectController::class)->except(['show', 'edit', 'create']);
+        Route::prefix('tasks')->name('tasks.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\TaskController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\TaskController::class, 'store'])->name('store');
+            Route::put('/{task}', [\App\Http\Controllers\TaskController::class, 'update'])->name('update');
+            Route::delete('/{task}', [\App\Http\Controllers\TaskController::class, 'destroy'])->name('destroy');
+            Route::patch('/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])->name('status');
         });
 
         Route::get('departments/template', [DepartmentController::class, 'template'])->name('departments.template');

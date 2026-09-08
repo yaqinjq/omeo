@@ -99,6 +99,7 @@
     if ($isTrainingTrainer && ($l = $routeItem('trainer.events.index', 'Trainer Events', 'report'))) $userMenu[] = $l;
     if ($l = $routeItem('employee-profile.show', 'Profil Saya', 'profile')) $userMenu[] = $l;
     if ($l = $routeItem('appraisals.my', 'Appraisal Saya', 'appraisal')) $userMenu[] = $l;
+    if ($l = $routeItem('tasks.my', 'Tugas Saya', 'verification')) $userMenu[] = $l;
     if ($l = $routeItem('appraisals.guide', 'Panduan Skor Penilaian', 'template')) $userMenu[] = $l;
     if ($l = $routeItem('attendance.index', 'Presensi Saya', 'attendance')) $userMenu[] = $l;
     if (Route::has('employee.attendance.export.index')) {
@@ -136,6 +137,11 @@
   if ($l = $routeItem('outlets.index', 'Master Outlet', 'outlet')) $employees[] = $l;
   if ($l = $routeItem('master-shifts.index', 'Master Shift Kerja', 'clock')) $employees[] = $l;
   if (count($employees)) $hrdGroups[] = ['label' => 'Employees', 'items' => $employees];
+
+  $tasks = [];
+  if ($l = $routeItem('tasks.index', 'Papan Tugas', 'verification')) $tasks[] = $l;
+  if ($l = $routeItem('projects.index', 'Project', 'folder')) $tasks[] = $l;
+  if (count($tasks)) $hrdGroups[] = ['label' => 'Task Management', 'items' => $tasks];
 
   $trainingLms = [];
   if ($l = $routeItem('my-training.index', 'My Training', 'training')) $trainingLms[] = $l;
