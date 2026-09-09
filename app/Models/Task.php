@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
@@ -16,6 +17,7 @@ class Task extends Model
 
     protected $fillable = [
         'project_id',
+        'parent_task_id',
         'title',
         'description',
         'position_id',
@@ -36,6 +38,43 @@ class Task extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Breakdown tugas tanpa batas kedalaman (ClickUp-style): tugas ini bisa
+     * jadi sub-tugas dari tugas lain, dan sub-tugas itu sendiri bisa punya
+     * sub-tugas lagi, dst. Papan utama cuma menampilkan tugas root
+     * (parent_task_id null) — breakdown dilihat lewat modal edit tugas.
+     */
+    public function parentTask(): BelongsTo
+    {
+        return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'parent_task_id');
+    }
+
+    /**
+     * Semua ID keturunan (anak, cucu, dst) — dipakai saat hapus tugas supaya
+     * seluruh breakdown-nya ikut terhapus, bukan jadi baris yatim yang
+     * nunjuk ke parent_task_id yang sudah tidak ada.
+     */
+    public function allDescendantIds(): array
+    {
+        $ids = [];
+        $queue = [$this->id];
+
+        while ($queue) {
+            $childIds = static::where('parent_task_id', array_shift($queue))->pluck('id')->all();
+            foreach ($childIds as $id) {
+                $ids[] = $id;
+                $queue[] = $id;
+            }
+        }
+
+        return $ids;
     }
 
     public function position(): BelongsTo

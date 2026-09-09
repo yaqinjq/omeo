@@ -604,28 +604,12 @@
 }
 </style>
 
+<script src="{{ asset('js/search-picker.js') }}"></script>
 <script>
 window.OC_EMPLOYEES   = @json($allEmployeesForPicker->map(fn ($e) => ['id' => $e->id, 'name' => $e->full_name])->values());
 window.OC_POSITIONS   = @json($allPositionsForPicker->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])->values());
 window.OC_DEPARTMENTS = @json($allDepartmentsForPicker->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values());
 window.OC_OUTLETS     = @json($allOutletsForPicker->map(fn ($o) => ['id' => $o->id, 'name' => $o->name . ($o->brand_name ? ' · ' . $o->brand_name : '')])->values());
-
-function searchPicker(items) {
-    return {
-        items: items,
-        search: '',
-        open: false,
-        labelFor(id) {
-            const found = this.items.find(i => String(i.id) === String(id));
-            return found ? found.name : '';
-        },
-        filtered() {
-            const q = this.search.trim().toLowerCase();
-            const list = q ? this.items.filter(i => i.name.toLowerCase().includes(q)) : this.items;
-            return list.slice(0, 50);
-        },
-    };
-}
 
 function orgChart() {
     return {

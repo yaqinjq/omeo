@@ -171,6 +171,7 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/{task}', [\App\Http\Controllers\TaskController::class, 'update'])->name('update');
             Route::delete('/{task}', [\App\Http\Controllers\TaskController::class, 'destroy'])->name('destroy');
             Route::patch('/{task}/status', [\App\Http\Controllers\TaskController::class, 'updateStatus'])->name('status');
+            Route::get('/{task}/detail', [\App\Http\Controllers\TaskController::class, 'detail'])->name('detail');
         });
 
         Route::get('departments/template', [DepartmentController::class, 'template'])->name('departments.template');

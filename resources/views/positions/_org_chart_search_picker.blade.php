@@ -6,8 +6,10 @@
     - $items: nama variabel JS global berisi array {id,name} (mis. 'window.OC_EMPLOYEES')
     - $model: path Alpine ke tempat ID tersimpan (mis. 'nodeEditor.employeeId')
     - $placeholder: teks placeholder input
+    - $syncWhen: ekspresi Alpine boolean, kapan label re-sync ke nilai $model
+      (mis. 'nodeEditor.show' atau 'show') — beda tiap halaman yang pakai komponen ini
 --}}
-<div x-data="searchPicker({{ $items }})" x-effect="if (nodeEditor.show) search = labelFor({{ $model }})" style="position:relative;">
+<div x-data="searchPicker({{ $items }})" x-effect="if ({{ $syncWhen }}) search = labelFor({{ $model }})" style="position:relative;">
     <input type="text" x-model="search"
            @focus="open = true"
            @click.outside="open = false"

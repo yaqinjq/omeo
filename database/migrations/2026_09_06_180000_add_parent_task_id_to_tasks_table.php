@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('tasks', function (Blueprint $table) {
+            if (! Schema::hasColumn('tasks', 'parent_task_id')) {
+                $table->unsignedBigInteger('parent_task_id')->nullable()->after('project_id');
+                $table->foreign('parent_task_id')->references('id')->on('tasks')->cascadeOnDelete();
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('tasks', function (Blueprint $table) {
+            if (Schema::hasColumn('tasks', 'parent_task_id')) {
+                $table->dropForeign(['parent_task_id']);
+                $table->dropColumn('parent_task_id');
+            }
+        });
+    }
+};

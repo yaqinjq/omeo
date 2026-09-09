@@ -58,6 +58,7 @@
                     'items' => 'window.OC_EMPLOYEES',
                     'model' => 'nodeEditor.employeeId',
                     'placeholder' => 'Cari nama karyawan...',
+                    'syncWhen' => 'nodeEditor.show',
                 ])
             </div>
             <div x-data="{ list: [] }"
@@ -77,6 +78,7 @@
                     'items' => 'window.OC_POSITIONS',
                     'model' => 'nodeEditor.employeePositionId',
                     'placeholder' => 'Cari posisi...',
+                    'syncWhen' => 'nodeEditor.show',
                 ])
                 <input type="text" x-model="nodeEditor.newPositionName" placeholder="Atau ketik nama posisi baru"
                        style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:7px 10px; font-size:12.5px; margin-top:6px; box-sizing:border-box;">
@@ -87,6 +89,7 @@
                     'items' => 'window.OC_DEPARTMENTS',
                     'model' => 'nodeEditor.employeeDepartmentId',
                     'placeholder' => 'Cari departemen...',
+                    'syncWhen' => 'nodeEditor.show',
                 ])
                 <input type="text" x-model="nodeEditor.newEmployeeDeptName" placeholder="Atau ketik nama departemen baru"
                        style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:7px 10px; font-size:12.5px; margin-top:6px; box-sizing:border-box;">
@@ -115,6 +118,7 @@
                 'items' => 'window.OC_DEPARTMENTS',
                 'model' => 'nodeEditor.departmentId',
                 'placeholder' => 'Cari departemen...',
+                'syncWhen' => 'nodeEditor.show',
             ])
             <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin:10px 0 4px;">Atau Buat Departemen Baru</label>
             <input type="text" x-model="nodeEditor.newDepartmentName" placeholder="Nama departemen baru"
@@ -142,6 +146,7 @@
                 'items' => 'window.OC_OUTLETS',
                 'model' => 'nodeEditor.outletId',
                 'placeholder' => 'Cari outlet...',
+                'syncWhen' => 'nodeEditor.show',
             ])
         </div>
 

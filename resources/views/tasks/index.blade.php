@@ -7,7 +7,7 @@
         <div>
             <h1 style="font-size:22px; font-weight:800; color:#1e293b; margin:0;">📋 Task & Project</h1>
             <p style="color:#64748B; font-size:13px; margin:4px 0 0 0;">
-                Drag kartu antar kolom untuk ubah status — tugas bisa ditugaskan ke 1 karyawan atau ke seluruh pemegang 1 posisi
+                Drag kartu antar kolom untuk ubah status — klik kartu untuk lihat/tambah breakdown tugas tanpa batas
             </p>
         </div>
         <div style="display:flex; gap:10px;">
@@ -68,25 +68,16 @@
                      style="background:white; border:1.5px solid #E2E8F0; border-radius:12px; padding:12px; cursor:grab;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div style="font-weight:700; color:#1e293b; font-size:13px; margin-bottom:4px; flex:1;"
-                             @click="openEdit(@js([
-                                'id' => $task->id, 'title' => $task->title, 'description' => $task->description,
-                                'project_id' => $task->project_id, 'assignment_type' => $task->assignment_type,
-                                'position_id' => $task->position_id, 'employee_id' => $task->employee_id,
-                                'due_date' => $task->due_date?->format('Y-m-d'), 'priority' => $task->priority,
-                             ]))">
+                             @click="openEditById({{ $task->id }})">
                             {{ $task->title }}
                         </div>
                         <div x-data="{ open: false }" style="position:relative;">
                             <button type="button" @click="open = !open" @click.outside="open = false"
                                     style="background:none; border:none; color:#94A3B8; font-size:14px; cursor:pointer; padding:0 4px;">⋯</button>
                             <div x-show="open" x-cloak style="position:absolute; right:0; top:20px; background:white; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:10; min-width:110px;">
-                                <button type="button" @click="open=false; openEdit(@js([
-                                    'id' => $task->id, 'title' => $task->title, 'description' => $task->description,
-                                    'project_id' => $task->project_id, 'assignment_type' => $task->assignment_type,
-                                    'position_id' => $task->position_id, 'employee_id' => $task->employee_id,
-                                    'due_date' => $task->due_date?->format('Y-m-d'), 'priority' => $task->priority,
-                                ]))" style="display:block; width:100%; text-align:left; background:none; border:none; padding:8px 12px; font-size:12px; color:#1D4ED8; cursor:pointer;">✏️ Edit</button>
-                                <form method="POST" action="{{ route('tasks.destroy', $task) }}" onsubmit="return confirm('Hapus tugas ini?')">
+                                <button type="button" @click="open=false; openEditById({{ $task->id }})"
+                                        style="display:block; width:100%; text-align:left; background:none; border:none; padding:8px 12px; font-size:12px; color:#1D4ED8; cursor:pointer;">✏️ Edit</button>
+                                <form method="POST" action="{{ route('tasks.destroy', $task) }}" onsubmit="return confirm('Hapus tugas ini{{ $task->subtasks_count > 0 ? ' beserta '.$task->subtasks_count.' sub-tugasnya' : '' }}?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" style="display:block; width:100%; text-align:left; background:none; border:none; padding:8px 12px; font-size:12px; color:#DC2626; cursor:pointer;">🗑️ Hapus</button>
                                 </form>
@@ -115,6 +106,13 @@
                         </span>
                         @endif
                     </div>
+                    @if($task->subtasks_count > 0)
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #F1F5F9;">
+                        <span style="font-size:10.5px; color:#7C3AED; font-weight:600; cursor:pointer;" @click="openEditById({{ $task->id }})">
+                            🧩 {{ $task->subtasks_count }} breakdown
+                        </span>
+                    </div>
+                    @endif
                 </div>
                 @empty
                 @endforelse
@@ -126,89 +124,124 @@
     {{-- Modal create/edit tugas --}}
     <div x-show="show" x-cloak style="position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.5); display:flex; align-items:center; justify-content:center; padding:16px;"
          @click.self="show = false">
-        <div style="background:white; border-radius:16px; width:100%; max-width:460px; max-height:90vh; overflow-y:auto; padding:22px;">
+        <div style="background:white; border-radius:16px; width:100%; max-width:480px; max-height:92vh; overflow-y:auto; padding:22px;">
+
+            <div x-show="parentInfo" x-cloak style="margin-bottom:10px;">
+                <button type="button" @click="openEditById(parentInfo.id)"
+                        style="background:none; border:none; color:#7C3AED; font-size:12px; font-weight:600; cursor:pointer; padding:0;">
+                    ← Kembali ke "<span x-text="parentInfo?.title"></span>"
+                </button>
+            </div>
+
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h3 style="font-size:16px; font-weight:800; color:#1e293b; margin:0;" x-text="editId ? 'Edit Tugas' : 'Tambah Tugas'"></h3>
+                <h3 style="font-size:16px; font-weight:800; color:#1e293b; margin:0;">
+                    <span x-show="parentTaskId" x-cloak>🧩 </span><span x-text="editId ? 'Edit Tugas' : (parentTaskId ? 'Tambah Sub-tugas' : 'Tambah Tugas')"></span>
+                </h3>
                 <button type="button" @click="show = false" style="background:none; border:none; font-size:18px; color:#94A3B8; cursor:pointer;">✕</button>
             </div>
-            <form :action="editId ? `{{ url('tasks') }}/${editId}` : '{{ route('tasks.store') }}'" method="POST">
-                @csrf
-                <template x-if="editId"><input type="hidden" name="_method" value="PUT"></template>
 
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Judul Tugas</label>
-                    <input type="text" name="title" x-model="title" required maxlength="200"
+            <div x-show="error" x-cloak style="background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; padding:8px 12px; border-radius:8px; font-size:12.5px; margin-bottom:14px;" x-text="error"></div>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Judul Tugas</label>
+                <input type="text" x-model="title" required maxlength="200"
+                       style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Deskripsi (opsional)</label>
+                <textarea x-model="description" rows="2"
+                          style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"></textarea>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Project (opsional)</label>
+                <select x-model="projectId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
+                    <option value="">— Tidak ada —</option>
+                    @foreach($projects as $p)
+                    <option value="{{ $p->id }}">{{ $p->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:6px;">Ditugaskan Ke</label>
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                    <button type="button" @click="assignmentType = 'employee'"
+                            :style="assignmentType === 'employee' ? 'background:#F3E8FF;border-color:#7C3AED;color:#7C3AED;' : 'background:white;border-color:#E2E8F0;color:#64748B;'"
+                            style="flex:1; padding:8px; border-radius:8px; border:1.5px solid; font-size:12px; font-weight:600; cursor:pointer;">
+                        🙂 1 Karyawan
+                    </button>
+                    <button type="button" @click="assignmentType = 'position'"
+                            :style="assignmentType === 'position' ? 'background:#F3E8FF;border-color:#7C3AED;color:#7C3AED;' : 'background:white;border-color:#E2E8F0;color:#64748B;'"
+                            style="flex:1; padding:8px; border-radius:8px; border:1.5px solid; font-size:12px; font-weight:600; cursor:pointer;">
+                        🧩 Seluruh Posisi
+                    </button>
+                </div>
+                <div x-show="assignmentType === 'employee'">
+                    @include('positions._org_chart_search_picker', [
+                        'items' => 'window.TASK_EMPLOYEES',
+                        'model' => 'employeeId',
+                        'placeholder' => 'Cari nama karyawan...',
+                        'syncWhen' => 'show',
+                    ])
+                </div>
+                <div x-show="assignmentType === 'position'">
+                    @include('positions._org_chart_search_picker', [
+                        'items' => 'window.TASK_POSITIONS',
+                        'model' => 'positionId',
+                        'placeholder' => 'Cari posisi...',
+                        'syncWhen' => 'show',
+                    ])
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+                <div>
+                    <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Deadline (opsional)</label>
+                    <input type="date" x-model="dueDate"
                            style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
                 </div>
-
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Deskripsi (opsional)</label>
-                    <textarea name="description" x-model="description" rows="2"
-                              style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;"></textarea>
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Project (opsional)</label>
-                    <select name="project_id" x-model="projectId" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                        <option value="">— Tidak ada —</option>
-                        @foreach($projects as $p)
-                        <option value="{{ $p->id }}">{{ $p->name }}</option>
-                        @endforeach
+                <div>
+                    <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Prioritas</label>
+                    <select x-model="priority" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
+                        <option value="low">Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
                     </select>
                 </div>
+            </div>
 
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:6px;">Ditugaskan Ke</label>
-                    <div style="display:flex; gap:8px; margin-bottom:8px;">
-                        <button type="button" @click="assignmentType = 'employee'"
-                                :style="assignmentType === 'employee' ? 'background:#F3E8FF;border-color:#7C3AED;color:#7C3AED;' : 'background:white;border-color:#E2E8F0;color:#64748B;'"
-                                style="flex:1; padding:8px; border-radius:8px; border:1.5px solid; font-size:12px; font-weight:600; cursor:pointer;">
-                            🙂 1 Karyawan
-                        </button>
-                        <button type="button" @click="assignmentType = 'position'"
-                                :style="assignmentType === 'position' ? 'background:#F3E8FF;border-color:#7C3AED;color:#7C3AED;' : 'background:white;border-color:#E2E8F0;color:#64748B;'"
-                                style="flex:1; padding:8px; border-radius:8px; border:1.5px solid; font-size:12px; font-weight:600; cursor:pointer;">
-                            🧩 Seluruh Posisi
-                        </button>
-                    </div>
-                    <input type="hidden" name="assignment_type" x-model="assignmentType">
-                    <select x-show="assignmentType === 'employee'" name="employee_id" x-model="employeeId"
-                            style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                        <option value="">— Pilih Karyawan —</option>
-                        @foreach($employeeOptions as $e)
-                        <option value="{{ $e->id }}">{{ $e->full_name }}</option>
-                        @endforeach
-                    </select>
-                    <select x-show="assignmentType === 'position'" name="position_id" x-model="positionId"
-                            style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                        <option value="">— Pilih Posisi —</option>
-                        @foreach($positionOptions as $pos)
-                        <option value="{{ $pos->id }}">{{ $pos->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:20px;">
+                <button type="button" @click="show = false" style="background:#F1F5F9; color:#475569; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer;">Batal</button>
+                <button type="button" @click="save()" :disabled="saving" style="background:#7C3AED; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer;">
+                    <span x-text="saving ? 'Menyimpan…' : 'Simpan'"></span>
+                </button>
+            </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
-                    <div>
-                        <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Deadline (opsional)</label>
-                        <input type="date" name="due_date" x-model="dueDate"
-                               style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Prioritas</label>
-                        <select name="priority" x-model="priority" style="width:100%; border:1.5px solid #E2E8F0; border-radius:8px; padding:8px 10px; font-size:13px;">
-                            <option value="low">Low</option>
-                            <option value="normal">Normal</option>
-                            <option value="high">High</option>
-                        </select>
-                    </div>
+            {{-- Breakdown / sub-tugas — tanpa batas kedalaman --}}
+            <div x-show="editId" x-cloak style="border-top:1.5px solid #F1F5F9; padding-top:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 style="font-size:13px; font-weight:800; color:#1e293b; margin:0;">🧩 Breakdown Tugas</h4>
+                    <button type="button" @click="openCreate(editId)"
+                            style="background:#F3E8FF; color:#7C3AED; border:1px solid #DDD6FE; padding:5px 12px; border-radius:8px; font-size:11.5px; font-weight:600; cursor:pointer;">
+                        + Sub-tugas
+                    </button>
                 </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:8px;">
-                    <button type="button" @click="show = false" style="background:#F1F5F9; color:#475569; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer;">Batal</button>
-                    <button type="submit" style="background:#7C3AED; color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer;">Simpan</button>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <template x-for="st in subtasks" :key="st.id">
+                        <div @click="openEditById(st.id)" style="background:#FAFAFA; border:1px solid #F1F5F9; border-radius:10px; padding:8px 10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <div style="font-size:12.5px; font-weight:600; color:#1e293b;" x-text="st.title"></div>
+                                <div style="font-size:10.5px; color:#94A3B8;" x-text="st.assignee + (st.subtasks_count > 0 ? ' · ' + st.subtasks_count + ' breakdown' : '')"></div>
+                            </div>
+                            <span :style="st.status === 'done' ? 'background:#DCFCE7;color:#166534;' : (st.status === 'in_progress' ? 'background:#FFFBEB;color:#B45309;' : 'background:#EFF6FF;color:#1D4ED8;')"
+                                  style="font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:99px;" x-text="st.status === 'done' ? 'Done' : (st.status === 'in_progress' ? 'Progress' : 'Open')"></span>
+                        </div>
+                    </template>
+                    <div x-show="subtasks.length === 0" style="font-size:12px; color:#94A3B8; text-align:center; padding:10px;">Belum ada breakdown.</div>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -282,12 +315,21 @@
     </div>
 </div>
 
+<script src="{{ asset('js/search-picker.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.js"></script>
 <script>
+window.TASK_EMPLOYEES = @json($employeeOptions->map(fn ($e) => ['id' => $e->id, 'name' => $e->full_name])->values());
+window.TASK_POSITIONS = @json($positionOptions->map(fn ($p) => ['id' => $p->id, 'name' => $p->name])->values());
+
 function taskBoard() {
     return {
         show: false,
+        saving: false,
+        error: '',
         editId: null,
+        parentTaskId: null,
+        parentInfo: null,
+        subtasks: [],
         title: '', description: '', projectId: '',
         assignmentType: 'employee', employeeId: '', positionId: '',
         dueDate: '', priority: 'normal',
@@ -297,20 +339,83 @@ function taskBoard() {
         projectEditId: null,
         projectName: '', projectDescription: '',
 
-        openCreate() {
+        csrfHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            };
+        },
+
+        openCreate(parentTaskId = null) {
             this.show = true;
+            this.error = '';
             this.editId = null;
+            this.parentTaskId = parentTaskId;
             this.title = ''; this.description = ''; this.projectId = '';
             this.assignmentType = 'employee'; this.employeeId = ''; this.positionId = '';
             this.dueDate = ''; this.priority = 'normal';
+            this.subtasks = [];
+            // parentInfo tetap ditampilkan kalau sedang menambah sub-tugas
+            // (biar breadcrumb "← Kembali" tetap kelihatan)
         },
 
-        openEdit(task) {
+        async openEditById(id) {
             this.show = true;
-            this.editId = task.id;
-            this.title = task.title; this.description = task.description || ''; this.projectId = task.project_id || '';
-            this.assignmentType = task.assignment_type; this.employeeId = task.employee_id || ''; this.positionId = task.position_id || '';
-            this.dueDate = task.due_date || ''; this.priority = task.priority;
+            this.error = '';
+            try {
+                const r = await fetch(`{{ url('tasks') }}/${id}/detail`, { headers: { 'Accept': 'application/json' } });
+                if (!r.ok) throw new Error('Gagal memuat tugas.');
+                const data = await r.json();
+                const t = data.task;
+                this.editId = t.id;
+                this.parentTaskId = t.parent_task_id;
+                this.parentInfo = data.parent;
+                this.subtasks = data.subtasks;
+                this.title = t.title; this.description = t.description || ''; this.projectId = t.project_id || '';
+                this.assignmentType = t.assignment_type; this.employeeId = t.employee_id || ''; this.positionId = t.position_id || '';
+                this.dueDate = t.due_date || ''; this.priority = t.priority;
+            } catch (e) {
+                this.error = e.message || 'Gagal memuat tugas.';
+            }
+        },
+
+        async save() {
+            this.error = '';
+            this.saving = true;
+
+            const payload = {
+                title: this.title,
+                description: this.description,
+                project_id: this.projectId || null,
+                parent_task_id: this.parentTaskId || null,
+                assignment_type: this.assignmentType,
+                employee_id: this.assignmentType === 'employee' ? (this.employeeId || null) : null,
+                position_id: this.assignmentType === 'position' ? (this.positionId || null) : null,
+                due_date: this.dueDate || null,
+                priority: this.priority,
+            };
+
+            const url = this.editId ? `{{ url('tasks') }}/${this.editId}` : '{{ route('tasks.store') }}';
+            const method = this.editId ? 'PUT' : 'POST';
+
+            try {
+                const r = await fetch(url, { method, headers: this.csrfHeaders(), body: JSON.stringify(payload) });
+                const data = await r.json();
+                this.saving = false;
+                if (!r.ok) { this.error = data.message || 'Gagal menyimpan.'; return; }
+
+                if (this.parentTaskId) {
+                    // baru buat/edit sub-tugas — tetap di modal, refresh breakdown parent-nya
+                    await this.openEditById(this.parentTaskId);
+                } else {
+                    // tugas level atas — reload papan supaya kolom & badge ikut update
+                    window.location.reload();
+                }
+            } catch (e) {
+                this.saving = false;
+                this.error = 'Gagal menyimpan, coba lagi.';
+            }
         },
 
         initDragula() {
