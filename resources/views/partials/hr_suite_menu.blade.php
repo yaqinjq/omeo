@@ -139,8 +139,7 @@
   if (count($employees)) $hrdGroups[] = ['label' => 'Employees', 'items' => $employees];
 
   $tasks = [];
-  if ($l = $routeItem('tasks.index', 'Papan Tugas', 'verification')) $tasks[] = $l;
-  if ($l = $routeItem('projects.index', 'Project', 'folder')) $tasks[] = $l;
+  if ($l = $routeItem('tasks.index', 'Task & Project', 'verification')) $tasks[] = $l;
   if (count($tasks)) $hrdGroups[] = ['label' => 'Task Management', 'items' => $tasks];
 
   $trainingLms = [];

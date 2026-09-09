@@ -37,6 +37,7 @@ class TaskController extends Controller
         return view('tasks.index', [
             'board'             => $board,
             'projects'          => Project::where('status', 'active')->orderBy('name')->get(['id', 'name']),
+            'allProjects'       => Project::withCount('tasks')->orderByDesc('created_at')->get(),
             'positionOptions'   => Position::orderBy('name')->get(['id', 'name']),
             'employeeOptions'   => Employee::whereNotIn('status_employment', ['resigned', 'terminated'])->orderBy('full_name')->get(['id', 'full_name']),
             'filters'           => $request->only(['project_id', 'position_id', 'employee_id']),
@@ -71,7 +72,7 @@ class TaskController extends Controller
         return back()->with('success', 'Tugas berhasil dihapus.');
     }
 
-    public function updateStatus(Request $request, Task $task): RedirectResponse
+    public function updateStatus(Request $request, Task $task): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         $data = $request->validate([
             'status' => 'required|in:open,in_progress,done',
@@ -81,6 +82,10 @@ class TaskController extends Controller
             'status'       => $data['status'],
             'completed_at' => $data['status'] === Task::STATUS_DONE ? now() : null,
         ]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Status tugas diperbarui.']);
+        }
 
         return back()->with('success', 'Status tugas diperbarui.');
     }
