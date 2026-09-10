@@ -382,7 +382,23 @@ class PayrollImportService
 
             if ($existing) {
                 $existing->$gajiBulanCol = $sumTotal > 0 ? $sumTotal : null;
-                $existing->outlet_id     = $existing->outlet_id ?? $outletId;
+                // BUGFIX: dulu outlet_id/outlet_name_raw cuma diisi kalau
+                // masih kosong (??), jadi begitu terisi sekali (mis. Januari,
+                // bantu buka outlet baru) nilainya "nempel" selamanya walau
+                // karyawan itu sudah pindah outlet — export "Total Gaji per
+                // Brand" ikut salah karena baca kolom ini. Sekarang selalu
+                // di-refresh ke outlet dominan bulan yang baru disinkron,
+                // supaya paling tidak mencerminkan penugasan TERBARU (bukan
+                // solusi sempurna per-bulan — itu perlu kolom outlet per
+                // bulan tersendiri — tapi jauh lebih baik dari "nempel
+                // selamanya"; export sendiri sudah tidak bergantung ke
+                // kolom ini lagi, lihat PayrollExportController::exportTotalGaji()).
+                if ($outletId) {
+                    $existing->outlet_id = $outletId;
+                }
+                if (! blank($dominantRecord->outlet_name ?? null)) {
+                    $existing->outlet_name_raw = $dominantRecord->outlet_name;
+                }
                 $existing->posisi        = $existing->posisi ?: $firstRecord->posisi;
 
                 // Recompute bulan_aktif & total_tahunan dari semua 12 kolom

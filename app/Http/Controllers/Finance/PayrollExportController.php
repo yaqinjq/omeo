@@ -181,6 +181,30 @@ class PayrollExportController extends Controller
             return back()->with('error', "Tidak ada data gaji untuk periode {$periodeLabel}.");
         }
 
+        // BUGFIX: payroll_annual_summaries.outlet_name_raw itu 1 nilai per
+        // karyawan per TAHUN (bukan per bulan) — begitu terisi sekali (mis.
+        // Januari, bantu buka outlet baru), nilai itu "nempel" selamanya
+        // walau bulan-bulan berikutnya karyawan itu sudah tidak di outlet
+        // itu lagi. finance_bpjs_records (hasil import CSV payroll bulanan)
+        // justru py per-bulan akurat lewat kolom `periode` — jadi untuk
+        // penentuan outlet/brand di export bulan tertentu ini, PRIORITASKAN
+        // outlet dari finance_bpjs_records bulan itu; outlet_name_raw cuma
+        // dipakai kalau memang tidak ada data bulanan sama sekali untuk
+        // no_komp itu (mis. baris lama sebelum sinkronisasi bulanan ada).
+        $monthlyOutletByNoKomp = DB::table('finance_bpjs_records')
+            ->select('no_komp', 'outlet_name', 'total')
+            ->where('periode', $periode)
+            ->whereNotNull('no_komp')
+            ->whereNull('deleted_at')
+            ->get()
+            ->groupBy('no_komp')
+            ->map(fn ($rows) => $rows->sortByDesc('total')->first()->outlet_name);
+
+        $detailRows = $detailRows->map(function ($row) use ($monthlyOutletByNoKomp) {
+            $row->outlet_name_raw = $monthlyOutletByNoKomp->get($row->no_komp) ?: $row->outlet_name_raw;
+            return $row;
+        });
+
         $rows = $detailRows
             ->groupBy('outlet_name_raw')
             ->map(fn ($g, $outlet) => (object) [
@@ -289,18 +313,20 @@ class PayrollExportController extends Controller
         $infoSheet->mergeCells('A1:B1');
         $infoSheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
 
-        $importSessions = $detailRows->pluck('import_session_id')->unique()->count();
-        $importFiles    = $detailRows->pluck('source_file_name')->filter()->unique()->implode(', ') ?: '(tidak diketahui)';
+        $importSessions   = $detailRows->pluck('import_session_id')->unique()->count();
+        $importFiles      = $detailRows->pluck('source_file_name')->filter()->unique()->implode(', ') ?: '(tidak diketahui)';
+        $correctedCount   = $monthlyOutletByNoKomp->count();
 
         $info = [
-            ['Tabel sumber data', 'payroll_annual_summaries'],
-            ['Kolom nilai gaji yang dipakai', "{$col} (kolom khusus bulan {$periodeLabel})"],
-            ['Formula "Total Gaji" per Brand', "SUM({$col}) FROM payroll_annual_summaries WHERE tahun = {$year} AND {$col} > 0 AND deleted_at IS NULL, GROUP BY outlet_name_raw"],
+            ['Tabel sumber nilai gaji', 'payroll_annual_summaries (kolom gaji per bulan, dari upload "Summary Tokio-O!")'],
+            ['Tabel sumber nama Brand/Outlet', "finance_bpjs_records, difilter periode = {$periode} (hasil import CSV payroll bulanan) — dipilih outlet dengan total terbesar kalau 1 karyawan tercatat di >1 outlet bulan itu. Kalau no_komp tidak ditemukan di finance_bpjs_records untuk bulan ini, baru dipakai outlet_name_raw dari payroll_annual_summaries sebagai cadangan."],
+            ['Kenapa 2 tabel berbeda untuk 2 hal ini', 'payroll_annual_summaries HANYA punya 1 kolom outlet untuk SATU TAHUN PENUH, jadi kalau seorang karyawan pindah outlet di tengah tahun, kolom itu tidak bisa mengikuti — akan salah untuk bulan-bulan setelah pindah. finance_bpjs_records dicatat PER BULAN (kolom periode), jadi lebih akurat untuk menentukan outlet BULAN INI secara spesifik.'],
+            ['Kolom nilai gaji yang dipakai', "{$col} (kolom khusus bulan {$periodeLabel}) dari payroll_annual_summaries"],
+            ['Jumlah baris yang outlet-nya dikoreksi dari data bulanan', "{$correctedCount} dari {$detailRows->count()} baris"],
             ['Filter baris yang dihitung', "Hanya baris dengan {$col} > 0 (karyawan yang tidak bertugas/gaji Rp0 bulan ini tidak ikut dihitung) dan belum dihapus (soft-delete)"],
             ['Jumlah sesi import yang jadi sumber tahun ini', (string) $importSessions],
             ['Nama file sumber import', $importFiles],
-            ['Cara data ini masuk ke sistem', 'Diupload manual oleh HRD/Finance lewat menu Summary Gaji Tahunan → Upload, dari file "Summary Tokio-O!" (rekap tahunan per karyawan, 12 kolom bulan). Ini BUKAN hasil hitung otomatis dari data presensi/payroll harian OMEO.'],
-            ['Catatan penting', 'Tabel payroll_annual_summaries adalah data hasil upload terpisah dan TIDAK otomatis tersambung ke data karyawan OMEO (kolom employee_id kosong untuk sebagian besar baris). Kalau nilai di sini berbeda dari perhitungan payroll/BPJS di menu lain (yang bersumber dari finance_bpjs_records, hasil import CSV payroll bulanan), artinya dua sumber data ini memang independen satu sama lain dan bisa saja tidak singkron.'],
+            ['Catatan penting', 'Nilai GAJI tetap dari payroll_annual_summaries (upload manual "Summary Tokio-O!"), TIDAK berubah oleh perbaikan ini. Yang diperbaiki HANYA penentuan Brand/Outlet-nya, supaya karyawan yang pindah outlet di tengah tahun (mis. bantu buka outlet baru sebulan lalu kembali) tidak lagi salah tercatat di outlet lama untuk bulan-bulan setelahnya.'],
         ];
 
         $r = 3;
