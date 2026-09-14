@@ -161,49 +161,46 @@ class PayrollExportController extends Controller
 
         $periodeLabel = (self::BULAN_ID[$month] ?? $month) . ' ' . $year;
 
-        // Baris per-karyawan (sumber untuk sheet Total maupun sheet Detail —
-        // supaya angka di kedua sheet dijamin konsisten satu sama lain).
-        $detailRows = DB::table('payroll_annual_summaries as pas')
-            ->leftJoin('payroll_annual_import_sessions as ses', 'ses.id', '=', 'pas.import_session_id')
+        // Sumber data SATU-SATUNYA: finance_bpjs_records, persis logika yang
+        // dipakai fitur "Export Detail" (AnnualSummaryController::exportDetail)
+        // yang sudah terbukti akurat. Setiap baris = 1 karyawan di 1 outlet
+        // untuk periode ini — kalau seorang karyawan tercatat di >1 outlet
+        // bulan ini (pindah tengah bulan dsb.), setiap baris otomatis masuk
+        // ke outlet-nya masing-masing tanpa perlu menebak "outlet dominan".
+        // payroll_annual_summaries TIDAK dipakai lagi sama sekali di export
+        // ini karena nilainya per TAHUN (bukan per bulan) sehingga tidak
+        // selalu sinkron dengan Export Detail bulan berjalan.
+        $detailRows = DB::table('finance_bpjs_records as fbr')
+            ->leftJoin('payroll_import_sessions as ses', 'ses.id', '=', 'fbr.import_session_id')
             ->select(
-                'pas.outlet_name_raw', 'pas.no_komp', 'pas.nik', 'pas.nama', 'pas.posisi',
-                'pas.join_date', "pas.{$col} as nilai_gaji",
-                'ses.source_file_name', 'ses.id as import_session_id', 'ses.created_at as imported_at'
+                'fbr.outlet_name as outlet_name_raw', 'fbr.no_komp', 'fbr.nik', 'fbr.nama', 'fbr.posisi',
+                'fbr.join_date_emp as join_date', 'fbr.gaji_pokok', 'fbr.attd', 'fbr.hr', 'fbr.s_expense',
+                'fbr.ot1_amount', 'fbr.ot2_amount', 'fbr.tunjangan_total', 'fbr.total as total_raw',
+                'ses.source_file_name', 'ses.id as import_session_id'
             )
-            ->where('pas.tahun', $year)
-            ->whereNull('pas.deleted_at')
-            ->where("pas.{$col}", '>', 0)
-            ->orderBy('pas.outlet_name_raw')
-            ->orderBy('pas.nama')
-            ->get();
+            ->where('fbr.periode', $periode)
+            ->whereNull('fbr.deleted_at')
+            ->orderBy('fbr.outlet_name')
+            ->orderBy('fbr.nama')
+            ->get()
+            ->map(function ($row) {
+                $total = (float) ($row->total_raw ?? 0);
+                if ($total == 0) {
+                    $total = (float) ($row->gaji_pokok ?? 0) + (float) ($row->attd ?? 0)
+                        + (float) ($row->hr ?? 0) + (float) ($row->s_expense ?? 0)
+                        + (float) ($row->ot1_amount ?? 0) + (float) ($row->ot2_amount ?? 0)
+                        + (float) ($row->tunjangan_total ?? 0);
+                }
+                $row->nilai_gaji = $total;
+
+                return $row;
+            })
+            ->filter(fn ($row) => $row->nilai_gaji > 0)
+            ->values();
 
         if ($detailRows->isEmpty()) {
             return back()->with('error', "Tidak ada data gaji untuk periode {$periodeLabel}.");
         }
-
-        // BUGFIX: payroll_annual_summaries.outlet_name_raw itu 1 nilai per
-        // karyawan per TAHUN (bukan per bulan) — begitu terisi sekali (mis.
-        // Januari, bantu buka outlet baru), nilai itu "nempel" selamanya
-        // walau bulan-bulan berikutnya karyawan itu sudah tidak di outlet
-        // itu lagi. finance_bpjs_records (hasil import CSV payroll bulanan)
-        // justru py per-bulan akurat lewat kolom `periode` — jadi untuk
-        // penentuan outlet/brand di export bulan tertentu ini, PRIORITASKAN
-        // outlet dari finance_bpjs_records bulan itu; outlet_name_raw cuma
-        // dipakai kalau memang tidak ada data bulanan sama sekali untuk
-        // no_komp itu (mis. baris lama sebelum sinkronisasi bulanan ada).
-        $monthlyOutletByNoKomp = DB::table('finance_bpjs_records')
-            ->select('no_komp', 'outlet_name', 'total')
-            ->where('periode', $periode)
-            ->whereNotNull('no_komp')
-            ->whereNull('deleted_at')
-            ->get()
-            ->groupBy('no_komp')
-            ->map(fn ($rows) => $rows->sortByDesc('total')->first()->outlet_name);
-
-        $detailRows = $detailRows->map(function ($row) use ($monthlyOutletByNoKomp) {
-            $row->outlet_name_raw = $monthlyOutletByNoKomp->get($row->no_komp) ?: $row->outlet_name_raw;
-            return $row;
-        });
 
         $rows = $detailRows
             ->groupBy('outlet_name_raw')
@@ -269,39 +266,48 @@ class PayrollExportController extends Controller
         $detailSheet->setTitle('Detail per Karyawan');
 
         $detailSheet->setCellValue('A1', "Detail Baris Sumber — {$periodeLabel}");
-        $detailSheet->mergeCells('A1:I1');
+        $detailSheet->mergeCells('A1:L1');
         $detailSheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
-        $detailSheet->setCellValue('A2', "Setiap baris di bawah ini adalah satu baris di tabel payroll_annual_summaries yang ikut dijumlahkan ke sheet \"Total per Outlet\". Kolom \"Nilai Gaji\" diambil dari kolom {$col} (kolom bulan {$periodeLabel}).");
-        $detailSheet->mergeCells('A2:I2');
+        $detailSheet->setCellValue('A2', 'Setiap baris di bawah ini adalah satu baris di tabel finance_bpjs_records (sumber yang sama persis dengan fitur "Export Detail" di menu Summary Gaji Tahunan) yang ikut dijumlahkan ke sheet "Total per Outlet". Kolom "Total" = Gaji Pokok + Attd + HR + S.Expense + OT + Tunjangan.');
+        $detailSheet->mergeCells('A2:L2');
         $detailSheet->getStyle('A2')->getFont()->setItalic(true)->setSize(9)->getColor()->setRGB('6B7280');
 
-        $detailHeader = ['No', 'Nama Brand', 'No.Komp', 'NIK', 'Nama Karyawan', 'Posisi', 'Tgl Join', "Nilai Gaji ({$col})", 'File Sumber Import'];
+        $detailHeader = ['No', 'Nama Brand', 'No.Komp', 'NIK', 'Nama Karyawan', 'Posisi', 'Tgl Join', 'Gaji Pokok', 'Attd/HR/S.Exp/OT', 'Tunjangan', 'Total', 'File Sumber Import'];
         $detailSheet->fromArray($detailHeader, null, 'A4');
-        $detailSheet->getStyle('A4:I4')->getFont()->setBold(true);
-        $detailSheet->getStyle('A4:I4')->getFill()
+        $detailSheet->getStyle('A4:L4')->getFont()->setBold(true);
+        $detailSheet->getStyle('A4:L4')->getFill()
             ->setFillType(Fill::FILL_SOLID)
             ->getStartColor()->setRGB('EDE9FE');
 
         foreach ($detailRows as $i => $row) {
             $r = 5 + $i;
+            $attdHrSExpOt = (float) ($row->attd ?? 0) + (float) ($row->hr ?? 0)
+                + (float) ($row->s_expense ?? 0) + (float) ($row->ot1_amount ?? 0) + (float) ($row->ot2_amount ?? 0);
+
             $detailSheet->setCellValue("A{$r}", $i + 1);
             $detailSheet->setCellValue("B{$r}", $row->outlet_name_raw);
             $detailSheet->setCellValueExplicit("C{$r}", (string) $row->no_komp, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $detailSheet->setCellValueExplicit("D{$r}", (string) $row->nik, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $detailSheet->setCellValue("E{$r}", $row->nama);
             $detailSheet->setCellValue("F{$r}", $row->posisi);
-            $detailSheet->setCellValue("G{$r}", $row->join_date);
-            $detailSheet->setCellValue("H{$r}", (float) $row->nilai_gaji);
-            $detailSheet->setCellValue("I{$r}", $row->source_file_name);
+            $detailSheet->setCellValue("G{$r}", $row->join_date
+                ? \Carbon\Carbon::parse($row->join_date)->format('d/m/Y') : '');
+            $detailSheet->setCellValue("H{$r}", (float) ($row->gaji_pokok ?? 0));
+            $detailSheet->setCellValue("I{$r}", $attdHrSExpOt);
+            $detailSheet->setCellValue("J{$r}", (float) ($row->tunjangan_total ?? 0));
+            $detailSheet->setCellValue("K{$r}", (float) $row->nilai_gaji);
+            $detailSheet->setCellValue("L{$r}", $row->source_file_name);
         }
 
         $detailCount = $detailRows->count();
         if ($detailCount > 0) {
             $lastDetailRow = 4 + $detailCount;
-            $detailSheet->getStyle("H5:H{$lastDetailRow}")->getNumberFormat()->setFormatCode('#,##0');
+            foreach (['H', 'I', 'J', 'K'] as $col2) {
+                $detailSheet->getStyle("{$col2}5:{$col2}{$lastDetailRow}")->getNumberFormat()->setFormatCode('#,##0');
+            }
         }
 
-        foreach (['A' => 6, 'B' => 30, 'C' => 14, 'D' => 16, 'E' => 30, 'F' => 20, 'G' => 12, 'H' => 18, 'I' => 30] as $col2 => $width) {
+        foreach (['A' => 6, 'B' => 30, 'C' => 14, 'D' => 16, 'E' => 30, 'F' => 20, 'G' => 12, 'H' => 16, 'I' => 16, 'J' => 16, 'K' => 18, 'L' => 30] as $col2 => $width) {
             $detailSheet->getColumnDimension($col2)->setWidth($width);
         }
 
@@ -313,20 +319,17 @@ class PayrollExportController extends Controller
         $infoSheet->mergeCells('A1:B1');
         $infoSheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
 
-        $importSessions   = $detailRows->pluck('import_session_id')->unique()->count();
-        $importFiles      = $detailRows->pluck('source_file_name')->filter()->unique()->implode(', ') ?: '(tidak diketahui)';
-        $correctedCount   = $monthlyOutletByNoKomp->count();
+        $importSessions = $detailRows->pluck('import_session_id')->filter()->unique()->count();
+        $importFiles    = $detailRows->pluck('source_file_name')->filter()->unique()->implode(', ') ?: '(tidak diketahui)';
 
         $info = [
-            ['Tabel sumber nilai gaji', 'payroll_annual_summaries (kolom gaji per bulan, dari upload "Summary Tokio-O!")'],
-            ['Tabel sumber nama Brand/Outlet', "finance_bpjs_records, difilter periode = {$periode} (hasil import CSV payroll bulanan) — dipilih outlet dengan total terbesar kalau 1 karyawan tercatat di >1 outlet bulan itu. Kalau no_komp tidak ditemukan di finance_bpjs_records untuk bulan ini, baru dipakai outlet_name_raw dari payroll_annual_summaries sebagai cadangan."],
-            ['Kenapa 2 tabel berbeda untuk 2 hal ini', 'payroll_annual_summaries HANYA punya 1 kolom outlet untuk SATU TAHUN PENUH, jadi kalau seorang karyawan pindah outlet di tengah tahun, kolom itu tidak bisa mengikuti — akan salah untuk bulan-bulan setelah pindah. finance_bpjs_records dicatat PER BULAN (kolom periode), jadi lebih akurat untuk menentukan outlet BULAN INI secara spesifik.'],
-            ['Kolom nilai gaji yang dipakai', "{$col} (kolom khusus bulan {$periodeLabel}) dari payroll_annual_summaries"],
-            ['Jumlah baris yang outlet-nya dikoreksi dari data bulanan', "{$correctedCount} dari {$detailRows->count()} baris"],
-            ['Filter baris yang dihitung', "Hanya baris dengan {$col} > 0 (karyawan yang tidak bertugas/gaji Rp0 bulan ini tidak ikut dihitung) dan belum dihapus (soft-delete)"],
-            ['Jumlah sesi import yang jadi sumber tahun ini', (string) $importSessions],
+            ['Tabel sumber data', 'finance_bpjs_records — persis sumber yang dipakai fitur "Export Detail" di menu Finance → Summary Gaji Tahunan → Export Detail. Sengaja disamakan supaya kedua laporan selalu sinkron satu sama lain.'],
+            ['Formula "Total Gaji" per Brand', "Ambil semua baris finance_bpjs_records dengan periode = {$periode}, kelompokkan per kolom outlet_name (Brand), lalu jumlahkan kolom total tiap baris (fallback: Gaji Pokok + Attd + HR + S.Expense + OT + Tunjangan kalau kolom total kosong)."],
+            ['Kenapa tidak lagi pakai payroll_annual_summaries', 'Tabel payroll_annual_summaries menyimpan 1 nilai gaji per karyawan per TAHUN dan tidak mengikuti perpindahan outlet di tengah tahun, sehingga sering tidak sinkron dengan Export Detail (yang sudah akurat per bulan). Export ini sekarang 100% bersumber dari finance_bpjs_records agar angkanya selalu sama persis dengan Export Detail untuk periode yang sama.'],
+            ['Filter baris yang dihitung', 'Baris finance_bpjs_records periode ini dengan Total > 0, belum dihapus (soft-delete).'],
+            ['Jumlah sesi import yang jadi sumber periode ini', (string) $importSessions],
             ['Nama file sumber import', $importFiles],
-            ['Catatan penting', 'Nilai GAJI tetap dari payroll_annual_summaries (upload manual "Summary Tokio-O!"), TIDAK berubah oleh perbaikan ini. Yang diperbaiki HANYA penentuan Brand/Outlet-nya, supaya karyawan yang pindah outlet di tengah tahun (mis. bantu buka outlet baru sebulan lalu kembali) tidak lagi salah tercatat di outlet lama untuk bulan-bulan setelahnya.'],
+            ['Cara verifikasi silang', 'Buka Export Detail untuk tahun & outlet yang sama, lihat sheet bulan yang sesuai (mis. "Juli") — baris "TOTAL" di kolom P pada sheet itu harus sama persis dengan angka Total Gaji outlet tersebut di sheet "Total per Outlet" file ini.'],
         ];
 
         $r = 3;
