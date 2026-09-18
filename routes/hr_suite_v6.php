@@ -125,6 +125,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/hr-notifications/read-all', [HrNotificationController::class, 'markAllRead'])->name('hr-notifications.readAll');
 
     Route::get('/my-tasks', [\App\Http\Controllers\MyTaskController::class, 'index'])->name('tasks.my');
+    Route::get('/my-tasks/{task}/detail', [\App\Http\Controllers\MyTaskController::class, 'detail'])->name('tasks.my.detail');
+    Route::post('/my-tasks', [\App\Http\Controllers\MyTaskController::class, 'store'])->name('tasks.my.store');
+    Route::put('/my-tasks/{task}', [\App\Http\Controllers\MyTaskController::class, 'update'])->name('tasks.my.update');
     Route::patch('/my-tasks/{task}/status', [\App\Http\Controllers\MyTaskController::class, 'updateStatus'])->name('tasks.my.status');
 
     Route::get('/appraisals/my', [AppraisalController::class, 'my'])->name('appraisals.my');
