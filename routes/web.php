@@ -182,11 +182,13 @@ Route::middleware(['auth'])->group(function () {
 
             // Mandiri Template Export
             Route::get('/export/mandiri', [\App\Http\Controllers\Finance\PayrollExportController::class, 'exportMandiriTemplate'])
-                ->name('export.mandiri');
+                ->name('export.mandiri')
+                ->middleware('permission:finance.export');
 
             // Total Gaji per Brand Export
             Route::get('/export/total-gaji', [\App\Http\Controllers\Finance\PayrollExportController::class, 'exportTotalGaji'])
-                ->name('export.total-gaji');
+                ->name('export.total-gaji')
+                ->middleware('permission:finance.export');
 
             // Payroll Import
             Route::get('/import', [PayrollImportController::class, 'index'])->name('import.index');
@@ -209,10 +211,10 @@ Route::middleware(['auth'])->group(function () {
                 ->middleware('permission:finance.import');
             Route::get('/annual-summary/export', [AnnualSummaryExportController::class, 'export'])
                 ->name('annual-summary.export')
-                ->middleware('permission:finance.bpjs.view');
+                ->middleware('permission:finance.bpjs.view,finance.export');
             Route::get('/annual-summary/export-detail', [AnnualSummaryController::class, 'exportDetail'])
                 ->name('annual-summary.export-detail')
-                ->middleware('permission:finance.bpjs.view');
+                ->middleware('permission:finance.bpjs.view,finance.export');
             Route::get('/annual-summary/detail-view', [AnnualSummaryController::class, 'detailView'])
                 ->name('annual-summary.detail-view')
                 ->middleware('permission:finance.bpjs.view');

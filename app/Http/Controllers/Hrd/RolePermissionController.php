@@ -112,6 +112,32 @@ class RolePermissionController extends Controller
         ]);
     }
 
+    /**
+     * Permission sensitif ini sengaja "terkunci" — cuma Super Admin yang
+     * boleh MEMBERIKANNYA ke role manapun (termasuk role custom baru).
+     * Tanpa ini, siapa pun yang bisa buka halaman ini (HRD sudah punya
+     * settings.manage + users_roles.manage secara default) bisa bikin role
+     * custom, centang semua permission sensitif ini (termasuk yang tidak
+     * dimiliki role HRD sendiri, mis. finance.bpjs.rates.manage), lalu
+     * pindahkan user ke role itu untuk dapat akses yang seharusnya tidak
+     * boleh mereka berikan sendiri.
+     *
+     * @return list<string>
+     */
+    private function protectedPermissionSlugs(): array
+    {
+        return [
+            'settings.manage',
+            'users_roles.manage',
+            'master.company_groups.manage',
+            'master.legal_entities.manage',
+            'master.regions.manage',
+            'master.positions.manage',
+            'finance.bpjs.rates.manage',
+            'finance.bpjs.legal.manage',
+        ];
+    }
+
     public function updatePermissions(Request $request, Role $role): RedirectResponse
     {
         if (! Schema::hasTable('permissions')) {
@@ -128,6 +154,19 @@ class RolePermissionController extends Controller
             ->filter()
             ->unique()
             ->values();
+
+        $actingUser = $request->user();
+        if (! $actingUser->isSuperAdmin()) {
+            $oldSlugs = $role->permissions()->pluck('permissions.slug')->all();
+            $newlyAdded = $selected->diff($oldSlugs);
+            $blocked = $newlyAdded->intersect($this->protectedPermissionSlugs());
+
+            if ($blocked->isNotEmpty()) {
+                return back()->withErrors([
+                    'permissions' => 'Hanya Super Admin yang boleh memberikan permission berikut: '.$blocked->implode(', ').'. Perubahan tidak disimpan.',
+                ]);
+            }
+        }
 
         if ($role->is_super_admin || $role->slug === 'admin') {
             $selected = Permission::query()->pluck('slug');
