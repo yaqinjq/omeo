@@ -120,6 +120,48 @@ class TutorialController extends Controller
                     ],
                 ],
             ],
+            [
+                'category' => 'Task & Project Management',
+                'icon'     => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-7 9l2 2 4-4',
+                'color'    => '#7C3AED',
+                'articles' => [
+                    [
+                        'title' => 'Papan Kanban Open / In Progress / Done',
+                        'body'  => 'Menu <strong>Task & Project</strong> menampilkan semua tugas dalam 3 kolom status. <strong>Drag kartu tugas</strong> antar kolom untuk mengubah statusnya — tidak perlu buka form edit. Klik <strong>"+ Tambah Tugas"</strong> untuk membuat tugas baru, isi judul, project (opsional), siapa yang dikerjakan (1 karyawan tertentu atau seluruh pemegang 1 posisi), deadline, dan prioritas.',
+                    ],
+                    [
+                        'title' => 'Kelola Project',
+                        'body'  => 'Klik <strong>"📁 Kelola Project"</strong> di pojok kanan atas papan untuk buka panel tambah/edit/hapus project — tidak perlu pindah halaman. Project dipakai untuk mengelompokkan tugas-tugas yang berkaitan (mis. "Renovasi Outlet Kupang Indah"), dan bisa dipakai sebagai filter di papan utama.',
+                    ],
+                    [
+                        'title' => 'Breakdown tugas tanpa batas (ala ClickUp)',
+                        'body'  => 'Klik kartu tugas mana pun untuk buka detailnya, lalu klik <strong>"+ Sub-tugas"</strong> di bagian "Breakdown Tugas" untuk memecahnya jadi langkah-langkah kecil. Sub-tugas ini sendiri juga bisa dipecah lagi jadi sub-sub-tugas, tidak ada batas kedalaman. Gunakan breadcrumb <strong>"← Kembali ke [tugas induk]"</strong> di bagian atas modal untuk naik lagi ke tugas di atasnya. Menghapus 1 tugas otomatis menghapus semua breakdown di bawahnya.',
+                    ],
+                    [
+                        'title' => 'Halaman "Tugas Saya" untuk karyawan',
+                        'body'  => 'Karyawan (bukan admin/HRD/manager) punya papan sendiri di menu <strong>"Tugas Saya"</strong> — hanya menampilkan tugas yang ditugaskan langsung ke mereka atau tugas rutin posisi mereka. Karyawan bisa drag kartu untuk ubah status dan memecah tugasnya sendiri jadi breakdown pribadi, tapi tidak bisa membuat tugas baru dari nol atau mengelola project — itu tetap wewenang admin/HRD/manager di papan utama.',
+                    ],
+                    [
+                        'title' => 'Cari karyawan/posisi lebih cepat',
+                        'body'  => 'Dropdown "Karyawan" dan "Seluruh Posisi" di form tugas sekarang bisa diketik langsung untuk mencari (live-search), tidak perlu scroll daftar panjang — sama seperti fitur pencarian di Org-chart Builder.',
+                    ],
+                ],
+            ],
+            [
+                'category' => 'Role & Permission',
+                'icon'     => 'M12 3l7 4v5c0 5-3.5 9-7 10-3.5-1-7-5-7-10V7l7-4zM9 12l2 2 4-4',
+                'color'    => '#0F766E',
+                'articles' => [
+                    [
+                        'title' => 'Mengatur permission per aksi',
+                        'body'  => 'Buka <strong>HRD → Users & Roles</strong>, pilih role yang ingin diatur, klik <strong>"Permission"</strong>. Selain permission umum seperti "Kelola Karyawan", sekarang tersedia juga permission per-aksi yang lebih rinci (mis. "Tambah Karyawan", "Edit Tugas", "Hapus Tugas", "Approve Appraisal", "Terima/Tolak Candidate") — bisa dicentang satu-satu sesuai kebutuhan role tersebut, tidak harus mencentang izin "Kelola" penuh kalau memang cuma butuh sebagian aksi.',
+                    ],
+                    [
+                        'title' => 'Permission yang dikunci untuk Super Admin',
+                        'body'  => 'Beberapa permission paling sensitif — <strong>Kelola User & Role</strong>, <strong>Kelola Data Master Lanjutan</strong> (Group Perusahaan/Entitas Legal/Regional/Posisi), dan <strong>Kelola Tarif/Akun BPJS</strong> — hanya bisa dicentang/diberikan oleh akun Super Admin. Kalau bukan Super Admin mencoba mencentang salah satu dari permission ini untuk sebuah role, sistem akan menolak dan menampilkan pesan permission mana saja yang tidak bisa diberikan.',
+                    ],
+                ],
+            ],
         ];
     }
 }

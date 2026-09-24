@@ -19,6 +19,50 @@ class ChangelogController extends Controller
     {
         return [
             [
+                'version' => 'v3.3.20',
+                'date'    => '18 September 2026',
+                'label'   => 'Role & Permission Kini Bisa Diatur Per Aksi, Bukan Cuma Per Fitur',
+                'color'   => '#7C3AED',
+                'items'   => [
+                    'Tambah 26 permission baru yang lebih detail untuk modul Karyawan, Tugas & Project, Kandidat, dan Appraisal — sebelumnya 1 permission (mis. "Kelola Karyawan") membungkus semua aksi sekaligus (tambah, edit, hapus jadi satu), sekarang bisa dipisah per aksi. Ini memungkinkan role custom yang lebih sempit, misalnya "boleh edit tugas tapi tidak boleh menghapusnya" — sebelumnya tidak mungkin diatur seperti ini. Semua role yang sudah ada (HRD, Manager) otomatis mendapat permission granular yang setara, jadi tidak ada akses yang berkurang',
+                    'Fix celah nyata: permission "Export Laporan Finance" ternyata sudah ada di sistem sejak awal tapi tidak pernah benar-benar dicek di halaman manapun — siapa saja yang bisa membuka menu Finance otomatis bisa export data tanpa permission ini benar-benar berfungsi. Sudah dikaitkan ke seluruh fitur export di Finance (Total Gaji per Brand, Template Mandiri, Export Detail Summary Gaji)',
+                    'Pengaman baru anti penyalahgunaan akses: 8 permission paling sensitif (kelola User & Role, kelola Data Master Lanjutan, kelola Tarif/Akun BPJS) sekarang cuma bisa DIBERIKAN oleh Super Admin. Sebelumnya, siapa pun yang bisa membuka halaman "Kelola Role" berpotensi membuat role baru, mencentang semua permission sensitif itu untuk role tersebut (termasuk yang tidak dimiliki role-nya sendiri), lalu memindahkan user ke role itu untuk mendapat akses yang seharusnya tidak boleh mereka berikan sendiri',
+                ],
+            ],
+            [
+                'version' => 'v3.3.19',
+                'date'    => '14 September 2026',
+                'label'   => 'Export Total Gaji Kini Sinkron 100% dengan Export Detail; Papan Tugas Karyawan Dirombak',
+                'color'   => '#7C3AED',
+                'items'   => [
+                    'Export "Total Gaji per Brand" (Finance → Summary Gaji Tahunan) dirombak total: sekarang sumber datanya sama persis dengan fitur "Export Detail" (tabel finance_bpjs_records, per baris per outlet per bulan) — sebelumnya kedua laporan ini bisa punya angka berbeda untuk outlet yang sama di bulan yang sama, karena sumber datanya memang berbeda tabel. Sekarang dijamin selalu sinkron, sudah diverifikasi cocok sampai rupiah terakhir untuk data Juli 2026 (Rp 5.109.472.885, 1.659 baris). Sheet "Detail per Karyawan" juga sekarang menampilkan rincian Gaji Pokok/Attd+HR+S.Expense+OT/Tunjangan/Total per baris, dan sheet "Formula & Sumber Data" dijelaskan ulang dengan cara verifikasi silang ke Export Detail',
+                    'Halaman "Tugas Saya" (sisi karyawan, bukan admin/HRD/manager) dirombak jadi papan Kanban gaya Trello — sebelumnya masih tampilan daftar biasa peninggalan versi awal, tidak mendukung breakdown sub-tugas sama sekali. Sekarang karyawan bisa drag kartu untuk ubah status, klik untuk lihat detail, dan bisa memecah tugasnya sendiri jadi langkah-langkah kecil (sub-tugas pribadi) persis seperti yang sudah bisa dilakukan HRD/manager di papan utama',
+                ],
+            ],
+            [
+                'version' => 'v3.3.18',
+                'date'    => '10 September 2026',
+                'label'   => 'Task & Project Jadi 1 Halaman Gaya Trello, Sub-tugas Tanpa Batas, Fix Outlet Salah di Export Total Gaji',
+                'color'   => '#7C3AED',
+                'items'   => [
+                    'Modul Task & Project Management digabung jadi 1 halaman gaya Trello — papan 3 kolom (Open/In Progress/Done) dengan drag-drop asli untuk ubah status, dan panel "Kelola Project" langsung di halaman yang sama tanpa perlu pindah menu',
+                    'Dropdown Karyawan dan Posisi di form tambah/edit tugas sekarang live-search (bisa diketik untuk cari), memakai komponen pencarian yang sama dengan Org-chart Builder',
+                    'Tugas sekarang bisa dipecah jadi sub-tugas tanpa batas kedalaman (ala ClickUp) — tugas di dalam tugas di dalam tugas, dengan breadcrumb navigasi "Kembali", dan menghapus 1 tugas otomatis menghapus semua sub-tugas di bawahnya',
+                    'Fix akar masalah Export "Total Gaji per Brand" menampilkan karyawan di outlet yang salah — penyebabnya kolom penyimpan nama outlet cuma diisi 1x per tahun dan tidak pernah di-refresh, sehingga karyawan yang pindah outlet di tengah tahun (mis. bantu buka outlet baru sebulan lalu kembali ke outlet asal) tetap tercatat di outlet lama untuk bulan-bulan berikutnya. Setelah ditelusuri, dampaknya ternyata mengenai 149 dari 1.358 karyawan pada data Juli 2026, bukan cuma 3 nama yang dilaporkan pimpinan di awal',
+                ],
+            ],
+            [
+                'version' => 'v3.3.17',
+                'date'    => '8 September 2026',
+                'label'   => 'Org-chart: Jabatan Berbeda per Node & Fix Garis Konektor; Modul Task & Project Management Baru',
+                'color'   => '#7C3AED',
+                'items'   => [
+                    'Fix garis konektor yang hilang di org-chart untuk node "Anggota" yang punya bawahan hasil drag — sebelumnya kotak Anggota dengan bawahan tampil terputus dari struktur di atasnya',
+                    'Karyawan yang merangkap lebih dari 1 jabatan sekarang bisa ditampilkan sebagai jabatan yang berbeda di tiap node org-chart yang ditempatinya (mis. muncul sebagai "Supervisor" di 1 kotak dan "PIC Outlet" di kotak lain), tidak lagi selalu memakai 1 jabatan utama yang sama di semua tempat',
+                    'Modul baru: Task & Project Management (versi awal) — papan tugas, kelola project, tugas rutin per posisi, dan halaman "Tugas Saya" untuk karyawan',
+                ],
+            ],
+            [
                 'version' => 'v3.3.16',
                 'date'    => '28 Agustus 2026',
                 'label'   => 'Fix Evaluator Dobel & Tanda Tangan Hilang di PDF, Fitur Perpanjang Kontrak Otomatis',
@@ -581,6 +625,51 @@ class ChangelogController extends Controller
     private function getPimpinanReport(): array
     {
         return [
+            [
+                'date'    => '18 September 2026',
+                'title'   => 'Role & Permission Kini Bisa Diatur Per Aksi (v3.3.20)',
+                'summary' => 'Permintaan agar pengaturan hak akses (role & permission) bisa diatur lebih detail per menu/fitur/aksi sudah dikerjakan. Sebelumnya 1 saklar akses (mis. "Kelola Karyawan") membungkus semua aksi sekaligus — tambah, edit, hapus jadi satu, tidak bisa dipisah. Sekarang ditambahkan 26 hak akses baru yang lebih rinci untuk modul Karyawan, Tugas & Project, Kandidat, dan Appraisal, sehingga bisa dibuat role khusus dengan akses yang lebih sempit sesuai kebutuhan (misalnya staf tertentu boleh mengedit data tapi tidak boleh menghapus). Semua role yang sudah ada (HRD, Manager) otomatis mendapat hak akses setara, tidak ada yang berkurang. Sekaligus ditemukan dan ditutup 1 celah: hak akses "Export Laporan Finance" ternyata sudah ada di sistem tapi belum pernah benar-benar dicek di halaman manapun — sekarang sudah berfungsi. Ditambahkan juga pengaman: hak akses paling sensitif (kelola User & Role, kelola Data Master) sekarang hanya bisa diberikan oleh Super Admin, supaya tidak ada user lain yang bisa diam-diam memberi dirinya sendiri akses setingkat itu lewat pembuatan role baru.',
+                'access'  => 'HRD → Users & Roles → pilih role → Permission',
+                'howto'   => [
+                    'Buka HRD → Users & Roles, klik nama role yang ingin diatur, lalu klik "Permission"',
+                    'Permission baru per-aksi sudah muncul terkelompok rapi (mis. "Tambah Karyawan", "Edit Tugas", "Approve Appraisal") — centang sesuai kebutuhan role tersebut',
+                    'Untuk permission yang sangat sensitif (kelola User & Role, kelola Data Master Lanjutan), hanya akun Super Admin yang bisa mencentangnya',
+                ],
+                'stats'   => '✅ 26 permission granular baru | Celah "Export Finance" yang tidak pernah dicek ditutup | Pengaman anti penyalahgunaan akses ditambahkan | File diubah/baru: 4',
+            ],
+            [
+                'date'    => '14 September 2026',
+                'title'   => 'Export Total Gaji Kini Sinkron 100% dengan Export Detail (v3.3.19)',
+                'summary' => 'Menindaklanjuti arahan pimpinan: "Export Total Gaji per Brand" sekarang dirombak supaya sumber datanya PERSIS SAMA dengan fitur "Export Detail" yang sudah terbukti akurat — outlet dan nominal gaji sekarang diambil dari tabel yang sama (data upload payroll bulanan per outlet), bukan lagi dari file rekap tahunan terpisah yang jadi akar masalah selisih angka selama ini. Sudah diverifikasi langsung ke data produksi: untuk periode Juli 2026, total keseluruhan Rp 5.109.472.885 dari 1.659 baris cocok persis sampai rupiah terakhir antara kedua laporan. Sebagai bagian dari penelusuran ini juga ditemukan bahwa 30 karyawan status probation di outlet TOKIO-O! Mandala Malang sempat tidak ter-upload di data bulanan Juni-Juli — ini sudah dilaporkan terpisah untuk ditindaklanjuti tim Finance. Selain itu, halaman "Tugas Saya" milik karyawan (bukan halaman admin/HRD) dirombak jadi papan Kanban seperti Trello, sehingga karyawan biasa juga nyaman memakai fitur Task Management, termasuk bisa memecah tugasnya sendiri jadi langkah-langkah kecil.',
+                'access'  => 'Finance → Summary Gaji Tahunan → Export Excel → Export Total Gaji | Menu Task & Project → Tugas Saya',
+                'howto'   => [
+                    'Export Total Gaji seperti biasa, sekarang angkanya dijamin sama dengan sheet bulan yang sesuai di Export Detail — bisa dipakai untuk cek silang',
+                    'Karyawan buka menu "Tugas Saya", tampilannya sekarang papan Kanban — drag kartu untuk ubah status, klik untuk lihat detail dan tambah breakdown tugas sendiri',
+                ],
+                'stats'   => '✅ Akar masalah selisih Export Total Gaji vs Export Detail diperbaiki tuntas (bukan tambal sulam) | Fitur baru: papan Kanban di halaman Tugas Saya karyawan | File diubah/baru: 3',
+            ],
+            [
+                'date'    => '10 September 2026',
+                'title'   => 'Task Management Jadi 1 Halaman Gaya Trello; Fix Outlet Salah di Export Total Gaji (v3.3.18)',
+                'summary' => 'Menindaklanjuti laporan pimpinan soal "Export Total Gaji per Brand" yang menampilkan karyawan di outlet yang salah (contoh: Ahmad Tarmizi, Dimas Surya Kusuma Wardana, Mohammad Muharram Rizky tercatat di Ah Pek Kopitiam Samarinda padahal cuma bantu buka outlet itu di Januari). Akar masalahnya sudah ditemukan: kolom penyimpan nama outlet di data rekap tahunan cuma diisi 1x per tahun dan tidak pernah diperbarui, sehingga karyawan yang pindah outlet di tengah tahun tetap tercatat di outlet lama untuk bulan-bulan berikutnya. Setelah ditelusuri lebih dalam ke seluruh data (bukan cuma 3 nama contoh), ternyata dampaknya mengenai 149 dari 1.358 karyawan pada data Juli 2026 — semuanya otomatis ikut terkoreksi oleh perbaikan ini, bukan cuma yang dilaporkan. Sekalian, atas arahan pimpinan, modul Task & Project Management yang sebelumnya prototipe terpisah sekarang digabung jadi 1 halaman gaya Trello (drag-drop antar status, kelola project di panel yang sama), dengan tambahan pencarian cepat untuk pilih karyawan/posisi, dan tugas sekarang bisa dipecah jadi sub-tugas tanpa batas seperti ClickUp.',
+                'access'  => 'Finance → Summary Gaji Tahunan → Export Excel → Export Total Gaji | Menu Task & Project',
+                'howto'   => [
+                    'Export Total Gaji seperti biasa, outlet sekarang mengikuti data upload bulan yang sedang di-export, bukan lagi data lama yang nempel',
+                    'Menu Task & Project sekarang 1 halaman — drag kartu tugas antar kolom Open/In Progress/Done, klik "📁 Kelola Project" untuk atur project, klik tugas untuk tambah breakdown sub-tugas',
+                ],
+                'stats'   => '✅ Akar masalah outlet salah di Export Total Gaji diperbaiki, berdampak ke 149 karyawan (bukan cuma 3 yang dilaporkan) | Fitur baru: Task Management gaya Trello, sub-tugas tanpa batas | File diubah/baru: 9',
+            ],
+            [
+                'date'    => '8 September 2026',
+                'title'   => 'Org-chart: Jabatan Berbeda per Node; Modul Task & Project Management Baru (v3.3.17)',
+                'summary' => 'Org-chart sekarang mendukung karyawan yang merangkap lebih dari 1 jabatan — bisa ditampilkan sebagai jabatan yang berbeda di tiap kotak yang ditempatinya, tidak lagi terpaku ke 1 jabatan utama yang sama di semua tempat. Sekalian diperbaiki juga bug garis konektor yang hilang untuk node "Anggota" yang punya bawahan hasil drag. Atas permintaan pimpinan untuk modul pengelolaan tugas/project, dibuatkan prototipe awal Task & Project Management — papan tugas, kelola project, tugas rutin per posisi, dan halaman "Tugas Saya" untuk karyawan.',
+                'access'  => 'Master Perusahaan → Posisi & Departemen → Org Chart | Menu Task & Project (baru)',
+                'howto'   => [
+                    'Org-chart: buka Builder, klik kotak karyawan yang merangkap jabatan, akan ada opsi pilih jabatan mana yang ditampilkan di kotak itu',
+                    'Task & Project: menu baru di sidebar, coba buat project dan tugas pertama',
+                ],
+                'stats'   => '✅ Fix bug garis konektor org-chart | Fitur baru: jabatan berbeda per node, modul Task & Project Management (prototipe) | File diubah/baru: 12',
+            ],
             [
                 'date'    => '28 Agustus 2026',
                 'title'   => 'Fix Evaluator Dobel & Tanda Tangan Hilang di PDF, Fitur Perpanjang Kontrak Otomatis (v3.3.16)',
