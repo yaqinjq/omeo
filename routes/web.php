@@ -274,7 +274,7 @@ Route::middleware(['auth'])->group(function () {
                         ->name('template');
                     Route::post('/import',
                         [\App\Http\Controllers\MasterBpjs\BpjsAssignmentController::class, 'import'])
-                        ->name('import');
+                        ->name('import')->middleware('permission:finance.bpjs.manage');
                     Route::get('/cross-billing',
                         [\App\Http\Controllers\MasterBpjs\BpjsAssignmentController::class, 'crossBilling'])
                         ->name('cross-billing');
@@ -286,13 +286,13 @@ Route::middleware(['auth'])->group(function () {
                         ->name('index');
                     Route::post('/',
                         [\App\Http\Controllers\MasterBpjs\BpjsAssignmentController::class, 'store'])
-                        ->name('store');
+                        ->name('store')->middleware('permission:finance.bpjs.manage');
                     Route::put('/{assignment}',
                         [\App\Http\Controllers\MasterBpjs\BpjsAssignmentController::class, 'update'])
-                        ->name('update');
+                        ->name('update')->middleware('permission:finance.bpjs.manage');
                     Route::delete('/{assignment}',
                         [\App\Http\Controllers\MasterBpjs\BpjsAssignmentController::class, 'destroy'])
-                        ->name('destroy');
+                        ->name('destroy')->middleware('permission:finance.bpjs.manage');
                 });
 
             // Mapping Departemen → Kategori
@@ -300,12 +300,12 @@ Route::middleware(['auth'])->group(function () {
                 ->name('department-mappings.')
                 ->group(function () {
                     Route::get('/', [DepartmentCategoryMappingController::class, 'index'])->name('index');
-                    Route::get('/create', [DepartmentCategoryMappingController::class, 'create'])->name('create');
-                    Route::post('/', [DepartmentCategoryMappingController::class, 'store'])->name('store');
-                    Route::get('/{departmentMapping}/edit', [DepartmentCategoryMappingController::class, 'edit'])->name('edit');
-                    Route::put('/{departmentMapping}', [DepartmentCategoryMappingController::class, 'update'])->name('update');
-                    Route::patch('/{departmentMapping}/toggle', [DepartmentCategoryMappingController::class, 'toggle'])->name('toggle');
-                    Route::delete('/{departmentMapping}', [DepartmentCategoryMappingController::class, 'destroy'])->name('destroy');
+                    Route::get('/create', [DepartmentCategoryMappingController::class, 'create'])->name('create')->middleware('permission:finance.bpjs.manage');
+                    Route::post('/', [DepartmentCategoryMappingController::class, 'store'])->name('store')->middleware('permission:finance.bpjs.manage');
+                    Route::get('/{departmentMapping}/edit', [DepartmentCategoryMappingController::class, 'edit'])->name('edit')->middleware('permission:finance.bpjs.manage');
+                    Route::put('/{departmentMapping}', [DepartmentCategoryMappingController::class, 'update'])->name('update')->middleware('permission:finance.bpjs.manage');
+                    Route::patch('/{departmentMapping}/toggle', [DepartmentCategoryMappingController::class, 'toggle'])->name('toggle')->middleware('permission:finance.bpjs.manage');
+                    Route::delete('/{departmentMapping}', [DepartmentCategoryMappingController::class, 'destroy'])->name('destroy')->middleware('permission:finance.bpjs.manage');
                 });
 
             // Finance Settings
