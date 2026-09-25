@@ -27,6 +27,8 @@ class Outlet extends Model
         'outlet_type',
         'owner_in_charge_name',
         'is_active',
+        'bpjs_lokasi_kode',
+        'bpjs_lokasi_nama',
     ];
 
     protected $casts = [

@@ -113,6 +113,18 @@
       @error('owner_in_charge_name')<div class="text-red-600 text-sm">{{ $message }}</div>@enderror
     </div>
 
+    <div>
+      <label class="block text-sm text-gray-600">Lokasi Pekerjaan BPJS</label>
+      <select name="bpjs_lokasi_kode" class="border rounded px-3 py-2 w-full">
+        <option value="">— Pilih kabupaten/kota —</option>
+        @foreach(($bpjsLokasiOptions ?? []) as $lokasi)
+          <option value="{{ $lokasi['kode'] }}" @selected(old('bpjs_lokasi_kode', $outlet->bpjs_lokasi_kode) === $lokasi['kode'])>{{ $lokasi['nama'] }} ({{ $lokasi['kode'] }})</option>
+        @endforeach
+      </select>
+      <p class="text-xs text-gray-400 mt-1">Kode wilayah resmi BPJS Ketenagakerjaan untuk outlet ini — dipakai otomatis di kolom LOKASI_PEKERJAAN saat Export Data TK Baru untuk semua karyawan outlet ini.</p>
+      @error('bpjs_lokasi_kode')<div class="text-red-600 text-sm">{{ $message }}</div>@enderror
+    </div>
+
     <div class="flex gap-2">
       <button class="px-4 py-2 rounded bg-gray-900 text-white">Simpan</button>
       <a href="{{ route('outlets.index') }}" class="px-4 py-2 rounded border">Kembali</a>

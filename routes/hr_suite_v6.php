@@ -265,6 +265,11 @@ Route::middleware(['auth'])->group(function () {
             [\App\Http\Controllers\EmployeeBankAccountController::class, 'destroy'])
             ->name('employee-bank-accounts.destroy');
 
+        // Export BPJS TK Baru — harus sebelum Route::resource('employees') agar {employee} tidak menangkap wildcard
+        Route::get('employees/export/bpjs-tk-baru',
+            [\App\Http\Controllers\EmployeeBpjsTkBaruExportController::class, 'export'])
+            ->name('employees.export.bpjs-tk-baru');
+
         Route::resource('employees', EmployeeController::class);
         Route::resource('training-materials', TrainingMaterialController::class);
         Route::resource('training-programs', TrainingProgramController::class);

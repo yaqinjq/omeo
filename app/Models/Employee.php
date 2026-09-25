@@ -33,12 +33,19 @@ class Employee extends Model
         'npk',
         'lokasi_kerja',
         'payroll_session_tag',
+        'kode_pos',
+        'jenis_identitas',
+        'masa_laku_identitas',
+        'surat_menyurat_ke',
+        'status_pegawai_bpjs',
+        'tanggal_akhir_kontrak',
     ];
 
     protected $casts = [
         'join_date' => 'date',
         'probation_end_date' => 'date',
         'current_salary' => 'decimal:2',
+        'tanggal_akhir_kontrak' => 'date',
     ];
 
     protected $appends = ['computed_employment_status', 'nik_display'];

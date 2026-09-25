@@ -100,6 +100,47 @@
       </div>
     </div>
 
+    <div class="mt-6 mb-3 text-sm font-semibold text-slate-700">Data BPJS (untuk Export TK Baru)</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="text-sm">Jenis Identitas</label>
+        <select name="jenis_identitas" class="w-full border rounded p-2">
+          <option value="">— Pilih —</option>
+          @foreach(['KTP','PASSPORT'] as $opt)
+            <option value="{{ $opt }}" @selected(old('jenis_identitas', $employee->jenis_identitas ?? '') === $opt)>{{ $opt }}</option>
+          @endforeach
+        </select>
+      </div>
+      <div>
+        <label class="text-sm">Masa Berlaku Identitas</label>
+        <input name="masa_laku_identitas" value="{{ old('masa_laku_identitas', $employee->masa_laku_identitas ?? '') }}" class="w-full border rounded p-2" placeholder="Contoh: SEUMUR HIDUP atau 31-12-2030">
+      </div>
+      <div>
+        <label class="text-sm">Kode Pos</label>
+        <input name="kode_pos" value="{{ old('kode_pos', $employee->kode_pos ?? '') }}" class="w-full border rounded p-2" placeholder="Contoh: 60224">
+      </div>
+      <div>
+        <label class="text-sm">Surat-menyurat Ke</label>
+        <select name="surat_menyurat_ke" class="w-full border rounded p-2">
+          <option value="">— Pilih —</option>
+          <option value="S" @selected(old('surat_menyurat_ke', $employee->surat_menyurat_ke ?? '') === 'S')>S (Alamat)</option>
+          <option value="E" @selected(old('surat_menyurat_ke', $employee->surat_menyurat_ke ?? '') === 'E')>E (Email)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm">Status Pegawai (BPJS)</label>
+        <select name="status_pegawai_bpjs" class="w-full border rounded p-2">
+          <option value="">— Pilih —</option>
+          <option value="PKWT" @selected(old('status_pegawai_bpjs', $employee->status_pegawai_bpjs ?? '') === 'PKWT')>PKWT (Kontrak)</option>
+          <option value="PKWTT" @selected(old('status_pegawai_bpjs', $employee->status_pegawai_bpjs ?? '') === 'PKWTT')>PKWTT (Tetap)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm">Tanggal Akhir Kontrak</label>
+        <input type="date" name="tanggal_akhir_kontrak" value="{{ old('tanggal_akhir_kontrak', isset($employee) && $employee->tanggal_akhir_kontrak ? $employee->tanggal_akhir_kontrak->format('Y-m-d') : '') }}" class="w-full border rounded p-2">
+      </div>
+    </div>
+
     <div class="mt-6 mb-3 text-sm font-semibold text-slate-700">Salary Handling</div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       <div>

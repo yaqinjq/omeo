@@ -52,8 +52,22 @@ class OutletController extends Controller
     public function create()
     {
         $legalEntities = LegalEntity::where('is_active', true)->orderBy('name')->get(['id', 'name', 'short_name']);
+        $bpjsLokasiOptions = $this->bpjsLokasiOptions();
 
-        return view('master.outlets.create', compact('legalEntities'));
+        return view('master.outlets.create', compact('legalEntities', 'bpjsLokasiOptions'));
+    }
+
+    /**
+     * Daftar kode wilayah "Lokasi Pekerjaan" resmi BPJS Ketenagakerjaan,
+     * dipakai untuk export Data TK Baru — dipetakan 1x per outlet supaya
+     * otomatis ikut ke semua karyawan outlet itu saat export.
+     */
+    private function bpjsLokasiOptions(): array
+    {
+        $list = include base_path('resources/data/bpjs_lokasi_pekerjaan.php');
+        usort($list, fn ($a, $b) => strcmp($a['nama'], $b['nama']));
+
+        return $list;
     }
 
     public function store(Request $request)
@@ -68,8 +82,9 @@ class OutletController extends Controller
     {
         $outlet->load(['permits.attachments']);
         $legalEntities = LegalEntity::where('is_active', true)->orderBy('name')->get(['id', 'name', 'short_name']);
+        $bpjsLokasiOptions = $this->bpjsLokasiOptions();
 
-        return view('master.outlets.edit', compact('outlet', 'legalEntities'));
+        return view('master.outlets.edit', compact('outlet', 'legalEntities', 'bpjsLokasiOptions'));
     }
 
     public function update(Request $request, Outlet $outlet)
@@ -425,6 +440,7 @@ class OutletController extends Controller
             'work_start_time' => ['nullable', 'date_format:H:i'],
             'work_end_time' => ['nullable', 'date_format:H:i'],
             'owner_in_charge_name' => ['nullable', 'string', 'max:150'],
+            'bpjs_lokasi_kode' => ['nullable', 'string', 'max:10'],
         ];
 
         $data = $request->validate($rules, [
@@ -440,6 +456,20 @@ class OutletController extends Controller
         $data['external_id'] = $this->normalizeExternalId($data['external_id'] ?? null);
         $data['location'] = trim((string) ($data['location'] ?? '')) ?: null;
         $data['owner_in_charge_name'] = trim((string) ($data['owner_in_charge_name'] ?? '')) ?: null;
+
+        // Kode & nama lokasi BPJS selalu diturunkan bareng dari 1 sumber
+        // referensi resmi (resources/data/bpjs_lokasi_pekerjaan.php) supaya
+        // tidak pernah tidak sinkron (mis. kode benar tapi nama salah ketik).
+        $bpjsLokasiKode = trim((string) ($data['bpjs_lokasi_kode'] ?? ''));
+        if ($bpjsLokasiKode !== '') {
+            $lokasiList = include base_path('resources/data/bpjs_lokasi_pekerjaan.php');
+            $match = collect($lokasiList)->firstWhere('kode', $bpjsLokasiKode);
+            $data['bpjs_lokasi_kode'] = $bpjsLokasiKode;
+            $data['bpjs_lokasi_nama'] = $match['nama'] ?? null;
+        } else {
+            $data['bpjs_lokasi_kode'] = null;
+            $data['bpjs_lokasi_nama'] = null;
+        }
 
         [$parsedLat, $parsedLng] = $this->extractCoordinatesFromReference(
             (string) ($data['maps_reference'] ?? ''),

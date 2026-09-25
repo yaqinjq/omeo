@@ -425,6 +425,12 @@ class EmployeeController extends Controller
             'department_id' => ['nullable', 'integer'],
             'position_id' => ['nullable', 'integer'],
             'outlet_id' => ['nullable', 'integer'],
+            'kode_pos' => ['nullable', 'string', 'max:10'],
+            'jenis_identitas' => ['nullable', Rule::in(['KTP', 'PASSPORT'])],
+            'masa_laku_identitas' => ['nullable', 'string', 'max:20'],
+            'surat_menyurat_ke' => ['nullable', Rule::in(['S', 'E'])],
+            'status_pegawai_bpjs' => ['nullable', Rule::in(['PKWT', 'PKWTT'])],
+            'tanggal_akhir_kontrak' => ['nullable', 'date'],
         ];
 
         if (Schema::hasTable('employees') && Schema::hasColumn('employees', 'employee_number')) {
@@ -480,6 +486,12 @@ class EmployeeController extends Controller
             'department_id' => 'Departemen',
             'position_id' => 'Jabatan/Posisi',
             'outlet_id' => 'Outlet',
+            'kode_pos' => 'Kode Pos',
+            'jenis_identitas' => 'Jenis Identitas',
+            'masa_laku_identitas' => 'Masa Berlaku Identitas',
+            'surat_menyurat_ke' => 'Surat-menyurat Ke',
+            'status_pegawai_bpjs' => 'Status Pegawai (BPJS)',
+            'tanggal_akhir_kontrak' => 'Tanggal Akhir Kontrak',
         ];
     }
 
