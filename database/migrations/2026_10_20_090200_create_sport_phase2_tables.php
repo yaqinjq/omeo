@@ -72,7 +72,11 @@ return new class extends Migration
             $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
             $table->foreign('sport_participant_id')->references('id')->on('sport_participants')->restrictOnDelete();
             $table->foreign('recorded_by_user_id')->references('id')->on('users')->restrictOnDelete();
-            $table->unique(['sport_event_id', 'sport_participant_id']); // 1 peserta Non-MKO = 1 record per event
+            // Nama constraint diberi eksplisit - nama auto-generate Laravel
+            // ("sport_non_mko_attendances_sport_event_id_sport_participant_id_unique",
+            // 68 karakter) melebihi batas identifier MySQL (64 karakter).
+            // SQLite tidak punya batas ini sehingga lolos di test lokal.
+            $table->unique(['sport_event_id', 'sport_participant_id'], 'sport_non_mko_att_event_participant_unique'); // 1 peserta Non-MKO = 1 record per event
         });
 
         Schema::create('sport_import_batches', function (Blueprint $table) {
