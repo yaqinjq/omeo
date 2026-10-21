@@ -42,140 +42,171 @@ use Illuminate\Support\Facades\Schema;
  * baris import tidak pernah ikut menghapus Attendance/NonMkoAttendance yang
  * sudah dibuat. File ini belum pernah dijalankan via `php artisan migrate`
  * terhadap database manapun, jadi aman diedit in-place.
+ *
+ * SELF-HEALING (ditambahkan setelah percobaan deploy pertama gagal di
+ * tengah jalan karena nama constraint unique terlalu panjang untuk MySQL —
+ * lihat commit "Fix MySQL identifier length violation..."): setiap
+ * Schema::create() di bawah dibungkus Schema::hasTable() check, dan
+ * constraint unique yang tadinya gagal dicek terpisah lewat
+ * Schema::hasIndex(). Ini supaya `php artisan migrate` aman dijalankan
+ * ulang APAPUN state tabel saat ini (baik di database yang benar-benar
+ * kosong, maupun di database yang sudah punya sport_participants/
+ * sport_non_mko_attendances tersisa dari percobaan yang gagal tadi) tanpa
+ * perlu DROP TABLE manual dulu.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('sport_participants', function (Blueprint $table) {
-            $table->id();
-            $table->string('full_name', 150);
-            $table->string('phone', 30)->nullable();
-            $table->string('external_reference', 100)->nullable(); // id/nomor eksternal bebas (bukan NIK karyawan)
-            $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by_user_id')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('sport_participants')) {
+            Schema::create('sport_participants', function (Blueprint $table) {
+                $table->id();
+                $table->string('full_name', 150);
+                $table->string('phone', 30)->nullable();
+                $table->string('external_reference', 100)->nullable(); // id/nomor eksternal bebas (bukan NIK karyawan)
+                $table->text('notes')->nullable();
+                $table->unsignedBigInteger('created_by_user_id')->nullable();
+                $table->timestamps();
 
-            $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
-            $table->index('full_name');
-        });
+                $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
+                $table->index('full_name');
+            });
+        }
 
-        Schema::create('sport_non_mko_attendances', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('sport_event_id');
-            $table->unsignedBigInteger('sport_participant_id');
-            $table->unsignedBigInteger('recorded_by_user_id'); // Admin Finance yang menginput (bukan self-service)
-            $table->dateTime('attended_at');
-            $table->text('notes')->nullable();
-            $table->timestamps();
+        if (! Schema::hasTable('sport_non_mko_attendances')) {
+            Schema::create('sport_non_mko_attendances', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('sport_event_id');
+                $table->unsignedBigInteger('sport_participant_id');
+                $table->unsignedBigInteger('recorded_by_user_id'); // Admin Finance yang menginput (bukan self-service)
+                $table->dateTime('attended_at');
+                $table->text('notes')->nullable();
+                $table->timestamps();
 
-            $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
-            $table->foreign('sport_participant_id')->references('id')->on('sport_participants')->restrictOnDelete();
-            $table->foreign('recorded_by_user_id')->references('id')->on('users')->restrictOnDelete();
-            // Nama constraint diberi eksplisit - nama auto-generate Laravel
-            // ("sport_non_mko_attendances_sport_event_id_sport_participant_id_unique",
-            // 68 karakter) melebihi batas identifier MySQL (64 karakter).
-            // SQLite tidak punya batas ini sehingga lolos di test lokal.
-            $table->unique(['sport_event_id', 'sport_participant_id'], 'sport_non_mko_att_event_participant_unique'); // 1 peserta Non-MKO = 1 record per event
-        });
+                $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
+                $table->foreign('sport_participant_id')->references('id')->on('sport_participants')->restrictOnDelete();
+                $table->foreign('recorded_by_user_id')->references('id')->on('users')->restrictOnDelete();
+            });
+        }
 
-        Schema::create('sport_import_batches', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('sport_event_id'); // import historis selalu ditarget ke 1 event tujuan
-            $table->unsignedBigInteger('uploaded_by_user_id');
-            $table->string('original_filename', 255);
-            $table->string('file_hash', 64); // sha256 isi file — dasar idempotensi
-            $table->json('column_mapping')->nullable();
-            $table->string('status', 20)->default('uploaded'); // uploaded|mapped|previewed|committed|failed
-            $table->unsignedInteger('total_rows')->default(0);
-            $table->unsignedInteger('valid_rows')->default(0);
-            $table->unsignedInteger('duplicate_rows')->default(0);
-            $table->unsignedInteger('invalid_rows')->default(0);
-            $table->unsignedInteger('unmatched_rows')->default(0);
-            $table->dateTime('committed_at')->nullable();
-            $table->unsignedBigInteger('committed_by_user_id')->nullable();
-            $table->timestamps();
+        // Dicek & ditambahkan terpisah dari Schema::create di atas (bukan
+        // inline) karena ini persis statement yang gagal di percobaan
+        // pertama (nama auto-generate 68 karakter > batas 64 MySQL) —
+        // dengan nama eksplisit pendek ini, dan dicek dulu supaya tidak
+        // dicoba dobel kalau sebagian sempat berhasil dibuat manual.
+        if (! Schema::hasIndex('sport_non_mko_attendances', 'sport_non_mko_att_event_participant_unique', 'unique')) {
+            Schema::table('sport_non_mko_attendances', function (Blueprint $table) {
+                $table->unique(['sport_event_id', 'sport_participant_id'], 'sport_non_mko_att_event_participant_unique'); // 1 peserta Non-MKO = 1 record per event
+            });
+        }
 
-            $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
-            $table->foreign('uploaded_by_user_id')->references('id')->on('users')->restrictOnDelete();
-            $table->foreign('committed_by_user_id')->references('id')->on('users')->nullOnDelete();
-            // Hash yang SAMA dan SUDAH committed tidak boleh di-commit ulang (dicek di controller,
-            // bukan unique index DB, karena hash boleh sama kalau batch sebelumnya gagal/batal).
-            $table->index(['file_hash', 'status']);
-        });
+        if (! Schema::hasTable('sport_import_batches')) {
+            Schema::create('sport_import_batches', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('sport_event_id'); // import historis selalu ditarget ke 1 event tujuan
+                $table->unsignedBigInteger('uploaded_by_user_id');
+                $table->string('original_filename', 255);
+                $table->string('file_hash', 64); // sha256 isi file — dasar idempotensi
+                $table->json('column_mapping')->nullable();
+                $table->string('status', 20)->default('uploaded'); // uploaded|mapped|previewed|committed|failed
+                $table->unsignedInteger('total_rows')->default(0);
+                $table->unsignedInteger('valid_rows')->default(0);
+                $table->unsignedInteger('duplicate_rows')->default(0);
+                $table->unsignedInteger('invalid_rows')->default(0);
+                $table->unsignedInteger('unmatched_rows')->default(0);
+                $table->dateTime('committed_at')->nullable();
+                $table->unsignedBigInteger('committed_by_user_id')->nullable();
+                $table->timestamps();
 
-        Schema::create('sport_import_rows', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('sport_import_batch_id');
-            $table->unsignedInteger('row_number');
-            $table->json('raw_data');
-            $table->string('participant_type', 20)->nullable(); // mko|non_mko, ditentukan saat preview
-            $table->unsignedBigInteger('matched_employee_id')->nullable();
-            $table->unsignedBigInteger('matched_participant_id')->nullable();
-            $table->string('row_status', 20)->default('pending'); // pending|valid|duplicate|invalid|unmatched
-            $table->string('error_message', 255)->nullable();
-            $table->unsignedBigInteger('resulting_attendance_id')->nullable();
-            $table->unsignedBigInteger('resulting_non_mko_attendance_id')->nullable();
-            $table->timestamps();
+                $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
+                $table->foreign('uploaded_by_user_id')->references('id')->on('users')->restrictOnDelete();
+                $table->foreign('committed_by_user_id')->references('id')->on('users')->nullOnDelete();
+                // Hash yang SAMA dan SUDAH committed tidak boleh di-commit ulang (dicek di controller,
+                // bukan unique index DB, karena hash boleh sama kalau batch sebelumnya gagal/batal).
+                $table->index(['file_hash', 'status']);
+            });
+        }
 
-            $table->foreign('sport_import_batch_id')->references('id')->on('sport_import_batches')->cascadeOnDelete();
-            $table->foreign('matched_employee_id')->references('id')->on('employees')->nullOnDelete();
-            $table->foreign('matched_participant_id')->references('id')->on('sport_participants')->nullOnDelete();
-        });
+        if (! Schema::hasTable('sport_import_rows')) {
+            Schema::create('sport_import_rows', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('sport_import_batch_id');
+                $table->unsignedInteger('row_number');
+                $table->json('raw_data');
+                $table->string('participant_type', 20)->nullable(); // mko|non_mko, ditentukan saat preview
+                $table->unsignedBigInteger('matched_employee_id')->nullable();
+                $table->unsignedBigInteger('matched_participant_id')->nullable();
+                $table->string('row_status', 20)->default('pending'); // pending|valid|duplicate|invalid|unmatched
+                $table->string('error_message', 255)->nullable();
+                $table->unsignedBigInteger('resulting_attendance_id')->nullable();
+                $table->unsignedBigInteger('resulting_non_mko_attendance_id')->nullable();
+                $table->timestamps();
 
-        Schema::create('sport_reward_configs', function (Blueprint $table) {
-            $table->id();
-            $table->string('sport', 50)->default('badminton');
-            $table->unsignedInteger('tier1_min_sessions')->nullable();
-            $table->unsignedInteger('tier1_max_sessions')->nullable();
-            $table->decimal('tier1_rate', 12, 2)->nullable();
-            $table->unsignedInteger('tier2_min_sessions')->nullable();
-            $table->unsignedInteger('tier2_max_sessions')->nullable();
-            $table->decimal('tier2_rate', 12, 2)->nullable();
-            $table->unsignedInteger('tier3_min_sessions')->nullable();
-            $table->string('tier3_comparison', 10)->nullable(); // 'gte' atau 'gt' — Needs owner decision, sengaja NULL
-            $table->decimal('tier3_rate', 12, 2)->nullable();
-            $table->string('period_label', 50)->nullable(); // periode reward (mingguan/bulanan dst) — belum disepakati, teks bebas
-            $table->date('effective_date')->nullable();
-            $table->unsignedBigInteger('approver_user_id')->nullable();
-            $table->string('status', 20)->default('draft'); // HANYA 'draft' dipakai di MVP ini (lihat RewardConfigController)
-            $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by_user_id')->nullable();
-            $table->unsignedBigInteger('updated_by_user_id')->nullable();
-            $table->timestamps();
+                $table->foreign('sport_import_batch_id')->references('id')->on('sport_import_batches')->cascadeOnDelete();
+                $table->foreign('matched_employee_id')->references('id')->on('employees')->nullOnDelete();
+                $table->foreign('matched_participant_id')->references('id')->on('sport_participants')->nullOnDelete();
+            });
+        }
 
-            $table->foreign('approver_user_id')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('updated_by_user_id')->references('id')->on('users')->nullOnDelete();
-        });
+        if (! Schema::hasTable('sport_reward_configs')) {
+            Schema::create('sport_reward_configs', function (Blueprint $table) {
+                $table->id();
+                $table->string('sport', 50)->default('badminton');
+                $table->unsignedInteger('tier1_min_sessions')->nullable();
+                $table->unsignedInteger('tier1_max_sessions')->nullable();
+                $table->decimal('tier1_rate', 12, 2)->nullable();
+                $table->unsignedInteger('tier2_min_sessions')->nullable();
+                $table->unsignedInteger('tier2_max_sessions')->nullable();
+                $table->decimal('tier2_rate', 12, 2)->nullable();
+                $table->unsignedInteger('tier3_min_sessions')->nullable();
+                $table->string('tier3_comparison', 10)->nullable(); // 'gte' atau 'gt' — Needs owner decision, sengaja NULL
+                $table->decimal('tier3_rate', 12, 2)->nullable();
+                $table->string('period_label', 50)->nullable(); // periode reward (mingguan/bulanan dst) — belum disepakati, teks bebas
+                $table->date('effective_date')->nullable();
+                $table->unsignedBigInteger('approver_user_id')->nullable();
+                $table->string('status', 20)->default('draft'); // HANYA 'draft' dipakai di MVP ini (lihat RewardConfigController)
+                $table->text('notes')->nullable();
+                $table->unsignedBigInteger('created_by_user_id')->nullable();
+                $table->unsignedBigInteger('updated_by_user_id')->nullable();
+                $table->timestamps();
 
-        Schema::create('sport_backdate_settings', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedInteger('max_backdate_days')->nullable(); // NULL = backdate nonaktif total
-            $table->unsignedBigInteger('updated_by_user_id')->nullable();
-            $table->timestamps();
+                $table->foreign('approver_user_id')->references('id')->on('users')->nullOnDelete();
+                $table->foreign('created_by_user_id')->references('id')->on('users')->nullOnDelete();
+                $table->foreign('updated_by_user_id')->references('id')->on('users')->nullOnDelete();
+            });
+        }
 
-            $table->foreign('updated_by_user_id')->references('id')->on('users')->nullOnDelete();
-        });
+        if (! Schema::hasTable('sport_backdate_settings')) {
+            Schema::create('sport_backdate_settings', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedInteger('max_backdate_days')->nullable(); // NULL = backdate nonaktif total
+                $table->unsignedBigInteger('updated_by_user_id')->nullable();
+                $table->timestamps();
 
-        Schema::create('sport_backdate_audits', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('sport_attendance_id')->nullable();
-            $table->unsignedBigInteger('sport_event_id');
-            $table->unsignedBigInteger('employee_id');
-            $table->string('action', 10); // create|update
-            $table->text('reason');
-            $table->dateTime('before_confirmed_at')->nullable();
-            $table->dateTime('after_confirmed_at');
-            $table->unsignedBigInteger('actor_user_id');
-            $table->dateTime('performed_at');
-            $table->timestamps();
+                $table->foreign('updated_by_user_id')->references('id')->on('users')->nullOnDelete();
+            });
+        }
 
-            $table->foreign('sport_attendance_id')->references('id')->on('sport_attendances')->restrictOnDelete();
-            $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
-            $table->foreign('employee_id')->references('id')->on('employees')->restrictOnDelete();
-            $table->foreign('actor_user_id')->references('id')->on('users')->restrictOnDelete();
-        });
+        if (! Schema::hasTable('sport_backdate_audits')) {
+            Schema::create('sport_backdate_audits', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('sport_attendance_id')->nullable();
+                $table->unsignedBigInteger('sport_event_id');
+                $table->unsignedBigInteger('employee_id');
+                $table->string('action', 10); // create|update
+                $table->text('reason');
+                $table->dateTime('before_confirmed_at')->nullable();
+                $table->dateTime('after_confirmed_at');
+                $table->unsignedBigInteger('actor_user_id');
+                $table->dateTime('performed_at');
+                $table->timestamps();
+
+                $table->foreign('sport_attendance_id')->references('id')->on('sport_attendances')->restrictOnDelete();
+                $table->foreign('sport_event_id')->references('id')->on('sport_events')->restrictOnDelete();
+                $table->foreign('employee_id')->references('id')->on('employees')->restrictOnDelete();
+                $table->foreign('actor_user_id')->references('id')->on('users')->restrictOnDelete();
+            });
+        }
     }
 
     public function down(): void
