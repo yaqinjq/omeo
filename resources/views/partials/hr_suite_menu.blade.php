@@ -100,6 +100,7 @@
     if ($l = $routeItem('employee-profile.show', 'Profil Saya', 'profile')) $userMenu[] = $l;
     if ($l = $routeItem('appraisals.my', 'Appraisal Saya', 'appraisal')) $userMenu[] = $l;
     if ($l = $routeItem('tasks.my', 'Tugas Saya', 'verification')) $userMenu[] = $l;
+    if ($l = $routeItem('sport.index', 'OMEO Sport', 'training')) $userMenu[] = $l;
     if ($l = $routeItem('appraisals.guide', 'Panduan Skor Penilaian', 'template')) $userMenu[] = $l;
     if ($l = $routeItem('attendance.index', 'Presensi Saya', 'attendance')) $userMenu[] = $l;
     if (Route::has('employee.attendance.export.index')) {
@@ -141,6 +142,15 @@
   $tasks = [];
   if ($l = $routeItem('tasks.index', 'Task & Project', 'verification')) $tasks[] = $l;
   if (count($tasks)) $hrdGroups[] = ['label' => 'Task Management', 'items' => $tasks];
+
+  $sportCoordinator = [];
+  if ($l = $routeItem('sport.coordinator.index', 'Kelola Event Sport', 'training')) $sportCoordinator[] = $l;
+  if ($l = $routeItem('sport.admin.reports.index', 'Laporan Sport', 'report')) $sportCoordinator[] = $l;
+  if ($l = $routeItem('sport.admin.participants.index', 'Peserta Non-MKO', 'profile')) $sportCoordinator[] = $l;
+  if ($l = $routeItem('sport.admin.import.create', 'Import Historis Sport', 'folder')) $sportCoordinator[] = $l;
+  if ($l = $routeItem('sport.admin.reward.index', 'Draft Reward Badminton', 'template')) $sportCoordinator[] = $l;
+  if ($l = $routeItem('sport.admin.backdate.settings', 'Setting Backdate Sport', 'verification')) $sportCoordinator[] = $l;
+  if (count($sportCoordinator)) $hrdGroups[] = ['label' => 'OMEO Sport', 'items' => $sportCoordinator];
 
   $trainingLms = [];
   if ($l = $routeItem('my-training.index', 'My Training', 'training')) $trainingLms[] = $l;

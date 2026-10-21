@@ -431,6 +431,11 @@ Route::middleware(['auth'])
 require __DIR__.'/auth.php';
 
 /**
+ * OMEO Sport — modul baru, terisolasi di file sendiri (lihat routes/sport.php).
+ */
+require base_path('routes/sport.php');
+
+/**
  * Modul tambahan master data + appraisal assignment
  */
 require base_path('routes/hr_suite_v6.php');

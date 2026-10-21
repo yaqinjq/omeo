@@ -78,6 +78,18 @@ return [
         'finance.bpjs.rates.manage'    => ['label' => 'Kelola Tarif BPJS per Regional','group' => 'Finance'],
         'finance.bpjs.legal.manage'    => ['label' => 'Kelola Akun Legal BPJS',       'group' => 'Finance'],
         'master.positions.manage'      => ['label' => 'Kelola Master Posisi/Jabatan', 'group' => 'Master Lanjutan'],
+
+        // OMEO Sport (MVP slice 1 — lifecycle event/registrasi/pembatalan/kehadiran)
+        'sport.events.manage'       => ['label' => 'Kelola Event Sport (milik sendiri)', 'group' => 'Sport'],
+        'sport.cancellations.decide' => ['label' => 'Approve/Reject Pembatalan Peserta', 'group' => 'Sport'],
+        'sport.roster.view'         => ['label' => 'Lihat Roster & Kehadiran Event', 'group' => 'Sport'],
+
+        // OMEO Sport (MVP slice 2 — Admin Finance: laporan, Non-MKO, import, draft reward, backdate)
+        'sport.reports.view'       => ['label' => 'Lihat Laporan & Export Sport', 'group' => 'Sport'],
+        'sport.participants.manage' => ['label' => 'Kelola Peserta Non-MKO', 'group' => 'Sport'],
+        'sport.import.manage'      => ['label' => 'Import Historis Sport', 'group' => 'Sport'],
+        'sport.reward.manage'      => ['label' => 'Kelola Draft Reward Badminton', 'group' => 'Sport'],
+        'sport.backdate.manage'    => ['label' => 'Backdate Attendance Sport', 'group' => 'Sport'],
     ],
 
     'legacy_role_permissions' => [
@@ -91,6 +103,11 @@ return [
             'finance.export',
             'finance.bpjs.rates.manage',
             'finance.bpjs.legal.manage',
+            'sport.reports.view',
+            'sport.participants.manage',
+            'sport.import.manage',
+            'sport.reward.manage',
+            'sport.backdate.manage',
         ],
         'hrd' => [
             'settings.view',
@@ -162,6 +179,11 @@ return [
             'tasks.update',
             'tasks.delete',
             'notifications.manage',
+        ],
+        'koordinator' => [
+            'sport.events.manage',
+            'sport.cancellations.decide',
+            'sport.roster.view',
         ],
         'employee' => [],
         'probation' => [],
@@ -282,5 +304,18 @@ return [
         'finance.import.confirm-all' => ['finance.import.review'],
         'finance.bpjs.*'             => ['finance.bpjs.view'],
         'finance.bpjs.payment.*'     => ['finance.bpjs.manage'],
+
+        // OMEO Sport — Koordinator (create/edit/cancel event miliknya, decide cancellation request)
+        'sport.coordinator.*'        => ['sport.events.manage'],
+        'sport.coordinator.cancellations.decide' => ['sport.cancellations.decide'],
+        // Daftar event, pendaftaran, ajukan pembatalan, konfirmasi hadir — karyawan biasa, tanpa permission khusus (lihat routes/sport.php, grup plain 'auth').
+
+        // OMEO Sport — Admin Finance (slice 2: laporan, Non-MKO, import, draft reward, backdate)
+        'sport.admin.reports.*'      => ['sport.reports.view'],
+        'sport.admin.participants.*' => ['sport.participants.manage'],
+        'sport.admin.events.non-mko-attendances.*' => ['sport.participants.manage'],
+        'sport.admin.import.*'       => ['sport.import.manage'],
+        'sport.admin.reward.*'       => ['sport.reward.manage'],
+        'sport.admin.backdate.*'     => ['sport.backdate.manage'],
     ],
 ];
