@@ -992,6 +992,65 @@ create synthetic accounts with `php artisan tinker`:
 Not done this round — stated as the path forward, not executed, since the
 blocker above makes it non-functional today.
 
+## Post-deploy fixes and additions (after Slice 2 went live)
+
+Two migration fixes shipped directly to `main` after the first production
+deploy surfaced them (both documented in their own commit messages):
+
+1. **MySQL identifier length violation** — the auto-generated unique
+   constraint name for `sport_non_mko_attendances` (68 chars) exceeded
+   MySQL's 64-char limit (SQLite has no such limit, so local tests never
+   caught it). Fixed with an explicit short constraint name.
+2. **Self-healing migration** — production's first deploy attempt failed
+   mid-migration after that error, leaving `sport_participants` and
+   `sport_non_mko_attendances` partially created. `2026_10_20_090200_create_sport_phase2_tables.php`
+   now wraps every `Schema::create()` in a `Schema::hasTable()` check (and
+   the unique constraint in a `Schema::hasIndex()` check), so `php artisan
+   migrate` is safe to re-run regardless of which tables already exist —
+   verified locally by reproducing production's exact partial state in an
+   isolated SQLite file before shipping the fix.
+
+### Selfie (live camera) required for attendance confirmation
+
+New requirement: employee attendance confirmation (`SportController::confirmAttendance()`)
+now requires a selfie captured live from the camera, following the same
+pattern already used by the work-attendance system (`AttendanceController::storeBase64EvidencePhoto()`)
+but simplified — **one photo only**, no environment photo, no geolocation,
+since this is sports-event attendance, not daily work attendance.
+
+- `capture_mode` must be exactly `live_camera`; any other value (e.g. a
+  plain file upload) is rejected — mirrors the work-attendance system's
+  anti-upload rule exactly.
+- `selfie_photo_data` must be a `data:image/{png,jpeg,jpg,webp};base64,...`
+  URI, max 4MB decoded — same validation and size limit as the work-
+  attendance photos, reusing the identical regex/limit rather than
+  inventing new ones.
+- Stored under `storage/app/public/sport-attendance/{event_id}/{employee_id}/...`
+  — a separate path from `attendance/` (work attendance photos), so the
+  two are never mixed on disk.
+- New nullable column `sport_attendances.selfie_photo_path` (migration
+  `2026_10_21_100000_add_selfie_photo_to_sport_attendances.php` — added as
+  a new migration, not an edit to the already-deployed table-creation
+  migration). NULL for attendance rows created via backdate (Admin Finance
+  correction, not a self-service camera capture) or historical import
+  (no photo exists for old data) — both remain valid without a photo.
+- Koordinator roster (`sport/coordinator/show.blade.php`) now shows a
+  "lihat selfie" link next to any confirmed attendance that has one.
+
+Tests: `test_attendance_confirmation_requires_a_live_camera_selfie` (no
+photo rejected, non-live-camera capture_mode rejected, malformed data-URI
+rejected with a clear error not a 500, valid payload succeeds and the file
+is actually written to the fake storage disk, Koordinator roster page
+renders the new link without error) plus the 4 pre-existing confirm-
+attendance tests updated to send a fake-but-valid photo payload (via a new
+`fakeSelfiePayload()` test helper) since the behavior they exercise now
+requires one. `Storage::fake('public')` added to `setUp()` so no test ever
+writes a real file to disk.
+
+**Not done**: displaying/moderating selfies in bulk (e.g. an admin gallery
+view across all events) — only the per-registration "lihat selfie" link in
+the existing Koordinator roster was added, since that wasn't asked for.
+
 ## Deployment status
 
 **Nothing has been pushed, merged, committed, or deployed. No branch was

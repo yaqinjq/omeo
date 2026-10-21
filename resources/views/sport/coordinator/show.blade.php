@@ -71,6 +71,9 @@
                     <td style="padding:10px 14px; color:#64748B;">
                         @if($reg->attendance)
                             ✓ Hadir ({{ $reg->attendance->confirmed_at->copy()->setTimezone(\App\Models\Sport\Event::BUSINESS_TIMEZONE)->format('d M H:i') }} WIB){{ $reg->attendance->is_backdated ? ' · backdated' : '' }}
+                            @if($reg->attendance->selfie_photo_path)
+                                · <a href="{{ Illuminate\Support\Facades\Storage::disk('public')->url($reg->attendance->selfie_photo_path) }}" target="_blank" rel="noopener" style="color:#7C3AED; font-weight:600;">lihat selfie</a>
+                            @endif
                         @else
                             — Belum konfirmasi
                         @endif

@@ -58,11 +58,37 @@
                 @if($myRegistration->attendance)
                     <div style="font-size:12.5px; color:#166534; font-weight:600;">✓ Kehadiran sudah dikonfirmasi pada {{ $myRegistration->attendance->confirmed_at->copy()->setTimezone(\App\Models\Sport\Event::BUSINESS_TIMEZONE)->format('d M Y H:i') }} WIB.</div>
                 @elseif($event->isAttendanceWindowOpen() && $myRegistration->status !== 'cancelled')
-                    <form method="POST" action="{{ route('sport.registrations.confirm-attendance', $myRegistration) }}">
-                        @csrf
-                        <button type="submit" style="background:#166534; color:white; border:none; padding:10px 20px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">Konfirmasi Kehadiran</button>
-                    </form>
-                    <p style="font-size:11px; color:#94A3B8; margin-top:6px;">Jendela konfirmasi dibuka sejak event selesai sampai sekitar 1 jam kemudian.</p>
+                    <div x-data="sportSelfieCapture('{{ route('sport.registrations.confirm-attendance', $myRegistration) }}')" x-cloak>
+                        <template x-if="!photoDataUrl">
+                            <div>
+                                <button type="button" @click="startCamera()" x-show="!streamActive"
+                                        style="background:#166534; color:white; border:none; padding:10px 20px; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
+                                    📷 Buka Kamera & Konfirmasi Hadir
+                                </button>
+                                <div x-show="streamActive" style="margin-top:8px;">
+                                    <video x-ref="video" autoplay playsinline muted style="width:100%; max-width:280px; border-radius:10px; background:#000;"></video>
+                                    <div style="margin-top:8px;">
+                                        <button type="button" @click="capture()" style="background:#166534; color:white; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;">Ambil Foto</button>
+                                    </div>
+                                </div>
+                                <canvas x-ref="canvas" style="display:none;"></canvas>
+                            </div>
+                        </template>
+                        <template x-if="photoDataUrl">
+                            <div>
+                                <img :src="photoDataUrl" style="width:140px; border-radius:10px; display:block; margin-bottom:8px;">
+                                <button type="button" @click="retake()" :disabled="submitting" style="background:#F1F5F9; color:#475569; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; margin-right:6px;">Ambil Ulang</button>
+                                <form method="POST" :action="confirmUrl" @submit="submitting = true" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="capture_mode" value="live_camera">
+                                    <input type="hidden" name="selfie_photo_data" :value="photoDataUrl">
+                                    <button type="submit" :disabled="submitting" style="background:#166534; color:white; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;">Kirim Konfirmasi</button>
+                                </form>
+                            </div>
+                        </template>
+                        <p x-show="error" x-text="error" style="color:#991B1B; font-size:11px; margin-top:6px;"></p>
+                    </div>
+                    <p style="font-size:11px; color:#94A3B8; margin-top:6px;">Jendela konfirmasi dibuka sejak event selesai sampai sekitar 1 jam kemudian. Selfie wajib diambil langsung dari kamera (bukan upload file).</p>
                 @elseif($myRegistration->status !== 'cancelled')
                     <div style="font-size:12px; color:#94A3B8;">Konfirmasi kehadiran belum dibuka (buka setelah event selesai) atau sudah tutup.</div>
                 @endif
@@ -70,4 +96,53 @@
         </div>
     </div>
 </div>
+
+<script>
+    function sportSelfieCapture(confirmUrl) {
+        return {
+            confirmUrl: confirmUrl,
+            streamActive: false,
+            photoDataUrl: null,
+            error: null,
+            submitting: false,
+            stream: null,
+            async startCamera() {
+                this.error = null;
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    this.error = 'Browser ini tidak mendukung akses kamera.';
+                    return;
+                }
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                    });
+                    this.streamActive = true;
+                    this.$nextTick(() => { this.$refs.video.srcObject = this.stream; });
+                } catch (e) {
+                    this.error = 'Tidak bisa mengakses kamera. Pastikan izin kamera diaktifkan di browser.';
+                }
+            },
+            capture() {
+                const video = this.$refs.video;
+                const canvas = this.$refs.canvas;
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                this.photoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                this.stopCamera();
+            },
+            retake() {
+                this.photoDataUrl = null;
+                this.startCamera();
+            },
+            stopCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach((t) => t.stop());
+                    this.stream = null;
+                }
+                this.streamActive = false;
+            },
+        };
+    }
+</script>
 @endsection

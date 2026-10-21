@@ -16,6 +16,7 @@ class Attendance extends Model
         'sport_registration_id',
         'employee_id',
         'confirmed_at',
+        'selfie_photo_path',
         'is_backdated',
         'backdated_by_user_id',
         'backdate_reason',

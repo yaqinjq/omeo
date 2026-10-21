@@ -10,6 +10,8 @@ use App\Models\Sport\Registration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -128,6 +130,15 @@ class SportController extends Controller
         return back()->with('success', 'Permintaan pembatalan dikirim, menunggu keputusan Koordinator.');
     }
 
+    /**
+     * Konfirmasi kehadiran WAJIB selfie dari live camera — mengikuti pola
+     * yang sudah ada di AttendanceController (presensi kerja), versi
+     * sederhana (1 foto saja, tanpa foto lingkungan/geolocation, karena ini
+     * presensi event olahraga, bukan presensi kerja harian). Upload file
+     * biasa (bukan capture langsung dari kamera) ditolak di sisi validasi,
+     * sama seperti presensi kerja — "capture_mode" dikirim oleh JS kamera
+     * di view, bukan diisi manual oleh user.
+     */
     public function confirmAttendance(Request $request, Registration $registration): RedirectResponse
     {
         $this->authorizeOwnRegistration($request, $registration);
@@ -141,19 +152,73 @@ class SportController extends Controller
             return back()->with('error', 'Pendaftaran ini sudah dibatalkan, tidak bisa konfirmasi kehadiran.');
         }
 
+        $validated = $request->validate([
+            'capture_mode' => ['required', 'string', 'in:live_camera'],
+            'selfie_photo_data' => ['required', 'string'],
+        ], [
+            'capture_mode.required' => 'Konfirmasi kehadiran wajib menggunakan live camera.',
+            'capture_mode.in' => 'Konfirmasi kehadiran wajib menggunakan live camera, bukan upload file.',
+            'selfie_photo_data.required' => 'Selfie wajib diambil langsung dari kamera.',
+        ]);
+
+        try {
+            $selfiePath = $this->storeSelfiePhoto(
+                (string) $validated['selfie_photo_data'],
+                $event->id,
+                $registration->employee_id
+            );
+        } catch (\InvalidArgumentException|\RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
         try {
             Attendance::create([
                 'sport_event_id' => $event->id,
                 'sport_registration_id' => $registration->id,
                 'employee_id' => $registration->employee_id,
                 'confirmed_at' => now(),
+                'selfie_photo_path' => $selfiePath,
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             // Unique constraint (sport_event_id, employee_id) — konfirmasi ganda tidak menambah record.
+            Storage::disk('public')->delete($selfiePath);
+
             return back()->with('error', 'Kehadiran Anda untuk event ini sudah dikonfirmasi sebelumnya.');
         }
 
         return back()->with('success', 'Kehadiran berhasil dikonfirmasi. Terima kasih!');
+    }
+
+    /**
+     * Sama persis prinsip validasinya dengan
+     * AttendanceController::storeBase64EvidencePhoto() (format data URI,
+     * batas ukuran 4MB) — path disimpan terpisah di bawah "sport-attendance/"
+     * supaya tidak tercampur dengan foto presensi kerja.
+     */
+    private function storeSelfiePhoto(string $dataUri, int $eventId, int $employeeId): string
+    {
+        if (! preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/', $dataUri, $matches)) {
+            throw new \InvalidArgumentException('Format data kamera tidak valid.');
+        }
+
+        $extension = strtolower($matches[1] === 'jpeg' ? 'jpg' : $matches[1]);
+        $binary = base64_decode($matches[2], true);
+        if ($binary === false || strlen($binary) === 0) {
+            throw new \InvalidArgumentException('File kamera tidak dapat diproses.');
+        }
+
+        if (strlen($binary) > (4 * 1024 * 1024)) {
+            throw new \InvalidArgumentException('Ukuran file kamera terlalu besar.');
+        }
+
+        $filename = now()->format('Ymd_His') . '_' . Str::uuid() . '.' . $extension;
+        $path = "sport-attendance/{$eventId}/{$employeeId}/{$filename}";
+
+        if (! Storage::disk('public')->put($path, $binary)) {
+            throw new \RuntimeException('Gagal menyimpan selfie ke storage.');
+        }
+
+        return $path;
     }
 
     private function authorizeOwnRegistration(Request $request, Registration $registration): void

@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -41,6 +42,7 @@ class SportEventLifecycleTest extends TestCase
     {
         parent::setUp();
         $this->ensureSchema();
+        Storage::fake('public'); // selfie konfirmasi hadir ditulis ke disk public — jangan sentuh storage sungguhan di test
     }
 
     protected function tearDown(): void
@@ -404,21 +406,66 @@ class SportEventLifecycleTest extends TestCase
         $withinWindow = $this->publishedEvent(startAt: now()->subHours(3), endAt: now()->subMinutes(5));
         $reg1 = $this->registerDirectly($withinWindow, $employee, $user);
 
-        $okResponse = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $reg1));
+        $okResponse = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $reg1), $this->fakeSelfiePayload());
         $okResponse->assertSessionHas('success');
         $this->assertDatabaseCount('sport_attendances', 1);
+        Storage::disk('public')->assertExists(Attendance::first()->selfie_photo_path);
 
         // Konfirmasi ganda tidak menambah record.
-        $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $reg1));
+        $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $reg1), $this->fakeSelfiePayload());
         $this->assertDatabaseCount('sport_attendances', 1);
 
         // Event selesai lebih dari 1 jam lalu — jendela sudah tutup.
         $expired = $this->publishedEvent(startAt: now()->subHours(5), endAt: now()->subHours(2));
         $reg2 = $this->registerDirectly($expired, $employee, $user);
 
-        $lateResponse = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $reg2));
+        $lateResponse = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $reg2), $this->fakeSelfiePayload());
         $lateResponse->assertSessionHas('error');
         $this->assertDatabaseCount('sport_attendances', 1);
+    }
+
+    public function test_attendance_confirmation_requires_a_live_camera_selfie(): void
+    {
+        [$employee, $user] = $this->makeEmployeeUser();
+        $coordinator = User::factory()->create(['role' => 'koordinator']);
+        $event = $this->publishedEvent(startAt: now()->subHours(2), endAt: now()->subMinutes(10), coordinator: $coordinator);
+        $registration = $this->registerDirectly($event, $employee, $user);
+
+        // Halaman detail event (dengan jendela konfirmasi terbuka) harus benar-benar
+        // render — membuktikan widget kamera di Blade tidak punya syntax error
+        // (php -l tidak memvalidasi Blade, jadi ini satu-satunya cara memastikan).
+        $this->actingAs($user)->get(route('sport.show', $event))->assertOk();
+
+        // Tidak kirim foto sama sekali.
+        $noPhoto = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration));
+        $noPhoto->assertSessionHasErrors(['capture_mode', 'selfie_photo_data']);
+        $this->assertDatabaseCount('sport_attendances', 0);
+
+        // Kirim capture_mode selain live_camera (mencoba lewat upload file biasa) — ditolak.
+        $uploadAttempt = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration), [
+            'capture_mode' => 'file_upload',
+            'selfie_photo_data' => 'data:image/jpeg;base64,' . base64_encode('x'),
+        ]);
+        $uploadAttempt->assertSessionHasErrors('capture_mode');
+        $this->assertDatabaseCount('sport_attendances', 0);
+
+        // Format data URI tidak valid (bukan data:image/...;base64,...) — ditolak dengan pesan jelas, bukan 500.
+        $badFormat = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration), [
+            'capture_mode' => 'live_camera',
+            'selfie_photo_data' => 'bukan-data-uri-sama-sekali',
+        ]);
+        $badFormat->assertSessionHas('error');
+        $this->assertDatabaseCount('sport_attendances', 0);
+
+        // Payload valid akhirnya berhasil dan file selfie benar-benar tersimpan di storage.
+        $ok = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration), $this->fakeSelfiePayload());
+        $ok->assertSessionHas('success');
+        $attendance = Attendance::first();
+        $this->assertNotNull($attendance->selfie_photo_path);
+        Storage::disk('public')->assertExists($attendance->selfie_photo_path);
+
+        // Roster Koordinator juga harus render dengan aman (link "lihat selfie" baru).
+        $this->actingAs($coordinator)->get(route('sport.coordinator.show', $event))->assertOk()->assertSee('lihat selfie');
     }
 
     /**
@@ -441,14 +488,17 @@ class SportEventLifecycleTest extends TestCase
 
         $before = Carbon::now();
 
-        $response = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration), [
-            // Percobaan injeksi backdate lewat payload — tidak ada field ini
-            // di validasi/controller sama sekali, harus diabaikan total.
-            'confirmed_at' => '2020-01-01 00:00:00',
-            'is_backdated' => true,
-            'backdated_by_user_id' => $attacker->id,
-            'backdate_reason' => 'mencoba backdate tanpa izin',
-        ]);
+        $response = $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration), array_merge(
+            $this->fakeSelfiePayload(),
+            [
+                // Percobaan injeksi backdate lewat payload — tidak ada field ini
+                // di validasi/controller sama sekali, harus diabaikan total.
+                'confirmed_at' => '2020-01-01 00:00:00',
+                'is_backdated' => true,
+                'backdated_by_user_id' => $attacker->id,
+                'backdate_reason' => 'mencoba backdate tanpa izin',
+            ]
+        ));
         $response->assertSessionHas('success');
 
         $attendance = Attendance::first();
@@ -471,7 +521,7 @@ class SportEventLifecycleTest extends TestCase
         $event = $this->publishedEvent(startAt: now()->subHours(2), endAt: now()->subMinutes(10));
         $registration = $this->registerDirectly($event, $employee, $user);
 
-        $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration));
+        $this->actingAs($user)->post(route('sport.registrations.confirm-attendance', $registration), $this->fakeSelfiePayload());
 
         // Tidak ada tabel absensi/payroll kerja yang disentuh oleh modul Sport sama sekali.
         $this->assertFalse(Schema::hasTable('attendances'));
@@ -1168,6 +1218,20 @@ class SportEventLifecycleTest extends TestCase
         return [$employee, $user];
     }
 
+    /**
+     * Payload selfie live-camera palsu tapi valid-secara-format untuk test
+     * — base64 di sini TIDAK perlu benar-benar berisi gambar JPEG asli,
+     * cukup lolos regex data-URI + bisa di-base64_decode (sama seperti
+     * cara AttendanceControllerTest menguji presensi kerja).
+     */
+    private function fakeSelfiePayload(): array
+    {
+        return [
+            'capture_mode' => 'live_camera',
+            'selfie_photo_data' => 'data:image/jpeg;base64,' . base64_encode('fake-selfie-bytes-for-test'),
+        ];
+    }
+
     private function registerDirectly(Event $event, Employee $employee, User $user): Registration
     {
         return Registration::create([
@@ -1236,6 +1300,10 @@ class SportEventLifecycleTest extends TestCase
 
         if (! Schema::hasTable('sport_report_settings')) {
             (require base_path('database/migrations/2026_10_20_090300_create_sport_report_settings_table.php'))->up();
+        }
+
+        if (! Schema::hasColumn('sport_attendances', 'selfie_photo_path')) {
+            (require base_path('database/migrations/2026_10_21_100000_add_selfie_photo_to_sport_attendances.php'))->up();
         }
     }
 }
